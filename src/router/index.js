@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
+import Homepage from '@/views/Homepage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: HomeView },
+    { path: '/', name: 'home', component: Homepage },
     { path: '/routes', name: 'routes-list', component: () => import('@/views/RoutesList.vue') },
     { path: '/globe', name: 'routes-globe', component: () => import('@/views/RoutesGlobe.vue') },
     { path: '/routes/:id', name: 'route-detail', component: () => import('@/views/RouteDetail.vue') },
