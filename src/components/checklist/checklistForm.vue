@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { useChecklistStore } from '@/stores/checklist'
+import { useChecklistStore } from '@/controller/checklistStore'
 
 const props = defineProps({
   item: { type: Object, default: null }, // null = add mode
