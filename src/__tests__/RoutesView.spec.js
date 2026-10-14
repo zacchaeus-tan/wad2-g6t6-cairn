@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { fetchRoutes } from '../api/routes'
-import RoutesView from '../views/RoutesView.vue'
+import RoutesView from '../views/RoutesList.vue/index.js'
 
 vi.mock('../api/routes', () => ({
   fetchRoutes: vi.fn(),
