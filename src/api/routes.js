@@ -1,23 +1,12 @@
-import axios from 'axios'
+import { supabase } from '@/lib/supabase'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-async function getRoutes(params) {
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to load routes.')
+export async function fetchRoutes() {
+  const { data, error } = await supabase.from('routes').select('*')
+  if (error) {
+    throw error
   }
 
-  const { data } = await axios.get(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/routes`, {
-    params,
-    headers: { apikey: supabaseKey },
-  })
-
   return data
-}
-
-export function fetchRoutes() {
-  return getRoutes({ select: '*' })
 }
 
 export async function fetchRouteById(id) {
@@ -25,11 +14,14 @@ export async function fetchRouteById(id) {
     throw new Error('A route ID is required to load a route.')
   }
 
-  const routes = await getRoutes({
-    select: '*',
-    id: `eq.${id}`,
-    limit: 1,
-  })
+  const { data, error } = await supabase
+    .from('routes')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) {
+    throw error
+  }
 
-  return routes[0] ?? null
+  return data
 }
