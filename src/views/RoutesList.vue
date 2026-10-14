@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchRoutes } from '../api/routes'
+import { fetchRoutes } from '../controller/routesController'
 
 const routes = ref([])
 const loading = ref(true)

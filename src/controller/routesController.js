@@ -1,7 +1,10 @@
-import { supabase } from '@/lib/supabase'
+import { listRoutes, getRoute } from '@/model/routesModel'
+
+// Controller: checks input, calls the model, and turns database errors into
+// thrown errors so views can show them.
 
 export async function fetchRoutes() {
-  const { data, error } = await supabase.from('routes').select('*')
+  const { data, error } = await listRoutes()
   if (error) {
     throw error
   }
@@ -14,11 +17,7 @@ export async function fetchRouteById(id) {
     throw new Error('A route ID is required to load a route.')
   }
 
-  const { data, error } = await supabase
-    .from('routes')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
+  const { data, error } = await getRoute(id)
   if (error) {
     throw error
   }

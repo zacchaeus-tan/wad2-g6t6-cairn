@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { fetchRouteById } from '../api/routes'
+import { fetchRouteById } from '../controller/routesController'
 
 const routeParams = useRoute()
 const route = ref(null)
