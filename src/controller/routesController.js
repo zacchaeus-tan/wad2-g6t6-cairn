@@ -1,23 +1,26 @@
 import { listRoutes, getRoute } from '@/model/routesModel'
 
+// Controller: checks input, calls the model, and turns database errors into
+// thrown errors so views can show them.
+
 export async function fetchRoutes() {
-  try {
-    return await listRoutes()
-  } catch (err) {
-    console.error('fetchRoutes failed:', err)
-    throw err
+  const { data, error } = await listRoutes()
+  if (error) {
+    throw error
   }
+
+  return data
 }
 
 export async function fetchRouteById(id) {
-  try {
-    if (!id) {
-      throw new Error('A route ID is required to load a route.')
-    }
-
-    return await getRoute(id)
-  } catch (err) {
-    console.error('fetchRouteById failed:', err)
-    throw err
+  if (!id) {
+    throw new Error('A route ID is required to load a route.')
   }
+
+  const { data, error } = await getRoute(id)
+  if (error) {
+    throw error
+  }
+
+  return data
 }
