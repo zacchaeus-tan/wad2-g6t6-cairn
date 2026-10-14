@@ -7,6 +7,10 @@ vi.mock('../controller/routesController', () => ({
   fetchRouteById: vi.fn(),
 }))
 
+vi.mock('../controller/reviewsController', () => ({
+  fetchReviewsForRoute: vi.fn().mockResolvedValue([]),
+}))
+
 async function mountRouteDetailView() {
   const router = createRouter({
     history: createMemoryHistory(),
