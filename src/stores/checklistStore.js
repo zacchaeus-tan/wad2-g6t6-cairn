@@ -1,21 +1,34 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 
+const categories = ['clothing', 'safety', 'navigation', 'water_food', 'shelter', 'documents', 'other']
+
 export const useChecklistStore = defineStore('checklist', () => {
-    const checklistId = ref(null) // set when a saved checklist is open
+    const checklist = ref(null) // current checklist row, or null
     const items = ref([])
     const error = ref(null)
     const loading = ref(false)
+
+    const checklistId = computed(() =>   
+        checklist.value ? checklist.value.id : null
+    )
+
 
     function clearError() {
         error.value = null
     }
 
+    function reset() {
+        checklist.value = null
+        items.value = []
+        clearError()
+    }
+
     function validate(form) {
         if (form.label == null || form.label.trim() === '') {
-        error.value = 'Item name is required.'
-        return false
+            error.value = 'Item name is required.'
+            return false
         }
         if (form.quantity == null || form.quantity.trim() === ''){
             error.value = 'Quantity is required.'
@@ -51,6 +64,26 @@ export const useChecklistStore = defineStore('checklist', () => {
         return true
     }
 
+    async function toggleSaved() {
+        if (!checklist.value){
+            return false
+        }
+        clearError()
+
+        const next = !checklist.value.is_saved
+        const { error: err } = await supabase
+                                    .from('checklists')
+                                    .update({ is_saved: next })
+                                    .eq('id', checklist.value.id)
+        if (err) {
+            error.value = err.message
+            return false
+        }
+        checklist.value.is_saved = next
+        return true
+    }
+
+    // custom item CRUD
     async function addCustom(form) {
         clearError()
         if (!validate(form)){
@@ -142,7 +175,9 @@ export const useChecklistStore = defineStore('checklist', () => {
         error,
         loading,
         clearError,
-        loadItems,
+        reset,
+        loadForRoute,
+        toggleSaved,
         addCustom,
         updateItem,
         deleteItem,
