@@ -20,6 +20,9 @@ const baseTilesUrl = maptilerKey
 const exploreView = { center: [119, 9], zoom: 2.5 }
 const introMinimumMs = 2200
 const spinDegreesPerMs = 360 / 150000
+// Route pills closer together than this are stacked so none is hidden behind another
+const stackRadiusMetres = 100
+const stackSpacingPx = 28
 
 const router = useRouter()
 const globeHost = ref(null)
@@ -40,6 +43,8 @@ let touchStartY
 let globeView
 let activePopup
 let hoverPopup
+// Route whose click card is open, so its line stays visible after the cursor leaves the pill
+let pinnedRouteId = null
 // Pill labels currently on the map, keyed by cluster or route id
 let markerLabels = new Map()
 let routeFetchReady = false
@@ -166,6 +171,8 @@ function updateRouteLayer() {
     }
   }
 
+  assignMarkerStacks(markerFeatures)
+
   const lineData = {
     type: 'FeatureCollection',
     features: lineFeatures,
@@ -191,7 +198,9 @@ function updateRouteLayer() {
       data: markerData,
       cluster: true,
       clusterRadius: 50,
-      clusterMaxZoom: 12,
+      // Pills only split out at zoom 16+, where routes more than stackRadiusMetres apart
+      // are far enough apart on screen not to overlap
+      clusterMaxZoom: 15,
     })
     for (const layer of addRouteLayersToStyle()) {
       globeView.addLayer(layer)
@@ -247,6 +256,77 @@ function buildRouteCard(properties) {
   return card
 }
 
+// Only one route's line is drawn at a time: the one being hovered, or the one whose card is open
+function routeGeometryFilter(routeId) {
+  return [
+    'all',
+    ['==', ['get', 'featureType'], 'route'],
+    ['==', ['get', 'routeId'], routeId ?? ''],
+  ]
+}
+
+function showRouteGeometry(routeId) {
+  for (const layerId of ['route-casing', 'route-lines']) {
+    if (globeView.getLayer(layerId)) {
+      globeView.setFilter(layerId, routeGeometryFilter(routeId))
+    }
+  }
+}
+
+function distanceInMetres([lng1, lat1], [lng2, lat2]) {
+  const toRadians = Math.PI / 180
+  const latDelta = (lat2 - lat1) * toRadians
+  const lngDelta = (lng2 - lng1) * toRadians
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(lat1 * toRadians) * Math.cos(lat2 * toRadians) * Math.sin(lngDelta / 2) ** 2
+  return 2 * 6371000 * Math.asin(Math.sqrt(a))
+}
+
+// Several routes share a trailhead, so their pills would sit exactly on top of each other
+// at every zoom. Routes starting close to each other are stacked into a column instead,
+// each pill shifted up or down by its own pixel offset.
+function assignMarkerStacks(markerFeatures) {
+  const stacks = []
+  for (const feature of markerFeatures) {
+    const position = feature.geometry.coordinates
+    const stack = stacks.find(
+      (group) => distanceInMetres(group[0].geometry.coordinates, position) < stackRadiusMetres,
+    )
+    if (stack) {
+      stack.push(feature)
+    } else {
+      stacks.push([feature])
+    }
+  }
+
+  for (const stack of stacks) {
+    // Northernmost pill on top, so zooming in (which spreads them north-south) never
+    // pushes one pill back onto another
+    stack.sort((a, b) => b.geometry.coordinates[1] - a.geometry.coordinates[1])
+    stack.forEach((feature, index) => {
+      feature.properties.stackOffsetY = (index - (stack.length - 1) / 2) * stackSpacingPx
+    })
+  }
+}
+
+// Keeps a route's card attached to its own pill when that pill is shifted within a stack
+function popupOffset(offsetY = 0) {
+  const gap = 18
+  const corner = Math.round(gap / Math.SQRT2)
+  return {
+    center: [0, offsetY],
+    top: [0, offsetY + gap],
+    'top-left': [corner, offsetY + corner],
+    'top-right': [-corner, offsetY + corner],
+    bottom: [0, offsetY - gap],
+    'bottom-left': [corner, offsetY - corner],
+    'bottom-right': [-corner, offsetY - corner],
+    left: [gap, offsetY],
+    right: [-gap, offsetY],
+  }
+}
+
 function showHoverPopup(properties, lngLat) {
   hoverPopup?.remove()
   hoverPopup = new Popup({
@@ -254,7 +334,7 @@ function showHoverPopup(properties, lngLat) {
     closeButton: false,
     closeOnClick: false,
     maxWidth: '380px',
-    offset: 18,
+    offset: popupOffset(properties.stackOffsetY),
   })
     .setLngLat(lngLat)
     .setDOMContent(buildRouteCard(properties))
@@ -279,12 +359,25 @@ function showRoutePopup(properties, lngLat) {
 
   hideHoverPopup()
   activePopup?.remove()
-  const popup = new Popup({ className: 'route-card-popup', maxWidth: '380px', offset: 18 })
+  pinnedRouteId = properties.routeId
+  showRouteGeometry(pinnedRouteId)
+  // Stays open (keeping its route highlighted) until the user clicks its close button
+  const popup = new Popup({
+    className: 'route-card-popup',
+    closeOnClick: false,
+    maxWidth: '380px',
+    offset: popupOffset(properties.stackOffsetY),
+  })
     .setLngLat(lngLat)
     .setDOMContent(content)
     .addTo(globeView)
-  // Close the card once the cursor moves into it and then leaves it
-  popup.getElement().addEventListener('mouseleave', () => popup.remove())
+  // Hide this route's line again once its card closes
+  popup.on('close', () => {
+    if (pinnedRouteId === properties.routeId) {
+      pinnedRouteId = null
+      showRouteGeometry(null)
+    }
+  })
   activePopup = popup
 }
 
@@ -317,14 +410,22 @@ function createRouteLabel(feature) {
   element.appendChild(dot)
   element.appendChild(document.createTextNode(properties.distanceLabel))
 
-  element.addEventListener('mouseenter', () => showHoverPopup(properties, coordinates))
-  element.addEventListener('mouseleave', hideHoverPopup)
+  element.addEventListener('mouseenter', () => {
+    showHoverPopup(properties, coordinates)
+    showRouteGeometry(properties.routeId)
+  })
+  element.addEventListener('mouseleave', () => {
+    hideHoverPopup()
+    showRouteGeometry(pinnedRouteId)
+  })
   element.addEventListener('click', (event) => {
     // Stop the map's own click from closing the popup straight away
     event.stopPropagation()
     showRoutePopup(properties, coordinates)
   })
-  return new Marker({ element }).setLngLat(coordinates).addTo(globeView)
+  return new Marker({ element, offset: [0, properties.stackOffsetY ?? 0] })
+    .setLngLat(coordinates)
+    .addTo(globeView)
 }
 
 async function zoomIntoCluster(clusterId, coordinates) {
@@ -359,6 +460,7 @@ function updateMarkerLabels() {
       // A removed pill never fires mouseleave, so close its hover card here
       if (label.getElement().matches(':hover')) {
         hideHoverPopup()
+        showRouteGeometry(pinnedRouteId)
       }
       label.remove()
     }
@@ -372,7 +474,7 @@ function addRouteLayersToStyle() {
       id: 'route-casing',
       type: 'line',
       source: 'route-geometries',
-      filter: ['==', ['get', 'featureType'], 'route'],
+      filter: routeGeometryFilter(pinnedRouteId),
       paint: {
         'line-color': '#fff7e9',
         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 8, 6],
@@ -384,7 +486,7 @@ function addRouteLayersToStyle() {
       id: 'route-lines',
       type: 'line',
       source: 'route-geometries',
-      filter: ['==', ['get', 'featureType'], 'route'],
+      filter: routeGeometryFilter(pinnedRouteId),
       paint: {
         'line-color': [
           'match',
@@ -422,8 +524,6 @@ function setupRouteInteraction() {
   globeView.on('render', updateMarkerLabels)
   // Zooming or panning moves the pill out from under the cursor, so close any hover card
   globeView.on('movestart', hideHoverPopup)
-  // Zooming can merge the clicked pill into a cluster, leaving its card pointing at nothing
-  globeView.on('zoomstart', () => activePopup?.remove())
   globeView.on('click', 'route-lines', (event) => {
     const feature = event.features?.[0]
     if (feature) {
