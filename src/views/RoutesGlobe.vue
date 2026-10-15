@@ -1,15 +1,27 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Map as MapLibreMap, Popup } from 'maplibre-gl'
+import { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { useRouter } from 'vue-router'
 import { fetchRoutes } from '../controller/routesController'
 
+const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
+// MapTiler Outdoor shows peaks, contours, huts and trails; fall back to Carto if no key is set
+const mapStyle = maptilerKey
+  ? `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${maptilerKey}`
+  : 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+
+const router = useRouter()
 const globeHost = ref(null)
 const routes = ref([])
 const loading = ref(true)
 const error = ref('')
 const mapError = ref('')
 let globeView
+let activePopup
+let hoverPopup
+// Pill labels currently on the map, keyed by cluster or route id
+let markerLabels = new Map()
 let routeFetchReady = false
 let routeOverlayReady = false
 let routeInteractionReady = false
@@ -86,41 +98,46 @@ function formatRouteDistance(distance) {
   return `${Number(distance).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`
 }
 
+function formatRouteDuration(days) {
+  if (days == null || days === '') {
+    return 'Not listed'
+  }
+
+  return `${days} ${Number(days) === 1 ? 'day' : 'days'}`
+}
+
+const difficultyNames = { 1: 'Easy', 2: 'Moderate', 3: 'Hard', 4: 'Strenuous' }
+
 function updateRouteLayer() {
   if (!globeView || !routeFetchReady) {
     return
   }
 
-  const features = []
+  const lineFeatures = []
+  const markerFeatures = []
   for (const route of routesWithGeometry.value) {
     const difficulty = difficultyLevel(route)
-    const name = route.name || 'Unnamed route'
-    const distanceLabel = formatRouteDistance(route.distance_km)
-    features.push({
+    const properties = {
+      routeId: route.id,
+      name: route.name || 'Unnamed route',
+      country: route.country || 'Not listed',
+      difficulty,
+      difficultyLabel: difficultyNames[difficulty] ?? 'Not rated',
+      durationLabel: formatRouteDuration(route.duration_days),
+      distanceLabel: formatRouteDistance(route.distance_km),
+      ratingLabel: route.avg_rating == null ? '' : Number(route.avg_rating).toFixed(1),
+    }
+    lineFeatures.push({
       type: 'Feature',
-      properties: {
-        routeId: route.id,
-        featureType: 'route',
-        name,
-        country: route.country || '',
-        difficulty,
-        distanceLabel,
-      },
+      properties: { ...properties, featureType: 'route' },
       geometry: route.geometry,
     })
 
     const position = routeMarkerPosition(route.geometry)
     if (position) {
-      features.push({
+      markerFeatures.push({
         type: 'Feature',
-        properties: {
-          routeId: route.id,
-          featureType: 'marker',
-          name,
-          country: route.country || '',
-          distanceLabel,
-          difficulty,
-        },
+        properties: { ...properties, featureType: 'marker' },
         geometry: {
           type: 'Point',
           coordinates: position,
@@ -129,9 +146,13 @@ function updateRouteLayer() {
     }
   }
 
-  const data = {
+  const lineData = {
     type: 'FeatureCollection',
-    features,
+    features: lineFeatures,
+  }
+  const markerData = {
+    type: 'FeatureCollection',
+    features: markerFeatures,
   }
 
   if (!routeOverlayReady) {
@@ -142,33 +163,187 @@ function updateRouteLayer() {
   if (!routeSource) {
     globeView.addSource('route-geometries', {
       type: 'geojson',
-      data,
+      data: lineData,
+    })
+    // Markers get their own source so nearby ones can be grouped into clusters when zoomed out
+    globeView.addSource('route-markers', {
+      type: 'geojson',
+      data: markerData,
+      cluster: true,
+      clusterRadius: 50,
+      clusterMaxZoom: 12,
     })
     for (const layer of addRouteLayersToStyle()) {
       globeView.addLayer(layer)
     }
   } else {
-    routeSource.setData(data)
+    routeSource.setData(lineData)
+    globeView.getSource('route-markers').setData(markerData)
   }
 
-  if (!routeInteractionReady && globeView.getLayer('route-marker-dots')) {
+  if (!routeInteractionReady && globeView.getLayer('route-lines')) {
     setupRouteInteraction()
     routeInteractionReady = true
   }
 }
 
-function showRoutePopup(event) {
-  const feature = event.features?.[0]
-  if (!feature) {
+function addTextElement(parent, tag, className, text) {
+  const element = document.createElement(tag)
+  element.className = className
+  element.textContent = text
+  parent.appendChild(element)
+  return element
+}
+
+// Route details card, shared by the hover and click popups
+function buildRouteCard(properties) {
+  const colour = difficultyColour(properties.difficulty)
+  const card = document.createElement('div')
+  card.className = 'route-card'
+
+  const body = document.createElement('div')
+  body.className = 'route-card-body'
+  addTextElement(body, 'p', 'route-card-title', properties.name)
+  addTextElement(body, 'p', 'route-card-location', properties.country)
+
+  const difficultyRow = document.createElement('p')
+  difficultyRow.className = 'route-card-meta'
+  if (properties.ratingLabel) {
+    difficultyRow.appendChild(document.createTextNode(`★ ${properties.ratingLabel} · `))
+  }
+  const square = addTextElement(difficultyRow, 'span', 'route-card-square', '')
+  square.style.background = colour
+  difficultyRow.appendChild(document.createTextNode(properties.difficultyLabel))
+  body.appendChild(difficultyRow)
+
+  addTextElement(
+    body,
+    'p',
+    'route-card-meta',
+    `${properties.distanceLabel} · Est. ${properties.durationLabel}`,
+  )
+  card.appendChild(body)
+
+  return card
+}
+
+function showHoverPopup(properties, lngLat) {
+  hoverPopup?.remove()
+  hoverPopup = new Popup({
+    className: 'route-card-popup',
+    closeButton: false,
+    closeOnClick: false,
+    maxWidth: '380px',
+    offset: 18,
+  })
+    .setLngLat(lngLat)
+    .setDOMContent(buildRouteCard(properties))
+    .addTo(globeView)
+}
+
+function hideHoverPopup() {
+  hoverPopup?.remove()
+  hoverPopup = null
+}
+
+function showRoutePopup(properties, lngLat) {
+  const content = buildRouteCard(properties)
+  const viewMoreButton = document.createElement('button')
+  viewMoreButton.type = 'button'
+  viewMoreButton.className = 'btn btn-sm btn-dark mt-2'
+  viewMoreButton.textContent = 'View more'
+  viewMoreButton.addEventListener('click', () => {
+    router.push({ name: 'route-detail', params: { id: properties.routeId } })
+  })
+  content.querySelector('.route-card-body').appendChild(viewMoreButton)
+
+  hideHoverPopup()
+  activePopup?.remove()
+  const popup = new Popup({ className: 'route-card-popup', maxWidth: '380px', offset: 18 })
+    .setLngLat(lngLat)
+    .setDOMContent(content)
+    .addTo(globeView)
+  // Close the card once the cursor moves into it and then leaves it
+  popup.getElement().addEventListener('mouseleave', () => popup.remove())
+  activePopup = popup
+}
+
+function difficultyColour(difficulty) {
+  return { 1: '#24883b', 2: '#e6b700', 3: '#ec741c', 4: '#cb3030' }[difficulty] ?? '#64748b'
+}
+
+function createClusterLabel(feature) {
+  const clusterId = feature.properties.cluster_id
+  const coordinates = feature.geometry.coordinates
+  const element = document.createElement('button')
+  element.type = 'button'
+  element.className = 'map-pill'
+  element.textContent = `${feature.properties.point_count} routes`
+  element.addEventListener('click', () => zoomIntoCluster(clusterId, coordinates))
+  return new Marker({ element }).setLngLat(coordinates).addTo(globeView)
+}
+
+// A single route is shown as a pill with its distance and a dot in its difficulty colour
+function createRouteLabel(feature) {
+  const properties = feature.properties
+  const coordinates = feature.geometry.coordinates
+  const element = document.createElement('button')
+  element.type = 'button'
+  element.className = 'map-pill'
+
+  const dot = document.createElement('span')
+  dot.className = 'map-pill-dot'
+  dot.style.background = difficultyColour(properties.difficulty)
+  element.appendChild(dot)
+  element.appendChild(document.createTextNode(properties.distanceLabel))
+
+  element.addEventListener('mouseenter', () => showHoverPopup(properties, coordinates))
+  element.addEventListener('mouseleave', hideHoverPopup)
+  element.addEventListener('click', (event) => {
+    // Stop the map's own click from closing the popup straight away
+    event.stopPropagation()
+    showRoutePopup(properties, coordinates)
+  })
+  return new Marker({ element }).setLngLat(coordinates).addTo(globeView)
+}
+
+async function zoomIntoCluster(clusterId, coordinates) {
+  const zoom = await globeView.getSource('route-markers').getClusterExpansionZoom(clusterId)
+  globeView.easeTo({ center: coordinates, zoom })
+}
+
+// Draw clusters as "N routes" pills and single routes as distance pills,
+// adding new ones and removing ones that have merged or split up
+function updateMarkerLabels() {
+  if (!globeView.getSource('route-markers') || !globeView.isSourceLoaded('route-markers')) {
     return
   }
 
-  const details = [
-    feature.properties?.name || 'Unnamed route',
-    feature.properties?.country,
-    feature.properties?.distanceLabel,
-  ].filter(Boolean)
-  new Popup().setLngLat(event.lngLat).setText(details.join(' — ')).addTo(globeView)
+  const nextLabels = new Map()
+  for (const feature of globeView.querySourceFeatures('route-markers')) {
+    const isCluster = Boolean(feature.properties.cluster)
+    const key = isCluster
+      ? `cluster-${feature.properties.cluster_id}`
+      : `route-${feature.properties.routeId}`
+    if (nextLabels.has(key)) {
+      continue
+    }
+
+    const label =
+      markerLabels.get(key) ?? (isCluster ? createClusterLabel(feature) : createRouteLabel(feature))
+    nextLabels.set(key, label)
+  }
+
+  for (const [key, label] of markerLabels) {
+    if (!nextLabels.has(key)) {
+      // A removed pill never fires mouseleave, so close its hover card here
+      if (label.getElement().matches(':hover')) {
+        hideHoverPopup()
+      }
+      label.remove()
+    }
+  }
+  markerLabels = nextLabels
 }
 
 function addRouteLayersToStyle() {
@@ -206,43 +381,31 @@ function addRouteLayersToStyle() {
       },
     },
     {
-      id: 'route-marker-dots',
+      // Invisible, but MapLibre only loads (and clusters) a source when a layer uses it.
+      // The visible pills are HTML markers drawn by updateMarkerLabels().
+      id: 'route-marker-anchors',
       type: 'circle',
-      source: 'route-geometries',
-      filter: ['==', ['get', 'featureType'], 'marker'],
+      source: 'route-markers',
       paint: {
-        'circle-color': [
-          'match',
-          ['get', 'difficulty'],
-          1,
-          '#24883b',
-          2,
-          '#e6b700',
-          3,
-          '#ec741c',
-          4,
-          '#cb3030',
-          '#64748b',
-        ],
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 4, 5, 7, 10, 10],
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 2,
+        'circle-radius': 0,
+        'circle-opacity': 0,
       },
     },
   ]
 }
 
 function setupRouteInteraction() {
-  globeView.on('click', 'route-marker-dots', (event) => {
-    showRoutePopup(event)
+  globeView.on('render', updateMarkerLabels)
+  // Zooming or panning moves the pill out from under the cursor, so close any hover card
+  globeView.on('movestart', hideHoverPopup)
+  // Zooming can merge the clicked pill into a cluster, leaving its card pointing at nothing
+  globeView.on('zoomstart', () => activePopup?.remove())
+  globeView.on('click', 'route-lines', (event) => {
+    const feature = event.features?.[0]
+    if (feature) {
+      showRoutePopup(feature.properties, event.lngLat)
+    }
   })
-  globeView.on('mouseenter', 'route-marker-dots', () => {
-    globeView.getCanvas().style.cursor = 'pointer'
-  })
-  globeView.on('mouseleave', 'route-marker-dots', () => {
-    globeView.getCanvas().style.cursor = ''
-  })
-  globeView.on('click', 'route-lines', showRoutePopup)
   globeView.on('mouseenter', 'route-lines', () => {
     globeView.getCanvas().style.cursor = 'pointer'
   })
@@ -255,9 +418,9 @@ onMounted(async () => {
   try {
     globeView = new MapLibreMap({
       container: globeHost.value,
-      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+      style: mapStyle,
       center: [119, 9],
-      zoom: 1,
+      zoom: 2.5,
       pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
     })
     globeView.on('error', (event) => {
@@ -267,7 +430,8 @@ onMounted(async () => {
     })
     globeView.once('style.load', () => {
       globeView.setProjection({ type: 'globe' })
-      for (const layer of globeView.getStyle().layers) {
+      // Force English labels on the Carto fallback only, so MapTiler keeps its peak heights in labels
+      for (const layer of maptilerKey ? [] : globeView.getStyle().layers) {
         const textField = layer.layout?.['text-field']
         if (layer.type === 'symbol' && JSON.stringify(textField ?? '').includes('name')) {
           globeView.setLayoutProperty(layer.id, 'text-field', [
@@ -276,6 +440,12 @@ onMounted(async () => {
             ['get', 'name:en'],
             ['get', 'name:latin'],
           ])
+        }
+      }
+      // Hide MapTiler's own hiking and cycling trails so only our routes are drawn in colour
+      for (const layer of globeView.getStyle().layers) {
+        if (layer['source-layer'] === 'trail') {
+          globeView.setLayoutProperty(layer.id, 'visibility', 'none')
         }
       }
       routeOverlayReady = true
@@ -321,7 +491,7 @@ onBeforeUnmount(() => {
         <p class="mb-0">
           Showing <strong>{{ routesWithGeometry.length }}</strong> of
           <strong>{{ routes.length }}</strong> routes with saved geometry.
-          Click a route line to see its name.
+          Hover over a route to see its details, or click it to view more.
         </p>
         <details v-if="routesWithoutGeometry.length" class="missing-routes">
           <summary>
@@ -454,6 +624,87 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border-radius: 1rem;
   background: #111827;
+}
+
+/* Cluster labels are created by MapLibre outside the template, so they need :deep() */
+.globe-surface :deep(.map-pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.globe-surface :deep(.map-pill:hover) {
+  background: #111827;
+  color: #ffffff;
+}
+
+/* Hover/click card, styled like a trail preview card */
+.globe-surface :deep(.route-card-popup .maplibregl-popup-content) {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.globe-surface :deep(.route-card-popup .maplibregl-popup-tip) {
+  display: none;
+}
+
+.globe-surface :deep(.route-card-popup .maplibregl-popup-close-button) {
+  top: 0.35rem;
+  right: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.globe-surface :deep(.route-card) {
+  min-width: 240px;
+}
+
+.globe-surface :deep(.route-card-body) {
+  padding: 0.75rem 1.75rem 0.75rem 1rem;
+}
+
+.globe-surface :deep(.route-card-title) {
+  margin-bottom: 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #111827;
+}
+
+.globe-surface :deep(.route-card-location) {
+  margin-bottom: 0.3rem;
+  color: #6b7280;
+}
+
+.globe-surface :deep(.route-card-meta) {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.15rem;
+  color: #374151;
+}
+
+.globe-surface :deep(.route-card-square) {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.globe-surface :deep(.map-pill-dot) {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
 }
 
 @media (max-width: 575px) {
