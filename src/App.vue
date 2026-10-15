@@ -8,6 +8,7 @@ import { RouterLink } from 'vue-router'
       <RouterLink class="site-brand" to="/">CAIRN</RouterLink>
       <div class="site-nav-links">
         <RouterLink class="site-nav-link" to="/">Home</RouterLink>
+        <RouterLink class="site-nav-link" to="/globe">Globe</RouterLink>
         <RouterLink class="site-nav-link" to="/routes">Browse routes</RouterLink>
         <RouterLink class="site-nav-link site-nav-cta" to="/quiz">Take the quiz</RouterLink>
       </div>
