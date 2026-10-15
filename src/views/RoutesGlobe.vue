@@ -442,7 +442,7 @@ function routeLineOpacity() {
   return phase.value === 'explore' ? 1 : 0
 }
 
-// Flat blue land, pale ocean and thin borders drawn over the outdoor map.
+// Flat green land, blue ocean and thin borders drawn over the outdoor map.
 // They fade out as the user zooms in, revealing the detailed trail map underneath.
 function addGlobeBaseLayers() {
   const fadeOnZoom = ['interpolate', ['linear'], ['zoom'], 3, 1, 4.5, 0]
@@ -450,14 +450,14 @@ function addGlobeBaseLayers() {
   globeView.addLayer({
     id: 'globe-land',
     type: 'background',
-    paint: { 'background-color': '#4a9af5', 'background-opacity': fadeOnZoom },
+    paint: { 'background-color': '#b5d8a0', 'background-opacity': fadeOnZoom },
   })
   globeView.addLayer({
     id: 'globe-ocean',
     type: 'fill',
     source: 'globe-base',
     'source-layer': 'water',
-    paint: { 'fill-color': '#f4f4f4', 'fill-opacity': fadeOnZoom },
+    paint: { 'fill-color': '#8cc4ee', 'fill-opacity': fadeOnZoom },
   })
   globeView.addLayer({
     id: 'globe-borders',
@@ -465,7 +465,7 @@ function addGlobeBaseLayers() {
     source: 'globe-base',
     'source-layer': 'boundary',
     filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]],
-    paint: { 'line-color': '#dbeafe', 'line-width': 0.6, 'line-opacity': fadeOnZoom },
+    paint: { 'line-color': '#ffffff', 'line-width': 0.6, 'line-opacity': fadeOnZoom },
   })
 }
 
