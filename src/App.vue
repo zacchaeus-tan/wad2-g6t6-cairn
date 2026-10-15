@@ -1,5 +1,14 @@
 <script setup>
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
+import { useAuthStore } from '@/controller/authStore'
+
+const auth = useAuthStore()
+const router = useRouter()
+
+async function logout() {
+  await auth.logout()
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -10,6 +19,11 @@ import { RouterLink } from 'vue-router'
         <RouterLink class="site-nav-link" to="/">Home</RouterLink>
         <RouterLink class="site-nav-link" to="/globe">Globe</RouterLink>
         <RouterLink class="site-nav-link" to="/routes">Browse routes</RouterLink>
+        <template v-if="auth.isLoggedIn">
+          <RouterLink class="site-nav-link" to="/profile">Profile</RouterLink>
+          <button type="button" class="site-nav-link site-nav-button" @click="logout">Log out</button>
+        </template>
+        <RouterLink v-else class="site-nav-link" to="/auth">Sign in</RouterLink>
         <RouterLink class="site-nav-link site-nav-cta" to="/quiz">Take the quiz</RouterLink>
       </div>
     </nav>
@@ -62,6 +76,12 @@ import { RouterLink } from 'vue-router'
 .site-nav-link:hover,
 .site-nav-link.router-link-active:not(.site-nav-cta) {
   color: #198754;
+}
+
+.site-nav-button {
+  border: 0;
+  padding: 0;
+  background: none;
 }
 
 .site-nav-cta {
