@@ -2,14 +2,23 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Map as MapLibreMap, Popup } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { useRouter } from 'vue-router'
 import { fetchRoutes } from '../controller/routesController'
 
+const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
+// MapTiler Outdoor shows peaks, contours, huts and trails; fall back to Carto if no key is set
+const mapStyle = maptilerKey
+  ? `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${maptilerKey}`
+  : 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+
+const router = useRouter()
 const globeHost = ref(null)
 const routes = ref([])
 const loading = ref(true)
 const error = ref('')
 const mapError = ref('')
 let globeView
+let activePopup
 let routeFetchReady = false
 let routeOverlayReady = false
 let routeInteractionReady = false
@@ -168,7 +177,25 @@ function showRoutePopup(event) {
     feature.properties?.country,
     feature.properties?.distanceLabel,
   ].filter(Boolean)
-  new Popup().setLngLat(event.lngLat).setText(details.join(' — ')).addTo(globeView)
+
+  const content = document.createElement('div')
+  const text = document.createElement('p')
+  text.className = 'mb-2'
+  text.textContent = details.join(' — ')
+  content.appendChild(text)
+
+  const viewMoreButton = document.createElement('button')
+  viewMoreButton.type = 'button'
+  viewMoreButton.className = 'btn btn-sm btn-primary'
+  viewMoreButton.textContent = 'View more'
+  viewMoreButton.addEventListener('click', () => {
+    router.push({ name: 'route-detail', params: { id: feature.properties.routeId } })
+  })
+  content.appendChild(viewMoreButton)
+
+  // Clicking where a marker and line overlap fires both handlers, so keep only one popup open
+  activePopup?.remove()
+  activePopup = new Popup().setLngLat(event.lngLat).setDOMContent(content).addTo(globeView)
 }
 
 function addRouteLayersToStyle() {
@@ -255,9 +282,9 @@ onMounted(async () => {
   try {
     globeView = new MapLibreMap({
       container: globeHost.value,
-      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+      style: mapStyle,
       center: [119, 9],
-      zoom: 1,
+      zoom: 2.5,
       pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
     })
     globeView.on('error', (event) => {
@@ -267,7 +294,8 @@ onMounted(async () => {
     })
     globeView.once('style.load', () => {
       globeView.setProjection({ type: 'globe' })
-      for (const layer of globeView.getStyle().layers) {
+      // Force English labels on the Carto fallback only, so MapTiler keeps its peak heights in labels
+      for (const layer of maptilerKey ? [] : globeView.getStyle().layers) {
         const textField = layer.layout?.['text-field']
         if (layer.type === 'symbol' && JSON.stringify(textField ?? '').includes('name')) {
           globeView.setLayoutProperty(layer.id, 'text-field', [
@@ -321,7 +349,7 @@ onBeforeUnmount(() => {
         <p class="mb-0">
           Showing <strong>{{ routesWithGeometry.length }}</strong> of
           <strong>{{ routes.length }}</strong> routes with saved geometry.
-          Click a route line to see its name.
+          Click a route to see its name and view more details.
         </p>
         <details v-if="routesWithoutGeometry.length" class="missing-routes">
           <summary>
