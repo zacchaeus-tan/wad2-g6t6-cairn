@@ -306,6 +306,12 @@ onMounted(async () => {
           ])
         }
       }
+      // Hide MapTiler's own hiking and cycling trails so only our routes are drawn in colour
+      for (const layer of globeView.getStyle().layers) {
+        if (layer['source-layer'] === 'trail') {
+          globeView.setLayoutProperty(layer.id, 'visibility', 'none')
+        }
+      }
       routeOverlayReady = true
       updateRouteLayer()
     })
