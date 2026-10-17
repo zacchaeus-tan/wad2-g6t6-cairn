@@ -223,6 +223,14 @@ async function reloadRoute() {
           </div>
         </section>
       </div>
+
+
+      <section class="mb-4" aria-labelledby="gear-checklist-title">
+        <h2 id="gear-checklist-title" class="h5">Gear checklist</h2>
+        <p class="alert alert-secondary mb-0">
+          The gear checklist is temporarily unavailable while its sign-in integration is being completed.
+        </p>
+      </section>
     </template>
   </main>
 </template>

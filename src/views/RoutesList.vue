@@ -168,23 +168,25 @@ onMounted(async () => {
         />
       </div>
 
-      <div class="mb-4">
-        <label class="form-label" for="distance-sort">Sort by distance</label>
-        <select id="distance-sort" v-model="distanceSort" class="form-select">
-          <option value="">Default order</option>
-          <option value="ascending">Shortest first</option>
-          <option value="descending">Longest first</option>
-        </select>
-      </div>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label" for="distance-sort">Sort by distance</label>
+          <select id="distance-sort" v-model="distanceSort" class="form-select">
+            <option value="">Default order</option>
+            <option value="ascending">Shortest first</option>
+            <option value="descending">Longest first</option>
+          </select>
+        </div>
 
-      <div class="mb-4">
-        <label class="form-label" for="country-filter">Filter by country</label>
-        <select id="country-filter" v-model="selectedCountry" class="form-select">
-          <option value="">All countries</option>
-          <option v-for="country in countries" :key="country" :value="country">
-            {{ country }}
-          </option>
-        </select>
+        <div class="col-md-6">
+          <label class="form-label" for="country-filter">Filter by country</label>
+          <select id="country-filter" v-model="selectedCountry" class="form-select">
+            <option value="">All countries</option>
+            <option v-for="country in countries" :key="country" :value="country">
+              {{ country }}
+            </option>
+          </select>
+        </div>
       </div>
 
       <p v-if="displayedRoutes.length === 0" class="routes-message mb-0">
