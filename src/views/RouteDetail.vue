@@ -3,16 +3,14 @@ import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
+import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
 import ReviewSummary from '../components/reviews/ReviewSummary.vue'
 import ReviewForm from '../components/reviews/ReviewForm.vue'
 
-// TEMPORARY: the test user's id until sign-in is connected. Saving only
-// works while the browser is signed in as this user (database security rule).
-const TEST_USER_ID = '835bf45f-2467-4567-95ad-4b99a2cbfe3c'
-
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
+const auth = useAuthStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -211,11 +209,16 @@ async function reloadRoute() {
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
             <ReviewForm
+              v-if="auth.isLoggedIn"
               :route="route"
-              :user-id="TEST_USER_ID"
+              :user-id="auth.user.id"
               @saved="reloadRoute"
               @deleted="reloadRoute"
             />
+            <p v-else class="alert alert-secondary">
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+              to leave a review.
+            </p>
             <p v-if="reviewsStore.loadError" role="alert">
               Unable to load reviews: {{ reviewsStore.loadError }}
             </p>
