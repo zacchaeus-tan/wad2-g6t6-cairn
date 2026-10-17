@@ -5,6 +5,11 @@ import { fetchRouteById } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
 import ReviewSummary from '../components/reviews/ReviewSummary.vue'
+import ReviewForm from '../components/reviews/ReviewForm.vue'
+
+// TEMPORARY: the test user's id until sign-in is connected. Saving only
+// works while the browser is signed in as this user (database security rule).
+const TEST_USER_ID = '835bf45f-2467-4567-95ad-4b99a2cbfe3c'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -73,9 +78,22 @@ onMounted(async () => {
   }
 
   if (route.value) {
-    await reviewsStore.fetchForRoute(routeParams.params.id)
+    await Promise.all([
+      reviewsStore.fetchForRoute(routeParams.params.id),
+      reviewsStore.fetchCategories(),
+    ])
   }
 })
+
+// After a review is saved or deleted, reload the route so its community
+// stats (average rating, effective difficulty, hazard) show the new values.
+async function reloadRoute() {
+  try {
+    route.value = await fetchRouteById(routeParams.params.id)
+  } catch (err) {
+    console.warn('Could not reload the route after a review change:', err)
+  }
+}
 </script>
 
 <template>
@@ -192,8 +210,14 @@ onMounted(async () => {
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
-            <p v-if="reviewsStore.error" role="alert">
-              Unable to load reviews: {{ reviewsStore.error }}
+            <ReviewForm
+              :route="route"
+              :user-id="TEST_USER_ID"
+              @saved="reloadRoute"
+              @deleted="reloadRoute"
+            />
+            <p v-if="reviewsStore.loadError" role="alert">
+              Unable to load reviews: {{ reviewsStore.loadError }}
             </p>
             <ReviewList v-else :reviews="reviewsStore.reviews" />
           </div>

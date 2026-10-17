@@ -14,7 +14,7 @@ const divergence = computed(() => {
 </script>
 
 <template>
-  <p v-if="divergence !== 0">
+  <p v-if="divergence !== 0" class="alert alert-info small">
     Hikers rate this route
     {{ divergence > 0 ? 'harder' : 'easier' }} than its official
     {{ difficultyLabel(route.official_difficulty) }} grade. Effective difficulty is now
