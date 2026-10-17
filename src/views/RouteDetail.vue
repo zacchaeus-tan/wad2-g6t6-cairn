@@ -2,8 +2,15 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById } from '../controller/routesController'
+import { useReviewsStore } from '../controller/reviewsStore'
+import { useAuthStore } from '@/controller/authStore'
+import ReviewList from '../components/reviews/ReviewList.vue'
+import ReviewSummary from '../components/reviews/ReviewSummary.vue'
+import ReviewForm from '../components/reviews/ReviewForm.vue'
 
 const routeParams = useRoute()
+const reviewsStore = useReviewsStore()
+const auth = useAuthStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -67,7 +74,24 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  if (route.value) {
+    await Promise.all([
+      reviewsStore.fetchForRoute(routeParams.params.id),
+      reviewsStore.fetchCategories(),
+    ])
+  }
 })
+
+// After a review is saved or deleted, reload the route so its community
+// stats (average rating, effective difficulty, hazard) show the new values.
+async function reloadRoute() {
+  try {
+    route.value = await fetchRouteById(routeParams.params.id)
+  } catch (err) {
+    console.warn('Could not reload the route after a review change:', err)
+  }
+}
 </script>
 
 <template>
@@ -177,6 +201,28 @@ onMounted(async () => {
                 <dd>{{ formatValue(route.community_hazard_note) }}</dd>
               </div>
             </dl>
+          </div>
+        </section>
+
+        <section class="col-12" aria-labelledby="route-reviews-title">
+          <div class="route-detail-section">
+            <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
+            <ReviewSummary :route="route" />
+            <ReviewForm
+              v-if="auth.isLoggedIn"
+              :route="route"
+              :user-id="auth.user.id"
+              @saved="reloadRoute"
+              @deleted="reloadRoute"
+            />
+            <p v-else class="alert alert-secondary">
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+              to leave a review.
+            </p>
+            <p v-if="reviewsStore.loadError" role="alert">
+              Unable to load reviews: {{ reviewsStore.loadError }}
+            </p>
+            <ReviewList v-else :reviews="reviewsStore.reviews" />
           </div>
         </section>
       </div>
