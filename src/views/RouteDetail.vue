@@ -2,16 +2,15 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById } from '../controller/routesController'
-import { fetchReviewsForRoute } from '../controller/reviewsController'
+import { useReviewsStore } from '../controller/reviewsStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
 import ReviewSummary from '../components/reviews/ReviewSummary.vue'
 
 const routeParams = useRoute()
+const reviewsStore = useReviewsStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
-const reviews = ref([])
-const reviewsError = ref('')
 
 const difficultyLabels = {
   1: 'Easy',
@@ -63,16 +62,6 @@ function formatCompletionRate(value) {
     : value
 }
 
-async function loadReviews() {
-  try {
-    reviews.value = await fetchReviewsForRoute(routeParams.params.id)
-    reviewsError.value = ''
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    reviewsError.value = `Unable to load reviews: ${message}`
-  }
-}
-
 onMounted(async () => {
   try {
     route.value = await fetchRouteById(routeParams.params.id)
@@ -84,7 +73,7 @@ onMounted(async () => {
   }
 
   if (route.value) {
-    await loadReviews()
+    await reviewsStore.fetchForRoute(routeParams.params.id)
   }
 })
 </script>
@@ -203,8 +192,10 @@ onMounted(async () => {
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
-            <p v-if="reviewsError" role="alert">{{ reviewsError }}</p>
-            <ReviewList v-else :reviews="reviews" />
+            <p v-if="reviewsStore.error" role="alert">
+              Unable to load reviews: {{ reviewsStore.error }}
+            </p>
+            <ReviewList v-else :reviews="reviewsStore.reviews" />
           </div>
         </section>
       </div>
