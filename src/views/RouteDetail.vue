@@ -7,6 +7,9 @@ import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
 import ReviewSummary from '../components/reviews/ReviewSummary.vue'
 import ReviewForm from '../components/reviews/ReviewForm.vue'
+import { generateItinerary } from '../controller/itineraryController'
+import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
+import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -14,6 +17,23 @@ const auth = useAuthStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
+
+const itinerary = ref(null)
+const itineraryLoading = ref(false)
+const itineraryError = ref('')
+
+async function onGenerate(form) {
+  itineraryLoading.value = true
+  itineraryError.value = ''
+  try {
+    itinerary.value = await generateItinerary(route.value, form)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    itineraryError.value = `Unable to generate an itinerary: ${message}`
+  } finally {
+    itineraryLoading.value = false
+  }
+}
 
 const difficultyLabels = {
   1: 'Easy',
@@ -44,6 +64,14 @@ function formatBoolean(value) {
   }
 
   return value ? 'Required' : 'Not required'
+}
+
+function formatYesNo(value) {
+  if (value == null) {
+    return 'Not listed'
+  }
+
+  return value ? 'Yes' : 'No'
 }
 
 function formatDuration(value) {
@@ -134,7 +162,7 @@ async function reloadRoute() {
               </div>
               <div>
                 <dt>Multiday route</dt>
-                <dd>{{ formatBoolean(route.is_multiday) }}</dd>
+                <dd>{{ formatYesNo(route.is_multiday) }}</dd>
               </div>
               <div>
                 <dt>Permit</dt>
@@ -201,6 +229,52 @@ async function reloadRoute() {
                 <dd>{{ formatValue(route.community_hazard_note) }}</dd>
               </div>
             </dl>
+          </div>
+        </section>
+
+        <section class="col-12" aria-labelledby="itinerary-title">
+          <div class="route-detail-section">
+            <h2 id="itinerary-title" class="h4 mb-2">Plan your itinerary</h2>
+            <p class="mb-4">
+              Choose when you're starting, how many days you have and your pace, and we'll suggest
+              a day-by-day plan.
+            </p>
+
+            <ItineraryForm
+              v-if="auth.isLoggedIn"
+              :route="route"
+              :loading="itineraryLoading"
+              @generate="onGenerate"
+            />
+            <p v-else class="alert alert-secondary mb-0">
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+              to generate an itinerary.
+            </p>
+
+            <p v-if="itineraryError" class="alert alert-danger mt-4 mb-0" role="alert">
+              {{ itineraryError }}
+            </p>
+
+            <template v-if="itinerary">
+              <p v-if="itinerary.summary" class="lead mt-4">{{ itinerary.summary }}</p>
+
+              <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
+                <div v-for="day in itinerary.days" :key="day.day" class="col">
+                  <ItineraryDay :day="day" />
+                </div>
+              </div>
+
+              <template v-if="itinerary.tips && itinerary.tips.length">
+                <h3 class="h5 mt-4">Tips</h3>
+                <ul>
+                  <li v-for="tip in itinerary.tips" :key="tip">{{ tip }}</li>
+                </ul>
+              </template>
+
+              <p class="small text-body-secondary mt-3 mb-0">
+                AI-generated. Check trail conditions, weather and permits before you hike.
+              </p>
+            </template>
           </div>
         </section>
 
