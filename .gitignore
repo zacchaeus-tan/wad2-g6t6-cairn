@@ -42,3 +42,6 @@ test-results/
 playwright-report/
 
 .env
+
+# Supabase CLI
+supabase/.temp/
