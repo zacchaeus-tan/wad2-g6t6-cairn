@@ -1,0 +1,6 @@
+# Edge functions are written in plain JavaScript, so point the CLI at index.js
+# (it looks for index.ts by default). verify_jwt is left on, so only
+# signed-in users can call the function.
+[functions.generate-itinerary]
+entrypoint = "./functions/generate-itinerary/index.js"
+verify_jwt = true
