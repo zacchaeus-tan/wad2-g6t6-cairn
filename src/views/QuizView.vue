@@ -4,6 +4,7 @@ import { RouterLink,useRouter } from 'vue-router'
 import { useAuthStore } from '@/controller/authStore'
 
 const auth = useAuthStore()
+const saved = ref(false)
 const router = useRouter()
 
 const hikingDuration = [
@@ -28,24 +29,27 @@ const hikeTypes = [
   { val: 'summit', desc: 'Summit hikes' },
 ]
 
-const answers = ref({
-  hikingDuration: '<1',
+// Default answers — used for new users and for any profile field that is null
+const defaultAnswers = {
+  hikingDuration: '0',
   hikeTypes: [],
-  experienceLevel: 'occasional',
-  longestDistanceKm: 10,
-  highestAltitudeM: 1000,
+  experienceLevel: 'beginner',
+  longestDistanceKm: 0,
+  highestAltitudeM: 0,
   goalsText: '',
-})
+}
+
+const answers = ref({ ...defaultAnswers, hikeTypes: [...defaultAnswers.hikeTypes] })
 
 function loadFromProfile() {
   if (!auth.profile) return
   answers.value = {
-    hikingDuration: auth.profile.hiking_duration || '<1',
-    hikeTypes: auth.profile.hike_types || [],
-    experienceLevel: auth.profile.experience_level || 'occasional',
-    longestDistanceKm: auth.profile.longest_distance_km ?? 10,
-    highestAltitudeM: auth.profile.highest_altitude_m ?? 1000,
-    goalsText: auth.profile.goals_text || '',
+    hikingDuration: auth.profile.hiking_duration ?? defaultAnswers.hikingDuration,
+    hikeTypes: auth.profile.hike_types ?? [...defaultAnswers.hikeTypes],
+    experienceLevel: auth.profile.experience_level ?? defaultAnswers.experienceLevel,
+    longestDistanceKm: auth.profile.longest_distance_km ?? defaultAnswers.longestDistanceKm,
+    highestAltitudeM: auth.profile.highest_altitude_m ?? defaultAnswers.highestAltitudeM,
+    goalsText: auth.profile.goals_text ?? defaultAnswers.goalsText,
   }
 }
 
@@ -53,8 +57,10 @@ onMounted(loadFromProfile)
 watch(() => auth.profile, loadFromProfile)
 
 async function submit() {
+  saved.value = false
   const result = await auth.saveQuiz(answers.value)
-  router.push('/profile')
+  saved.value = result.success
+  if (result.success) setTimeout(() => router.push('/profile'), 2000)
 }
 </script>
 
@@ -70,7 +76,7 @@ async function submit() {
       <div class="mb-3">
         <label class="form-label" for="duration">How long have you been hiking?</label>
         <select id="duration" v-model="answers.hikingDuration" class="form-select">
-          <option v-for="option in hikingDuration" :key="option.val" :value="option.val">
+          <option v-for="option in hikingDuration" :key="option.val" :value="option.val" >
             {{ option.desc }}
           </option>
         </select>
@@ -111,6 +117,7 @@ async function submit() {
       <button class="btn btn-success" :disabled="auth.loading" type="submit">Save answers</button>
     </form>
 
+    <div v-if="saved" class="alert alert-success mt-3">Saved.</div>
     <div v-if="auth.error" class="alert alert-danger mt-3">{{ auth.error }}</div>
   </div>
 </template>
