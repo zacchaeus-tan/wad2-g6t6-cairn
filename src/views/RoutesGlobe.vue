@@ -16,6 +16,38 @@ const baseTilesUrl = maptilerKey
   ? `https://api.maptiler.com/tiles/v3/tiles.json?key=${maptilerKey}`
   : 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json'
 
+// Raster tiles are declared at half their real pixel size so the map fetches one zoom level
+// deeper than usual. That gives one image pixel per screen pixel on high-DPI (retina) screens
+// instead of stretching each image pixel over four, which made the photos look blurry.
+// Satellite photos for the Google Earth-style view; Esri's free imagery if no MapTiler key is set
+const satelliteSource = maptilerKey
+  ? {
+      type: 'raster',
+      url: `https://api.maptiler.com/tiles/satellite-v2/tiles.json?key=${maptilerKey}`,
+      tileSize: 256,
+    }
+  : {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 128,
+      maxzoom: 19,
+      attribution: 'Imagery &copy; Esri',
+    }
+
+// NASA's Blue Marble (with sea-floor shading) for the bright, blue zoomed-out globe like Google Earth.
+// Its tiles stop at zoom 8, so it fades into the sharper satellite photos above as you zoom in.
+const blueMarbleSource = {
+  type: 'raster',
+  tiles: [
+    'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg',
+  ],
+  tileSize: 128,
+  maxzoom: 8,
+  attribution: 'Imagery &copy; NASA',
+}
+
 // The globe view used once the user starts exploring, centred on our routes in Southeast Asia
 const exploreView = { center: [119, 9], zoom: 2.5 }
 const introMinimumMs = 2200
@@ -33,6 +65,7 @@ const mapError = ref('')
 // 'intro' while loading, 'hero' shows the dim spinning globe, 'explore' lets the user interact
 const phase = ref('intro')
 const mapReady = ref(false)
+const satelliteView = ref(true)
 const introTimeDone = ref(false)
 const titleLetters = 'CAIRN'.split('')
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -327,18 +360,98 @@ function popupOffset(offsetY = 0) {
   }
 }
 
+// The route's line as screen points, filled in every few pixels so a long straight
+// segment still counts as crossing the card
+function routeScreenPoints(routeId) {
+  const route = routesWithGeometry.value.find((item) => item.id === routeId)
+  if (!route) {
+    return []
+  }
+
+  const lines =
+    route.geometry.type === 'LineString' ? [route.geometry.coordinates] : route.geometry.coordinates
+  const points = []
+  for (const line of lines) {
+    const projected = line.map((position) => globeView.project(position))
+    projected.forEach((point, index) => {
+      points.push(point)
+      const next = projected[index + 1]
+      if (!next) {
+        return
+      }
+      const steps = Math.floor(Math.hypot(next.x - point.x, next.y - point.y) / 8)
+      for (let step = 1; step < steps; step++) {
+        const t = step / steps
+        points.push({ x: point.x + (next.x - point.x) * t, y: point.y + (next.y - point.y) * t })
+      }
+    })
+  }
+  return points
+}
+
+// Where the card would sit on screen for each anchor (the anchor is the card's side touching the pill)
+function cardRectForAnchor(anchor, pill, width, height, offsetY) {
+  const [dx, dy] = popupOffset(offsetY)[anchor]
+  const x = pill.x + dx
+  const y = pill.y + dy
+  const left = anchor.includes('left') ? x : anchor.includes('right') ? x - width : x - width / 2
+  const top = anchor.startsWith('top') ? y : anchor.startsWith('bottom') ? y - height : y - height / 2
+  return { left, top, right: left + width, bottom: top + height }
+}
+
+// Picks the side of the pill that covers the least of the route's line,
+// preferring above the pill and then sides that keep the card inside the map
+function anchorAwayFromRoute(routeId, lngLat, width, height, offsetY = 0) {
+  const pill = globeView.project(lngLat)
+  const points = routeScreenPoints(routeId)
+  const canvas = globeView.getCanvas()
+  const mapWidth = canvas.clientWidth
+  const mapHeight = canvas.clientHeight
+  const anchors = ['bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right']
+
+  let bestAnchor = 'bottom'
+  let bestScore = Infinity
+  for (const anchor of anchors) {
+    const rect = cardRectForAnchor(anchor, pill, width, height, offsetY)
+    const covered = points.filter(
+      (point) =>
+        point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom,
+    ).length
+    const offScreen = rect.left < 0 || rect.top < 0 || rect.right > mapWidth || rect.bottom > mapHeight
+    // Going off screen is worse than covering a little of the line
+    const score = covered + (offScreen ? 50 : 0)
+    if (score < bestScore) {
+      bestScore = score
+      bestAnchor = anchor
+    }
+  }
+  return bestAnchor
+}
+
+// Adds the card once to measure it, then places it on the side away from its route
+function addRouteCardPopup(options, content, properties, lngLat) {
+  const measuringPopup = new Popup(options).setLngLat(lngLat).setDOMContent(content).addTo(globeView)
+  const { width, height } = measuringPopup.getElement().getBoundingClientRect()
+  measuringPopup.remove()
+
+  const anchor = anchorAwayFromRoute(properties.routeId, lngLat, width, height, properties.stackOffsetY)
+  return new Popup({ ...options, anchor }).setLngLat(lngLat).setDOMContent(content).addTo(globeView)
+}
+
 function showHoverPopup(properties, lngLat) {
   hoverPopup?.remove()
-  hoverPopup = new Popup({
-    className: 'route-card-popup',
-    closeButton: false,
-    closeOnClick: false,
-    maxWidth: '380px',
-    offset: popupOffset(properties.stackOffsetY),
-  })
-    .setLngLat(lngLat)
-    .setDOMContent(buildRouteCard(properties))
-    .addTo(globeView)
+  hoverPopup = addRouteCardPopup(
+    {
+      className: 'route-card-popup',
+      closeButton: false,
+      closeOnClick: false,
+      maxWidth: '380px',
+      offset: popupOffset(properties.stackOffsetY),
+    },
+    buildRouteCard(properties),
+    properties,
+    lngLat,
+  )
 }
 
 function hideHoverPopup() {
@@ -362,15 +475,17 @@ function showRoutePopup(properties, lngLat) {
   pinnedRouteId = properties.routeId
   showRouteGeometry(pinnedRouteId)
   // Stays open (keeping its route highlighted) until the user clicks its close button
-  const popup = new Popup({
-    className: 'route-card-popup',
-    closeOnClick: false,
-    maxWidth: '380px',
-    offset: popupOffset(properties.stackOffsetY),
-  })
-    .setLngLat(lngLat)
-    .setDOMContent(content)
-    .addTo(globeView)
+  const popup = addRouteCardPopup(
+    {
+      className: 'route-card-popup',
+      closeOnClick: false,
+      maxWidth: '380px',
+      offset: popupOffset(properties.stackOffsetY),
+    },
+    content,
+    properties,
+    lngLat,
+  )
   // Hide this route's line again once its card closes
   popup.on('close', () => {
     if (pinnedRouteId === properties.routeId) {
@@ -569,6 +684,108 @@ function addGlobeBaseLayers() {
   })
 }
 
+// Drawn over the map's filled areas (land, water, buildings) but under its roads, borders and
+// place names, like Google Earth's labels layer. Shown or hidden by applyMapType().
+function addSatelliteLayers() {
+  globeView.addSource('satellite', satelliteSource)
+  globeView.addSource('blue-marble', blueMarbleSource)
+  const layers = globeView.getStyle().layers
+  const areaTypes = ['background', 'fill', 'fill-extrusion', 'hillshade', 'raster']
+  const lastAreaIndex = layers.findLastIndex((layer) => areaTypes.includes(layer.type))
+  const firstLineLayerId = layers[lastAreaIndex + 1]?.id
+  globeView.addLayer({ id: 'satellite', type: 'raster', source: 'satellite' }, firstLineLayerId)
+  globeView.addLayer(
+    {
+      id: 'blue-marble',
+      type: 'raster',
+      source: 'blue-marble',
+      paint: {
+        'raster-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0],
+        'raster-brightness-min': 0.14,
+        'raster-saturation': 0.3,
+      },
+    },
+    firstLineLayerId,
+  )
+}
+
+// Satellite replaces the flat-coloured globe at every zoom, like Google Earth.
+// Map mode keeps the flat colours.
+function applyMapType(showSatellite) {
+  if (!globeView?.getLayer('satellite')) {
+    return
+  }
+  for (const layerId of ['satellite', 'blue-marble', 'clouds']) {
+    // The clouds load separately, so they may not be on the map yet
+    if (globeView.getLayer(layerId)) {
+      globeView.setLayoutProperty(layerId, 'visibility', showSatellite ? 'visible' : 'none')
+    }
+  }
+  for (const layerId of ['globe-land', 'globe-ocean', 'globe-borders']) {
+    globeView.setLayoutProperty(layerId, 'visibility', showSatellite ? 'none' : 'visible')
+  }
+}
+
+// NASA's cloud picture (public/clouds.jpg) is white clouds on black, stretched evenly from pole to
+// pole. The map needs it in the Web Mercator projection with see-through gaps between clouds.
+async function addCloudLayer() {
+  const image = new Image()
+  image.src = '/clouds.jpg'
+  await image.decode()
+
+  // Copy one row at a time into the Mercator position for that latitude
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.width
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  for (let y = 0; y < canvas.height; y++) {
+    const mercatorY = Math.PI * (1 - (2 * (y + 0.5)) / canvas.height)
+    const latitude = (Math.atan(Math.sinh(mercatorY)) * 180) / Math.PI
+    const sourceY = ((90 - latitude) / 180) * image.height
+    context.drawImage(image, 0, sourceY, image.width, 1, 0, y, canvas.width, 1)
+  }
+
+  // Brighter pixels are thicker cloud: make every pixel white and use its brightness as opacity
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    pixels.data[i + 3] = pixels.data[i]
+    pixels.data[i] = 255
+    pixels.data[i + 1] = 255
+    pixels.data[i + 2] = 255
+  }
+  context.putImageData(pixels, 0, 0)
+
+  // The map may have been closed while the picture was loading
+  if (!globeView?.getStyle()) {
+    return
+  }
+  const mercatorEdge = 85.051129
+  globeView.addSource('clouds', {
+    type: 'image',
+    url: canvas.toDataURL(),
+    coordinates: [
+      [-180, mercatorEdge],
+      [180, mercatorEdge],
+      [180, -mercatorEdge],
+      [-180, -mercatorEdge],
+    ],
+  })
+  globeView.addLayer(
+    {
+      id: 'clouds',
+      type: 'raster',
+      source: 'clouds',
+      layout: { visibility: satelliteView.value ? 'visible' : 'none' },
+      // Clouds fade away as you zoom in, so they never hide the trails
+      paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.9, 4.5, 0] },
+    },
+    // Keep the clouds under the routes even if the routes were added first
+    globeView.getLayer('route-casing') ? 'route-casing' : undefined,
+  )
+}
+
+watch(satelliteView, applyMapType)
+
 function setMapInteraction(enabled) {
   const handlers = [
     globeView.scrollZoom,
@@ -690,7 +907,7 @@ onMounted(async () => {
     })
     globeView.once('style.load', () => {
       globeView.setProjection({ type: 'globe' })
-      // No glow around the globe, so it sits cleanly on the dark background
+      // No glow around the globe, so it sits cleanly on the background
       globeView.setSky({ 'atmosphere-blend': 0 })
       // Force English labels on the Carto fallback only, so MapTiler keeps its peak heights in labels
       for (const layer of maptilerKey ? [] : globeView.getStyle().layers) {
@@ -714,7 +931,10 @@ onMounted(async () => {
           globeView.setLayerZoomRange(layer.id, Math.max(layer.minzoom ?? 0, 4), layer.maxzoom ?? 24)
         }
       }
+      addSatelliteLayers()
       addGlobeBaseLayers()
+      applyMapType(satelliteView.value)
+      addCloudLayer()
       routeOverlayReady = true
       updateRouteLayer()
     })
@@ -746,7 +966,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="globe-page"
-    :class="`is-${phase}`"
+    :class="[`is-${phase}`, { 'is-satellite': satelliteView }]"
     @wheel.passive="onWheel"
     @touchstart.passive="onTouchStart"
     @touchmove.passive="onTouchMove"
@@ -814,6 +1034,27 @@ onBeforeUnmount(() => {
         <li><span class="legend-swatch difficulty-hard"></span>Hard</li>
         <li><span class="legend-swatch difficulty-strenuous"></span>Strenuous</li>
       </ul>
+
+      <div class="btn-group btn-group-sm mt-3" role="group" aria-label="Map type">
+        <button
+          type="button"
+          class="btn"
+          :class="satelliteView ? 'btn-outline-light' : 'btn-light'"
+          :aria-pressed="!satelliteView"
+          @click="satelliteView = false"
+        >
+          Map
+        </button>
+        <button
+          type="button"
+          class="btn"
+          :class="satelliteView ? 'btn-light' : 'btn-outline-light'"
+          :aria-pressed="satelliteView"
+          @click="satelliteView = true"
+        >
+          Satellite
+        </button>
+      </div>
     </aside>
   </div>
 </template>
@@ -832,6 +1073,27 @@ onBeforeUnmount(() => {
 
 .globe-page.is-explore {
   background: #000000;
+}
+
+/* Scattered stars behind the satellite globe. Each layer of dots repeats at a different
+   size so the pattern doesn't look like a grid. */
+.globe-page.is-explore.is-satellite {
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, #ffffff, transparent),
+    radial-gradient(1px 1px at 140px 90px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 230px 170px, #ffffff, transparent),
+    radial-gradient(1px 1px at 310px 40px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 90px 240px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 270px 280px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 360px 200px, rgba(255, 255, 255, 0.4), transparent);
+  background-size:
+    380px 320px,
+    430px 390px,
+    510px 470px,
+    350px 410px,
+    460px 350px,
+    560px 520px,
+    400px 440px;
 }
 
 .globe-surface {
