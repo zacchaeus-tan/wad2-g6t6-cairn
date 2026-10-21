@@ -77,9 +77,6 @@ const hikeStats = [
             <span class="badge bg-secondary text-capitalize">
               {{ auth.profile.experience_level || 'Experience not set' }}
             </span>
-            <!-- <span v-if="auth.profile.fitness_score != null" class="badge bg-success">
-              Fitness {{ auth.profile.fitness_score }} / 100
-            </span> -->
           </div>
           <p v-if="auth.profile.about" class="small mb-0" style="white-space: pre-line">{{ auth.profile.about }}</p>
         </div>

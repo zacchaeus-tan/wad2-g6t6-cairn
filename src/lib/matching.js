@@ -9,7 +9,7 @@ const STRETCH_FACTOR = 1.25
 // (CDC Yellow Book; Wilderness Medical Society guidelines).
 const AMS_ALTITUDE_M = 2500
 
-// Day < overnight < multiday, matching the quiz's longest_trek_days (1, 2 or 3).
+// Day < overnight < multiday
 // Having done a longer trip covers the shorter ones.
 const TRIP_TYPE_DAYS = { day: 1, overnight: 2, multiday: 3 }
 
