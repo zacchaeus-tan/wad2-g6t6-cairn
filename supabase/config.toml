@@ -4,3 +4,9 @@
 [functions.generate-itinerary]
 entrypoint = "./functions/generate-itinerary/index.js"
 verify_jwt = true
+
+# Recomputes a route's community stats after a review changes. Only signed-in
+# users can leave reviews, so verify_jwt stays on here too.
+[functions.recalc-route-stats]
+entrypoint = "./functions/recalc-route-stats/index.js"
+verify_jwt = true
