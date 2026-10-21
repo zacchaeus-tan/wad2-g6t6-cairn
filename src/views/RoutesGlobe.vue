@@ -64,6 +64,7 @@ const error = ref('')
 const mapError = ref('')
 // 'intro' while loading, 'hero' shows the dim spinning globe, 'explore' lets the user interact
 const phase = ref('intro')
+const styleReady = ref(false)
 const mapReady = ref(false)
 const satelliteView = ref(true)
 const introTimeDone = ref(false)
@@ -874,6 +875,26 @@ function onKeydown(event) {
   }
 }
 
+// The steps the intro loading bar fills up with; a failed step counts as done so the bar still finishes
+const loadingSteps = computed(() => [
+  { label: 'Building the globe', done: styleReady.value || Boolean(mapError.value) },
+  { label: 'Fetching routes', done: !loading.value },
+  { label: 'Loading map imagery', done: mapReady.value || Boolean(mapError.value) },
+])
+
+const loadingProgress = computed(() => {
+  const doneCount = loadingSteps.value.filter((step) => step.done).length
+  return Math.round((doneCount / loadingSteps.value.length) * 100)
+})
+
+const loadingMessage = computed(() => {
+  const nextStep = loadingSteps.value.find((step) => !step.done)
+  if (nextStep) {
+    return `${nextStep.label}...`
+  }
+  return error.value ? 'Ready' : `Ready: ${routes.value.length} routes found`
+})
+
 // Leave the intro once routes and globe are ready and the title animation has had time to play
 watch([loading, mapReady, mapError, introTimeDone], () => {
   const globeSettled = mapReady.value || Boolean(mapError.value)
@@ -937,6 +958,7 @@ onMounted(async () => {
       addCloudLayer()
       routeOverlayReady = true
       updateRouteLayer()
+      styleReady.value = true
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -992,10 +1014,21 @@ onBeforeUnmount(() => {
       </h1>
       <p class="globe-tagline">Find your next trail, anywhere on Earth</p>
 
-      <p v-if="phase === 'intro'" class="globe-loading" role="status">
-        Loading routes<span class="globe-loading-dot">.</span
-        ><span class="globe-loading-dot">.</span><span class="globe-loading-dot">.</span>
-      </p>
+      <div v-if="phase === 'intro'" class="globe-loading">
+        <div
+          class="progress"
+          role="progressbar"
+          aria-label="Loading routes"
+          :aria-valuenow="loadingProgress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <div class="progress-bar" :style="{ width: `${loadingProgress}%` }"></div>
+        </div>
+        <p class="globe-loading-text" role="status">
+          {{ loadingMessage }} <span class="globe-loading-percent">{{ loadingProgress }}%</span>
+        </p>
+      </div>
       <button v-else type="button" class="globe-scroll-cue" @click="startExploring">
         Scroll to explore
         <span class="globe-scroll-arrow" aria-hidden="true">&darr;</span>
@@ -1161,22 +1194,28 @@ onBeforeUnmount(() => {
 }
 
 .globe-loading {
+  width: min(18rem, 80vw);
   margin: 2.5rem 0 0;
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.9rem;
   letter-spacing: 0.1em;
 }
 
-.globe-loading-dot {
-  animation: dot-pulse 1.2s ease-in-out infinite;
+/* Thin bar on the dark intro, using Bootstrap's progress variables */
+.globe-loading .progress {
+  --bs-progress-height: 4px;
+  --bs-progress-bg: rgba(255, 255, 255, 0.15);
+  --bs-progress-bar-bg: #ffffff;
+  --bs-progress-bar-transition: width 0.6s ease;
 }
 
-.globe-loading-dot:nth-child(2) {
-  animation-delay: 0.2s;
+.globe-loading-text {
+  margin: 0.75rem 0 0;
 }
 
-.globe-loading-dot:nth-child(3) {
-  animation-delay: 0.4s;
+.globe-loading-percent {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .globe-scroll-cue {
@@ -1220,16 +1259,6 @@ onBeforeUnmount(() => {
     opacity: 0;
   }
   to {
-    opacity: 1;
-  }
-}
-
-@keyframes dot-pulse {
-  0%,
-  100% {
-    opacity: 0.2;
-  }
-  50% {
     opacity: 1;
   }
 }
@@ -1417,7 +1446,6 @@ onBeforeUnmount(() => {
   .globe-tagline,
   .globe-scroll-cue,
   .globe-scroll-arrow,
-  .globe-loading-dot,
   .globe-panel {
     animation: none;
     opacity: 1;
