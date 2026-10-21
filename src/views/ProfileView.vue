@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/controller/authStore'
 import { genderLabels } from '@/lib/countries'
+import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
 
 // the router guard only lets signed-in users reach this page
 const auth = useAuthStore()
@@ -27,16 +28,22 @@ const initials = computed(() =>
     .join(''),
 )
 
-// what the user told us in the quiz; null means they haven't answered yet
-const experienceStats = computed(() => {
-  const p = auth.profile
-  if (!p) return []
-  return [
-    { label: 'Longest distance', value: p.longest_distance_km, unit: 'km' },
-    { label: 'Max elevation gain', value: p.max_elevation_gain_m, unit: 'm' },
-    { label: 'Highest altitude', value: p.highest_altitude_m, unit: 'm' },
-  ]
-})
+// what the user told us in the quiz, shown as the option they picked; null means not answered
+const statLabels = {
+  longest_distance_km: 'Longest distance',
+  max_elevation_gain_m: 'Max elevation gain',
+  highest_altitude_m: 'Highest altitude',
+  longest_trek_days: 'Longest trek',
+}
+
+const experienceStats = computed(() =>
+  quizQuestions
+    .filter((question) => statLabels[question.column])
+    .map((question) => ({
+      label: statLabels[question.column],
+      value: quizAnswer(auth.profile, question)?.desc ?? null,
+    })),
+)
 
 // placeholder: there's no hike log table yet, so these always show "—"
 const hikeStats = [
@@ -84,18 +91,15 @@ const hikeStats = [
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h2 class="h6 text-muted text-uppercase mb-0">Your experience</h2>
         <RouterLink class="btn btn-sm btn-outline-primary" :to="{ name: 'quiz' }">
-          {{ auth.profile.fitness_score != null ? 'Retake quiz' : 'Take the quiz' }}
+          {{ auth.profile.quiz_completed_at ? 'Retake quiz' : 'Take the quiz' }}
         </RouterLink>
       </div>
       <div class="row g-3 mb-4">
-        <div v-for="stat in experienceStats" :key="stat.label" class="col-12 col-sm-4">
+        <div v-for="stat in experienceStats" :key="stat.label" class="col-6 col-md-3">
           <div class="card h-100 text-center">
             <div class="card-body">
               <div class="small text-muted">{{ stat.label }}</div>
-              <div class="h4 mb-0">
-                <template v-if="stat.value != null">{{ stat.value }} <span class="fs-6">{{ stat.unit }}</span></template>
-                <template v-else>—</template>
-              </div>
+              <div class="h6 mb-0">{{ stat.value ?? '—' }}</div>
             </div>
           </div>
         </div>

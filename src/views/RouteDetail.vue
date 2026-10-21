@@ -57,11 +57,11 @@ const verdictClasses = {
 }
 
 const ruleLabels = {
+  difficulty: 'Difficulty',
   distance: 'Distance',
   elevation_gain: 'Elevation gain',
   altitude: 'Altitude',
   trip_type: 'Trip length',
-  summit: 'Summit',
 }
 
 const statusBadges = {
