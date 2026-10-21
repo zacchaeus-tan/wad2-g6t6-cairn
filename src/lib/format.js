@@ -38,7 +38,7 @@ export function hazardClass(level) {
   return { elevated: 'bg-danger', moderate: 'bg-warning text-dark', low: 'bg-secondary' }[level] || 'bg-secondary'
 }
 
-// Open-Meteo weather codes (the WMO standard) in words
+// Open-Meteo weather codes from API Doc
 const WEATHER_LABELS = {
   0: 'Clear sky',
   1: 'Mainly clear',
