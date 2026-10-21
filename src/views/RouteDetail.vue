@@ -315,6 +315,24 @@ async function reloadRoute() {
 <style scoped>
 .route-detail-page {
   max-width: 1200px;
+  animation: page-fade-in 0.5s ease;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-detail-page {
+    animation: none;
+  }
 }
 
 .back-link {

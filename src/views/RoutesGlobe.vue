@@ -1,9 +1,9 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
+import { LngLatBounds, Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useRouter } from 'vue-router'
-import { fetchRoutes } from '../controller/routesController'
+import { fetchRouteGeometry, fetchRouteSummaries } from '../controller/routesController'
 
 const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
 // MapTiler Outdoor shows peaks, contours, huts and trails; fall back to Carto if no key is set
@@ -51,10 +51,31 @@ const blueMarbleSource = {
 // The globe view used once the user starts exploring, centred on our routes in Southeast Asia
 const exploreView = { center: [119, 9], zoom: 2.5 }
 const introMinimumMs = 2200
+// How long the camera takes to dive onto a route, the longest it then waits for the satellite
+// photos to sharpen, and how long the fade to black takes (matches .globe-route-dive::before)
+const routeDiveMs = 2400
+const routeTileWaitMs = 8000
+const routeFadeMs = 600
 const spinDegreesPerMs = 360 / 150000
 // Route pills closer together than this are stacked so none is hidden behind another
 const stackRadiusMetres = 100
 const stackSpacingPx = 28
+
+// Where the user was last looking, so coming back from a route's page skips the intro and lands
+// in the same spot. sessionStorage works like localStorage but is cleared when the tab closes,
+// so a fresh visit still gets the full intro.
+const savedViewKey = 'cairn-globe-view'
+
+function readSavedView() {
+  try {
+    const view = JSON.parse(sessionStorage.getItem(savedViewKey))
+    return view && Array.isArray(view.center) && Number.isFinite(view.zoom) ? view : null
+  } catch {
+    return null
+  }
+}
+
+const savedView = readSavedView()
 
 const router = useRouter()
 const globeHost = ref(null)
@@ -66,11 +87,16 @@ const mapError = ref('')
 const phase = ref('intro')
 const styleReady = ref(false)
 const mapReady = ref(false)
-const satelliteView = ref(true)
-const introTimeDone = ref(false)
+const satelliteView = ref(savedView?.satellite ?? true)
+// A returning visitor has already seen the title animation, so there's nothing to wait for
+const introTimeDone = ref(Boolean(savedView))
+// Name of the route being opened, shown while the globe dives onto it
+const openingRouteName = ref('')
+const routeDiveFading = ref(false)
 const titleLetters = 'CAIRN'.split('')
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 let introTimer
+let routeDiveTimer
 let spinFrame
 let lastSpinTime
 let touchStartY
@@ -81,9 +107,15 @@ let hoverPopup
 let pinnedRouteId = null
 // Pill labels currently on the map, keyed by cluster or route id
 let markerLabels = new Map()
+// Each route's card details (name, labels, difficulty, stack offset), keyed by route id
+let routeProperties = new Map()
+// Route whose line is drawn or being downloaded to be drawn
+let highlightedRouteId = null
 let routeFetchReady = false
 let routeOverlayReady = false
 let routeInteractionReady = false
+// The outdoor map's own layers drawn under the satellite photos (land, water, hillshade, contours)
+let layersUnderSatellite = []
 
 function isPosition(position) {
   return (
@@ -114,12 +146,40 @@ function hasRenderableGeometry(geometry) {
   )
 }
 
-const routesWithGeometry = computed(() =>
-  routes.value.filter((route) => hasRenderableGeometry(route.geometry)),
-)
-const routesWithoutGeometry = computed(() =>
-  routes.value.filter((route) => !hasRenderableGeometry(route.geometry)),
-)
+// A route's pill sits at its trailhead, which the latitude and longitude columns hold
+function routePosition(route) {
+  const position = [Number(route.longitude), Number(route.latitude)]
+  return route.longitude != null && route.latitude != null && isPosition(position) ? position : null
+}
+
+const routesOnGlobe = computed(() => routes.value.filter((route) => routePosition(route)))
+const routesNotOnGlobe = computed(() => routes.value.filter((route) => !routePosition(route)))
+
+// Each route's line is only downloaded the first time it's needed, then kept by route id.
+// The request itself is kept too, so hovering again mid-download doesn't fetch it twice.
+const routeLineRequests = new Map()
+// Finished downloads: route id -> its line, or null if it has no usable line
+const routeLines = new Map()
+
+function loadRouteLine(routeId) {
+  if (!routeLineRequests.has(routeId)) {
+    routeLineRequests.set(routeId, downloadRouteLine(routeId))
+  }
+  return routeLineRequests.get(routeId)
+}
+
+async function downloadRouteLine(routeId) {
+  try {
+    const geometry = await fetchRouteGeometry(routeId)
+    const line = hasRenderableGeometry(geometry) ? geometry : null
+    routeLines.set(routeId, line)
+    return line
+  } catch {
+    // Forget the failed download so the next hover tries again
+    routeLineRequests.delete(routeId)
+    return null
+  }
+}
 
 function difficultyLevel(route) {
   const value =
@@ -136,17 +196,6 @@ function difficultyLevel(route) {
       : Number(value)
 
   return Number.isFinite(numericValue) ? Math.min(4, Math.max(1, Math.round(numericValue))) : null
-}
-
-function routeMarkerPosition(geometry) {
-  const lines = geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates
-  for (const line of lines) {
-    if (line.length > 0) {
-      return line[0]
-    }
-  }
-
-  return null
 }
 
 function formatRouteDistance(distance) {
@@ -172,9 +221,9 @@ function updateRouteLayer() {
     return
   }
 
-  const lineFeatures = []
   const markerFeatures = []
-  for (const route of routesWithGeometry.value) {
+  routeProperties = new Map()
+  for (const route of routesOnGlobe.value) {
     const difficulty = difficultyLevel(route)
     const properties = {
       routeId: route.id,
@@ -186,31 +235,20 @@ function updateRouteLayer() {
       distanceLabel: formatRouteDistance(route.distance_km),
       ratingLabel: route.avg_rating == null ? '' : Number(route.avg_rating).toFixed(1),
     }
-    lineFeatures.push({
+    routeProperties.set(route.id, properties)
+    markerFeatures.push({
       type: 'Feature',
-      properties: { ...properties, featureType: 'route' },
-      geometry: route.geometry,
+      properties,
+      geometry: {
+        type: 'Point',
+        coordinates: routePosition(route),
+      },
     })
-
-    const position = routeMarkerPosition(route.geometry)
-    if (position) {
-      markerFeatures.push({
-        type: 'Feature',
-        properties: { ...properties, featureType: 'marker' },
-        geometry: {
-          type: 'Point',
-          coordinates: position,
-        },
-      })
-    }
   }
 
+  // Also gives each route's properties its stackOffsetY, which the line's card uses too
   assignMarkerStacks(markerFeatures)
 
-  const lineData = {
-    type: 'FeatureCollection',
-    features: lineFeatures,
-  }
   const markerData = {
     type: 'FeatureCollection',
     features: markerFeatures,
@@ -220,11 +258,12 @@ function updateRouteLayer() {
     return
   }
 
-  let routeSource = globeView.getSource('route-geometries')
-  if (!routeSource) {
-    globeView.addSource('route-geometries', {
+  const markerSource = globeView.getSource('route-markers')
+  if (!markerSource) {
+    // Holds only the one route line on show, so changing it is quick
+    globeView.addSource('route-highlight', {
       type: 'geojson',
-      data: lineData,
+      data: { type: 'FeatureCollection', features: [] },
     })
     // Markers get their own source so nearby ones can be grouped into clusters when zoomed out
     globeView.addSource('route-markers', {
@@ -240,8 +279,7 @@ function updateRouteLayer() {
       globeView.addLayer(layer)
     }
   } else {
-    routeSource.setData(lineData)
-    globeView.getSource('route-markers').setData(markerData)
+    markerSource.setData(markerData)
   }
 
   if (!routeInteractionReady && globeView.getLayer('route-lines')) {
@@ -290,21 +328,21 @@ function buildRouteCard(properties) {
   return card
 }
 
-// Only one route's line is drawn at a time: the one being hovered, or the one whose card is open
-function routeGeometryFilter(routeId) {
-  return [
-    'all',
-    ['==', ['get', 'featureType'], 'route'],
-    ['==', ['get', 'routeId'], routeId ?? ''],
-  ]
-}
-
-function showRouteGeometry(routeId) {
-  for (const layerId of ['route-casing', 'route-lines']) {
-    if (globeView.getLayer(layerId)) {
-      globeView.setFilter(layerId, routeGeometryFilter(routeId))
-    }
+// Only one route's line is drawn at a time: the one being hovered, or the one whose card is open.
+// Pass null to clear it.
+async function showRouteGeometry(routeId) {
+  highlightedRouteId = routeId
+  const line = routeId ? await loadRouteLine(routeId) : null
+  // The cursor may have moved to another route while this line was downloading
+  const source = globeView?.getSource('route-highlight')
+  if (highlightedRouteId !== routeId || !source) {
+    return
   }
+
+  source.setData({
+    type: 'FeatureCollection',
+    features: line ? [{ type: 'Feature', properties: routeProperties.get(routeId), geometry: line }] : [],
+  })
 }
 
 function distanceInMetres([lng1, lat1], [lng2, lat2]) {
@@ -364,13 +402,13 @@ function popupOffset(offsetY = 0) {
 // The route's line as screen points, filled in every few pixels so a long straight
 // segment still counts as crossing the card
 function routeScreenPoints(routeId) {
-  const route = routesWithGeometry.value.find((item) => item.id === routeId)
-  if (!route) {
+  // Before the line has downloaded, the card just takes its default side
+  const line = routeLines.get(routeId)
+  if (!line) {
     return []
   }
 
-  const lines =
-    route.geometry.type === 'LineString' ? [route.geometry.coordinates] : route.geometry.coordinates
+  const lines = line.type === 'LineString' ? [line.coordinates] : line.coordinates
   const points = []
   for (const line of lines) {
     const projected = line.map((position) => globeView.project(position))
@@ -467,7 +505,7 @@ function showRoutePopup(properties, lngLat) {
   viewMoreButton.className = 'btn btn-sm btn-dark mt-2'
   viewMoreButton.textContent = 'View more'
   viewMoreButton.addEventListener('click', () => {
-    router.push({ name: 'route-detail', params: { id: properties.routeId } })
+    openRouteDetails(properties, lngLat)
   })
   content.querySelector('.route-card-body').appendChild(viewMoreButton)
 
@@ -495,6 +533,77 @@ function showRoutePopup(properties, lngLat) {
     }
   })
   activePopup = popup
+}
+
+// Flies the camera down onto the route, fades to black, then opens its details page
+async function openRouteDetails(properties, lngLat) {
+  if (openingRouteName.value) {
+    return
+  }
+
+  const detailsPage = { name: 'route-detail', params: { id: properties.routeId } }
+  if (!globeView || prefersReducedMotion) {
+    router.push(detailsPage)
+    return
+  }
+
+  openingRouteName.value = properties.name
+  setMapInteraction(false)
+  hideHoverPopup()
+  // Closing the card unpins its line, so pin it again to keep it drawn during the dive
+  activePopup?.remove()
+  activePopup = null
+  pinnedRouteId = properties.routeId
+  showRouteGeometry(pinnedRouteId)
+
+  // Frame the whole route if it has a line (usually already downloaded when its card opened),
+  // otherwise zoom in on its pill
+  const line = await loadRouteLine(properties.routeId)
+  // The user may have left the page while the line was downloading
+  if (!globeView) {
+    return
+  }
+  let camera = { center: lngLat, zoom: 13 }
+  if (line) {
+    const lines = line.type === 'LineString' ? [line.coordinates] : line.coordinates
+    const bounds = new LngLatBounds()
+    for (const line of lines) {
+      for (const position of line) {
+        bounds.extend(position)
+      }
+    }
+    camera = globeView.cameraForBounds(bounds, { padding: 80, maxZoom: 12 }) ?? camera
+  }
+
+  // Zooming deeper or tilting further makes the map fetch far more satellite tiles
+  globeView.flyTo({
+    center: camera.center,
+    zoom: Math.min(camera.zoom, 13),
+    pitch: 45,
+    bearing: 25,
+    duration: routeDiveMs,
+    essential: true,
+  })
+  globeView.once('moveend', () => fadeOutWhenSharp(detailsPage))
+}
+
+// Waits on the route until its satellite photos have finished loading (or for a few seconds
+// on a slow connection), then fades to black and opens the details page
+function fadeOutWhenSharp(detailsPage) {
+  let fading = false
+  function fadeOut() {
+    if (fading) {
+      return
+    }
+    fading = true
+    clearTimeout(routeDiveTimer)
+    routeDiveFading.value = true
+    routeDiveTimer = setTimeout(() => router.push(detailsPage), routeFadeMs)
+  }
+
+  // 'idle' fires once every tile on screen has loaded and faded in
+  globeView.once('idle', fadeOut)
+  routeDiveTimer = setTimeout(fadeOut, routeTileWaitMs)
 }
 
 function difficultyColour(difficulty) {
@@ -525,6 +634,8 @@ function createRouteLabel(feature) {
   dot.style.background = difficultyColour(properties.difficulty)
   element.appendChild(dot)
   element.appendChild(document.createTextNode(properties.distanceLabel))
+  // Start downloading the line now, so it's usually ready by the time the pill is hovered
+  loadRouteLine(properties.routeId)
 
   element.addEventListener('mouseenter', () => {
     showHoverPopup(properties, coordinates)
@@ -589,8 +700,7 @@ function addRouteLayersToStyle() {
     {
       id: 'route-casing',
       type: 'line',
-      source: 'route-geometries',
-      filter: routeGeometryFilter(pinnedRouteId),
+      source: 'route-highlight',
       paint: {
         'line-color': '#fff7e9',
         'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 8, 6],
@@ -601,8 +711,7 @@ function addRouteLayersToStyle() {
     {
       id: 'route-lines',
       type: 'line',
-      source: 'route-geometries',
-      filter: routeGeometryFilter(pinnedRouteId),
+      source: 'route-highlight',
       paint: {
         'line-color': [
           'match',
@@ -694,12 +803,19 @@ function addSatelliteLayers() {
   const areaTypes = ['background', 'fill', 'fill-extrusion', 'hillshade', 'raster']
   const lastAreaIndex = layers.findLastIndex((layer) => areaTypes.includes(layer.type))
   const firstLineLayerId = layers[lastAreaIndex + 1]?.id
+  layersUnderSatellite = layers
+    .slice(0, lastAreaIndex + 1)
+    .filter((layer) => layer.layout?.visibility !== 'none')
+    .map((layer) => layer.id)
   globeView.addLayer({ id: 'satellite', type: 'raster', source: 'satellite' }, firstLineLayerId)
   globeView.addLayer(
     {
       id: 'blue-marble',
       type: 'raster',
       source: 'blue-marble',
+      // Fully faded out by zoom 6; stopping the layer there also stops its tiles downloading,
+      // so they don't hold up the satellite photos when zooming in
+      maxzoom: 6,
       paint: {
         'raster-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0],
         'raster-brightness-min': 0.14,
@@ -722,7 +838,9 @@ function applyMapType(showSatellite) {
       globeView.setLayoutProperty(layerId, 'visibility', showSatellite ? 'visible' : 'none')
     }
   }
-  for (const layerId of ['globe-land', 'globe-ocean', 'globe-borders']) {
+  // The satellite photos cover these completely, so turning them off also stops their data
+  // (like the hillshade and contour tiles) downloading and holding up the dive onto a route
+  for (const layerId of ['globe-land', 'globe-ocean', 'globe-borders', ...layersUnderSatellite]) {
     globeView.setLayoutProperty(layerId, 'visibility', showSatellite ? 'none' : 'visible')
   }
 }
@@ -776,6 +894,7 @@ async function addCloudLayer() {
       id: 'clouds',
       type: 'raster',
       source: 'clouds',
+      maxzoom: 4.5,
       layout: { visibility: satelliteView.value ? 'visible' : 'none' },
       // Clouds fade away as you zoom in, so they never hide the trails
       paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.9, 4.5, 0] },
@@ -785,7 +904,31 @@ async function addCloudLayer() {
   )
 }
 
-watch(satelliteView, applyMapType)
+watch(satelliteView, (showSatellite) => {
+  applyMapType(showSatellite)
+  saveView()
+})
+
+function saveView() {
+  // Not during the dive, so coming back lands where the user clicked rather than zoomed in on the route
+  if (phase.value !== 'explore' || openingRouteName.value) {
+    return
+  }
+
+  const center = globeView.getCenter()
+  const view = {
+    center: [center.lng, center.lat],
+    zoom: globeView.getZoom(),
+    bearing: globeView.getBearing(),
+    pitch: globeView.getPitch(),
+    satellite: satelliteView.value,
+  }
+  try {
+    sessionStorage.setItem(savedViewKey, JSON.stringify(view))
+  } catch {
+    // Storage is blocked (e.g. some private windows): the globe just won't remember the view
+  }
+}
 
 function setMapInteraction(enabled) {
   const handlers = [
@@ -841,14 +984,27 @@ function startExploring() {
     return
   }
 
+  showRouteLines()
+  // Only hand control to the user once the globe has settled on the routes
+  globeView.once('moveend', () => setMapInteraction(true))
+  globeView.easeTo({ ...exploreView, duration: prefersReducedMotion ? 0 : 2000 })
+}
+
+// Coming back to the globe: skip the hero screen and carry on exploring from the saved view
+function resumeExploring() {
+  phase.value = 'explore'
+  if (globeView) {
+    showRouteLines()
+    setMapInteraction(true)
+  }
+}
+
+function showRouteLines() {
   for (const layerId of ['route-casing', 'route-lines']) {
     if (globeView.getLayer(layerId)) {
       globeView.setPaintProperty(layerId, 'line-opacity', 1)
     }
   }
-  // Only hand control to the user once the globe has settled on the routes
-  globeView.once('moveend', () => setMapInteraction(true))
-  globeView.easeTo({ ...exploreView, duration: prefersReducedMotion ? 0 : 2000 })
 }
 
 // Any downward scroll, swipe up or "next" key on the hero screen starts exploring
@@ -899,25 +1055,34 @@ const loadingMessage = computed(() => {
 watch([loading, mapReady, mapError, introTimeDone], () => {
   const globeSettled = mapReady.value || Boolean(mapError.value)
   if (phase.value === 'intro' && !loading.value && globeSettled && introTimeDone.value) {
-    showHero()
+    if (savedView) {
+      resumeExploring()
+    } else {
+      showHero()
+    }
   }
 })
 
 onMounted(async () => {
-  introTimer = setTimeout(() => {
-    introTimeDone.value = true
-  }, introMinimumMs)
+  if (!introTimeDone.value) {
+    introTimer = setTimeout(() => {
+      introTimeDone.value = true
+    }, introMinimumMs)
+  }
   window.addEventListener('keydown', onKeydown)
 
   try {
     globeView = new MapLibreMap({
       container: globeHost.value,
       style: mapStyle,
-      center: [20, 15],
-      zoom: 1.4,
+      center: savedView?.center ?? [20, 15],
+      zoom: savedView?.zoom ?? 1.4,
+      bearing: savedView?.bearing ?? 0,
+      pitch: savedView?.pitch ?? 0,
       pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
     })
     setMapInteraction(false)
+    globeView.on('moveend', saveView)
     globeView.on('error', (event) => {
       if (event.error) {
         mapError.value = `Globe rendering error: ${event.error.message}`
@@ -966,7 +1131,7 @@ onMounted(async () => {
   }
 
   try {
-    routes.value = await fetchRoutes()
+    routes.value = await fetchRouteSummaries()
     routeFetchReady = true
     updateRouteLayer()
   } catch (err) {
@@ -979,9 +1144,12 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(introTimer)
+  clearTimeout(routeDiveTimer)
   stopSpinning()
   window.removeEventListener('keydown', onKeydown)
   globeView?.remove()
+  // Lets route lines that finish downloading after the page closes see there's no map to draw on
+  globeView = null
 })
 </script>
 
@@ -1041,19 +1209,17 @@ onBeforeUnmount(() => {
       <p v-if="mapError" class="globe-error" role="alert">{{ mapError }}</p>
       <template v-if="!error">
         <p class="mb-2">
-          Showing <strong>{{ routesWithGeometry.length }}</strong> of
+          Showing <strong>{{ routesOnGlobe.length }}</strong> of
           <strong>{{ routes.length }}</strong> routes. Hover over a route to see its details, or
           click it to view more.
         </p>
-        <details v-if="routesWithoutGeometry.length" class="missing-routes">
+        <details v-if="routesNotOnGlobe.length" class="missing-routes">
           <summary>
-            {{ routesWithoutGeometry.length }} route{{
-              routesWithoutGeometry.length === 1 ? '' : 's'
-            }}
-            missing usable geometry
+            {{ routesNotOnGlobe.length }} route{{ routesNotOnGlobe.length === 1 ? '' : 's' }}
+            missing a location
           </summary>
           <ul class="mb-0">
-            <li v-for="route in routesWithoutGeometry" :key="route.id">
+            <li v-for="route in routesNotOnGlobe" :key="route.id">
               {{ route.name || route.id }}
             </li>
           </ul>
@@ -1089,6 +1255,18 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </aside>
+
+    <!-- Covers the globe during the dive so nothing can be clicked, then fades to black -->
+    <div
+      v-if="openingRouteName"
+      class="globe-route-dive"
+      :class="{ 'is-fading': routeDiveFading }"
+      role="status"
+    >
+      <p class="globe-route-dive-label">
+        Heading to <strong>{{ openingRouteName }}</strong>
+      </p>
+    </div>
   </div>
 </template>
 
@@ -1252,6 +1430,45 @@ onBeforeUnmount(() => {
     transform: none;
     filter: blur(0);
   }
+}
+
+/* Sits over the globe while it dives onto a route; the label shows straight away and
+   the black fade starts once the route's satellite photos have loaded (.is-fading) */
+.globe-route-dive {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3rem;
+}
+
+/* The black layer fades its opacity rather than its colour, so the browser can blend it
+   without repainting the whole screen on every frame of the dive */
+.globe-route-dive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  opacity: 0;
+  transition: opacity 0.6s ease-in;
+}
+
+.globe-route-dive.is-fading::before {
+  opacity: 1;
+}
+
+.globe-route-dive-label {
+  position: relative;
+  margin: 0;
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.85);
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  animation: fade-in 0.4s ease forwards;
 }
 
 @keyframes fade-in {
