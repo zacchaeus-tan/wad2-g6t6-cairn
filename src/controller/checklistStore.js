@@ -1,8 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { supabase } from '@/lib/supabase'
+import * as checklistModel from '@/model/checklistModel'
+import * as routesModel from '@/model/routesModel'
 
 const categories = ['clothing', 'safety', 'navigation', 'water_food', 'shelter', 'documents', 'other']
+
+// the model returns { data, error }: throw the error, otherwise give back data
+function unwrap(result) {
+    if (result.error) {
+        throw result.error
+    }
+    return result.data
+}
+
+// the signed-in user, or null (no session counts as "not signed in", not error)
+async function currentUser() {
+    const { data } = await checklistModel.getUser()
+    return data?.user ?? null
+}
 
 export const useChecklistStore = defineStore('checklist', () => {
     const checklist = ref(null) // current checklist row, or null
@@ -49,11 +64,9 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
     }
 
-    // ---------- LLM (via the generate-checklist Edge Function) ----------
+    // LLM (via the generate-checklist Edge Function) 
     async function fetchItemsFromLLM(route) {
-        const { data, error: err } = await supabase.functions.invoke('generate-checklist', {
-            body: { route_id: route.id },
-        })
+        const { data, error: err } = await checklistModel.invokeGenerateChecklist(route.id)
         if (err || !Array.isArray(data?.items)) {
             console.error('generate-checklist failed:', err, data)
             throw new Error('Could not generate a checklist right now. Please try again.')
@@ -82,12 +95,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         loading.value = true
         clearError()
 
-        let success = false
-
         try {
-            const response = await supabase.auth.getUser()
-            const userData = response.data     
-            const user = userData?.user
+            const user = await currentUser()
             if (!user) {
                 throw new Error('Please sign in to generate a checklist.')
             }
@@ -99,160 +108,78 @@ export const useChecklistStore = defineStore('checklist', () => {
             }
 
             // 2. replace the old checklist
-            const { error: delErr } = await supabase
-                .from('checklists')
-                .delete()
-                .eq('user_id', user.id)
-                .eq('route_id', route.id)
-            if (delErr){ 
-                throw delErr
-            }
+            // throw error if delete fails
+            unwrap(await checklistModel.deleteChecklistsForRoute(user.id, route.id))
 
-            // create new checklist record
-            const { data: created, error: insErr } = await supabase
-                .from('checklists')
-                .insert({ 
-                    user_id: user.id, 
-                    route_id: route.id, 
-                    is_saved: false })
-                .select()
-                .single()
-            if (insErr) {
-                throw insErr
-            }
-
-            // add in generated items to new checklist
-            const { data: createdItems, error: itemsErr } = await supabase
-                .from('checklist_items')
-                .insert(generated.map((i) => ({
-                    label: i.label,
-                    category: i.category,
-                    quantity: i.quantity,
-                    reason: i.reason,
-                    is_checked: i.is_checked,
-                    is_custom: i.is_custom,
-                    checklist_id: created.id
-                    }))
-                )
-                .select()
-            if (itemsErr) {
-                throw itemsErr
-            }
+            const created = unwrap(await checklistModel.insertChecklist(user.id, route.id))
+            const createdItems = unwrap(await checklistModel.insertItems(created.id, generated))
 
             checklist.value = created
             items.value = createdItems
-            success =  true
+            
         } catch (e) {
             error.value = e.message
             return false
         }finally {
             loading.value = false
         }
-        return success        
     }
 
     // loading
     async function loadForRoute(routeId) {
         loading.value = true
         clearError()
-        const { data: userData } = await supabase.auth.getUser()
-        const user = userData?.user
-        if (!user) {
-            reset()
-            loading.value = false
-            return false
-        }
 
-        const { data, error: err } = await supabase
-            .from('checklists')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('route_id', routeId)
-            .eq('is_saved', true)
-            .order('generated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        if (err) {
-            error.value = err.message
-            loading.value = false
-            return false
-        }
-        if (!data) {
-            reset()
-            loading.value = false
+        try{
+            const user = await currentUser()
+            if (!user) {
+                reset()
+                loading.value = false
+                return false
+            }
+
+            const data = unwrap(await checklistModel.getSavedChecklistForRoute(user.id, routeId))
+            if (!data) {
+                reset()
+                return true
+            }
+
+            checklist.value = data
+            items.value = unwrap(await checklistModel.listItemsForChecklist(data.id))
             return true
-        }
-
-        checklist.value = data
-        const { data: rows, error: itemsErr } = await supabase
-            .from('checklist_items')
-            .select('*')
-            .eq('checklist_id', data.id)
-            .order('category')
-        loading.value = false
-        if (itemsErr) {
-            error.value = itemsErr.message
+        } catch (e) {
+            error.value = e.message
             return false
+        } finally {
+            loading.value = false
         }
-        items.value = rows
-        return true
     }
 
     // all saved checklists for the signed-in user, with route names and items
     async function loadSaved() {
         savedLoading.value = true
         clearError()
-        const { data: userData } = await supabase.auth.getUser()
-        const user = userData?.user
-        if (!user) {
-            savedChecklists.value = []
-            savedLoading.value = false
-            return false
-        }
 
-        // 1. the saved checklists
-        const { data: lists, error: listErr } = await supabase
-            .from('checklists')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('is_saved', true)
-            .order('generated_at', { ascending: false })
-        if (listErr) {
-            error.value = listErr.message
-            savedLoading.value = false
-            return false
-        }
-        if (lists.length === 0) {
-            savedChecklists.value = []
-            savedLoading.value = false
-            return true
-        }
+        try {
+            const user = await currentUser()
+            if (!user) {
+                savedChecklists.value = []
+                return false
+            }
+
+        // saved checklists
+            const lists = unwrap(await checklistModel.listSavedChecklists(user.id))
+            if (lists.length === 0) {
+                savedChecklists.value = []
+                return true
+            }
 
         const listIds = lists.map((l) => l.id)
         const routeIds = lists.map((l) => l.route_id)
-
-        // 2. their items
-        const { data: rows, error: itemsErr } = await supabase
-            .from('checklist_items')
-            .select('*')
-            .in('checklist_id', listIds)
-            .order('category')
-        if (itemsErr) {
-            error.value = itemsErr.message
-            savedLoading.value = false
-            return false
-        }
-
-        // 3. the route names
-        const { data: routes, error: routesErr } = await supabase
-            .from('routes')
-            .select('id, name, country')
-            .in('id', routeIds)
-        if (routesErr) {
-            error.value = routesErr.message
-            savedLoading.value = false
-            return false
-        }
+        // the items
+        const rows = unwrap(await checklistModel.listItemsForChecklists(listIds))
+        // the routes
+        const routes = unwrap(await routesModel.listRoutesByIds(routeIds))
 
         // put it together: one entry per saved checklist
         const result = []
@@ -267,8 +194,13 @@ export const useChecklistStore = defineStore('checklist', () => {
             })
         }
         savedChecklists.value = result
-        savedLoading.value = false
         return true
+        } catch (e) {
+            error.value = e.message
+            return false
+        } finally {
+            savedLoading.value = false
+        }
     }
     
 
@@ -278,17 +210,16 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
         clearError()
 
+        try{
         const next = !checklist.value.is_saved
-        const { error: err } = await supabase
-            .from('checklists')
-            .update({ is_saved: next })
-            .eq('id', checklist.value.id)
-        if (err) {
-            error.value = err.message
-            return false
-        }
+        // throw error if update fails
+        unwrap(await checklistModel.updateChecklistSaved(checklist.value.id, next))
         checklist.value.is_saved = next
         return true
+        } catch (e) {
+            error.value = e.message
+            return false
+        }
     }
 
     // custom item CRUD
@@ -303,25 +234,17 @@ export const useChecklistStore = defineStore('checklist', () => {
             return false
         }
 
-        const cleaned = clean(form)
-
-        const { data, error: err } = await supabase
-            .from('checklist_items')
-            .insert({
-                label: cleaned.label,
-                category: cleaned.category,
-                quantity: cleaned.quantity, 
-                reason: cleaned.reason,
-                checklist_id: id, 
-                is_custom: true })
-            .select()
-            .single()
-        if (err) {
-            error.value = err.message
+        try {
+            const data = unwrap(await checklistModel.insertCustomItem(id, clean(form)))
+            // only update the route page's list if the item went into that checklist
+            if (id === checklistId.value) {
+                items.value.push(data)
+            }
+            return true
+        } catch (e) {
+            error.value = e.message
             return false
         }
-        items.value.push(data)
-        return true
     }
 
     async function updateItem(id, form) {
@@ -330,52 +253,46 @@ export const useChecklistStore = defineStore('checklist', () => {
             return false
         }
 
-        const { data, error: err } = await supabase
-            .from('checklist_items')
-            .update(clean(form))
-            .eq('id', id)
-            .select()
-            .single()
-        if (err) {
-            error.value = err.message
+        try {
+            const data = unwrap(await checklistModel.updateItem(id, clean(form)))
+            const i = items.value.findIndex((x) => x.id === id)
+            if (i !== -1) {
+                items.value[i] = data
+            }
+            return true
+        } catch (e) {
+            error.value = e.message
             return false
         }
-        const i = items.value.findIndex((x) => x.id === id)
-        if (i !== -1){
-            items.value[i] = data
-        }
-        return true
     }
 
     async function deleteItem(id) {
         clearError()
-        const { error: err } = await supabase
-            .from('checklist_items')
-            .delete()
-            .eq('id', id)
-        if (err) {
-            error.value = err.message
+
+        try {
+            unwrap(await checklistModel.deleteItem(id))
+            items.value = items.value.filter((x) => x.id !== id)
+            return true
+        } catch (e) {
+            error.value = e.message
             return false
         }
-        items.value = items.value.filter((x) => x.id !== id)
-        return true
     }
 
     async function toggleChecked(id, checked) {
         clearError()
-        const { error: err } = await supabase
-            .from('checklist_items')
-            .update({ is_checked:checked })
-            .eq('id', id)
-        if (err) {
-            error.value = err.message
+
+        try {
+            unwrap(await checklistModel.updateItemChecked(id, checked))
+            const item = items.value.find((x) => x.id === id)
+            if (item) {
+                item.is_checked = checked
+            }
+            return true
+        } catch (e) {
+            error.value = e.message
             return false
         }
-        const item = items.value.find((x) => x.id === id)
-        if (item){
-            item.is_checked = checked
-        }
-        return true
     }
 
     return {
