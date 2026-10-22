@@ -1,4 +1,4 @@
-import { listRoutes, getRoute } from '@/model/routesModel'
+import { listRoutes, getRoute, listAlertsForRoute } from '@/model/routesModel'
 
 // Controller: checks input, calls the model, and turns database errors into
 // thrown errors so views can show them.
@@ -18,6 +18,15 @@ export async function fetchRouteById(id) {
   }
 
   const { data, error } = await getRoute(id)
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchRouteAlerts(routeId) {
+  const { data, error } = await listAlertsForRoute(routeId)
   if (error) {
     throw error
   }

@@ -1,0 +1,107 @@
+<script setup>
+import { ref, watch } from 'vue'
+import { useAdminStore } from '@/controller/adminStore'
+
+const props = defineProps({
+  userId: { type: String, required: true },
+  // Set when an admin clicks "Raise alert" on a reported hazard.
+  routeId: { type: String, default: '' },
+})
+
+const adminStore = useAdminStore()
+const saving = ref(false)
+const saved = ref(false)
+
+function emptyForm() {
+  return { routeId: props.routeId, severity: 'warning', title: '', message: '', startsAt: '', endsAt: '' }
+}
+
+const form = ref(emptyForm())
+
+watch(
+  () => props.routeId,
+  (id) => {
+    form.value.routeId = id
+  },
+)
+
+// datetime-local gives local time without a zone; convert it before saving.
+function toIso(value) {
+  return value ? new Date(value).toISOString() : null
+}
+
+async function submit() {
+  saving.value = true
+  saved.value = false
+  const ok = await adminStore.createAlert({
+    ...form.value,
+    startsAt: toIso(form.value.startsAt),
+    endsAt: toIso(form.value.endsAt),
+    createdBy: props.userId,
+  })
+  saving.value = false
+  if (ok) {
+    form.value = emptyForm()
+    saved.value = true
+  }
+}
+</script>
+
+<template>
+  <form novalidate @submit.prevent="submit">
+    <div class="row g-3">
+      <div class="col-12 col-md-8">
+        <label for="alert-route" class="form-label">Route</label>
+        <select id="alert-route" v-model="form.routeId" class="form-select">
+          <option value="" disabled>Choose a route</option>
+          <option v-for="route in adminStore.routes" :key="route.id" :value="route.id">
+            {{ route.name }}<template v-if="route.country"> ({{ route.country }})</template>
+          </option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label for="alert-severity" class="form-label">Severity</label>
+        <select id="alert-severity" v-model="form.severity" class="form-select">
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="danger">Danger</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label for="alert-title" class="form-label">Title</label>
+        <input
+          id="alert-title"
+          v-model="form.title"
+          type="text"
+          class="form-control"
+          maxlength="120"
+          placeholder="e.g. River crossing at Camp 2 impassable after heavy rain"
+        />
+      </div>
+
+      <div class="col-12">
+        <label for="alert-message" class="form-label">Details for hikers <span class="text-body-secondary">(optional)</span></label>
+        <textarea id="alert-message" v-model="form.message" class="form-control" rows="3"></textarea>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label for="alert-starts" class="form-label">Starts <span class="text-body-secondary">(blank = now)</span></label>
+        <input id="alert-starts" v-model="form.startsAt" type="datetime-local" class="form-control" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label for="alert-ends" class="form-label">Ends <span class="text-body-secondary">(blank = until removed)</span></label>
+        <input id="alert-ends" v-model="form.endsAt" type="datetime-local" class="form-control" />
+      </div>
+    </div>
+
+    <p v-if="adminStore.error" class="alert alert-danger mt-3 mb-0" role="alert">{{ adminStore.error }}</p>
+    <p v-else-if="saved" class="alert alert-success mt-3 mb-0" role="status">Alert published.</p>
+
+    <button type="submit" class="btn btn-success mt-3" :disabled="saving">
+      {{ saving ? 'Publishing…' : 'Publish alert' }}
+    </button>
+  </form>
+</template>

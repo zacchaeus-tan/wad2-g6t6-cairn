@@ -10,3 +10,10 @@ verify_jwt = true
 [functions.recalc-route-stats]
 entrypoint = "./functions/recalc-route-stats/index.js"
 verify_jwt = true
+
+# Queues weather alerts for the admin page. The daily pg_cron call has no
+# user token, so verify_jwt is off and the function checks for either the
+# CRON_SECRET header or an admin's token itself.
+[functions.check-weather]
+entrypoint = "./functions/check-weather/index.js"
+verify_jwt = false

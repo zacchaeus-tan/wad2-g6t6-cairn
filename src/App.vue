@@ -21,6 +21,7 @@ async function logout() {
         <RouterLink class="site-nav-link" to="/routes">Browse routes</RouterLink>
         <template v-if="auth.isLoggedIn">
           <RouterLink class="site-nav-link" to="/profile">Profile</RouterLink>
+          <RouterLink v-if="auth.isAdmin" class="site-nav-link" to="/admin">Admin</RouterLink>
           <button type="button" class="site-nav-link site-nav-button" @click="logout">Log out</button>
         </template>
         <RouterLink v-else class="site-nav-link" to="/auth">Sign in</RouterLink>

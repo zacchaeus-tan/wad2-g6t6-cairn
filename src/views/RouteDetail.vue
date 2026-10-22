@@ -1,7 +1,8 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { fetchRouteById } from '../controller/routesController'
+import { fetchRouteById, fetchRouteAlerts } from '../controller/routesController'
+import { alertClass, formatDate } from '@/lib/format'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
@@ -17,6 +18,7 @@ const auth = useAuthStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
+const alerts = ref([])
 
 const itinerary = ref(null)
 const itineraryLoading = ref(false)
@@ -107,9 +109,19 @@ onMounted(async () => {
     await Promise.all([
       reviewsStore.fetchForRoute(routeParams.params.id),
       reviewsStore.fetchCategories(),
+      loadAlerts(),
     ])
   }
 })
+
+// Alerts are extra information, so a failure here should not hide the route.
+async function loadAlerts() {
+  try {
+    alerts.value = await fetchRouteAlerts(routeParams.params.id)
+  } catch (err) {
+    console.warn('Could not load alerts for this route:', err)
+  }
+}
 
 // After a review is saved or deleted, reload the route so its community
 // stats (average rating, effective difficulty, hazard) show the new values.
@@ -138,6 +150,14 @@ async function reloadRoute() {
           Official rating: {{ route.technical_rating }}
         </p>
       </header>
+
+      <section v-if="alerts.length" class="mb-4" aria-label="Current alerts">
+        <div v-for="alert in alerts" :key="alert.id" class="alert" :class="alertClass(alert.severity)" role="alert">
+          <strong>{{ alert.title }}</strong>
+          <p v-if="alert.message" class="mb-1">{{ alert.message }}</p>
+          <p v-if="alert.ends_at" class="small mb-0">Expected until {{ formatDate(alert.ends_at) }}</p>
+        </div>
+      </section>
 
       <div class="row g-4">
         <section class="col-12 col-lg-6" aria-labelledby="route-overview-title">
