@@ -1,9 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useChecklistStore } from '@/controller/checklistStore'
 
 const props = defineProps({
   item: { type: Object, default: null }, // null = add mode
+  checklistId: {type:[String, Number], default:null}
 })
 const emit = defineEmits(['done'])
 
@@ -16,31 +17,32 @@ const blank = () => ({
     reason: '' 
 })
 
-const form = ref(blank())
-const saving = ref(false)
-
-watch(
-  () => props.item,
-  (item) => {
-    form.value = item
-      ? {
-          label: item.label,
-          category: item.category || 'other',
-          quantity: item.quantity || '',
-          reason: item.reason || '',
-        }
-      : blank()
-    checklistStore.clearError()
-  },
-  { immediate: true },
+const form = ref(
+  props.item
+    ? {
+        label: props.item.label,
+        category: props.item.category || 'other',
+        quantity: props.item.quantity || '',
+        reason: props.item.reason || '',
+      }
+    : blank()
 )
+const saving = ref(false)
+checklistStore.clearError()
 
 async function submit() {
     saving.value = true
-    const ok = props.item
-                ? await checklistStore.updateItem(props.item.id, form.value)
-                : await checklistStore.addCustom(form.value)
-    saving.value = false
+    
+    let ok = false
+    try {
+        if (props.item) {
+        ok = await checklistStore.updateItem(props.item.id, form.value)
+        } else {
+        ok = await checklistStore.addCustom(form.value, props.checklistId)
+        }
+    } finally {
+        saving.value = false
+    }
     if (ok){
         emit('done')
     }

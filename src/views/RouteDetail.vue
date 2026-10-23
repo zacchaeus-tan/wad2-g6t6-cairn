@@ -11,10 +11,13 @@ import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 import { checkRouteSuitability } from '@/lib/matching'
+import { useChecklistStore } from '@/controller/checklistStore'
+import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
+const checklistStore = useChecklistStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -129,6 +132,7 @@ function formatCompletionRate(value) {
 }
 
 onMounted(async () => {
+  checklistStore.reset()
   try {
     route.value = await fetchRouteById(routeParams.params.id)
   } catch (err) {
@@ -142,6 +146,7 @@ onMounted(async () => {
     await Promise.all([
       reviewsStore.fetchForRoute(routeParams.params.id),
       reviewsStore.fetchCategories(),
+      checklistStore.loadForRoute(route.value.id)
     ])
   }
 })
@@ -153,6 +158,40 @@ async function reloadRoute() {
     route.value = await fetchRouteById(routeParams.params.id)
   } catch (err) {
     console.warn('Could not reload the route after a review change:', err)
+  }
+}
+
+// gear checklist
+async function generateChecklist() {
+  if (
+    checklistStore.items.length &&
+    !confirm('Generating a new checklist will delete the current one and replace it. Continue?')
+  ) {
+    return
+  }
+  await checklistStore.generate(route.value)
+}
+
+const showForm = ref(false)
+const editingItem = ref(null)
+
+function openForm(item = null) {
+  editingItem.value = item
+  showForm.value = true
+}
+
+function closeForm() {
+  showForm.value = false
+  editingItem.value = null
+  checklistStore.clearError()
+}
+
+const isSaved = computed(() => Boolean(checklistStore.checklist?.is_saved))
+
+async function onToggleSaved() {
+  await checklistStore.toggleSaved()
+  if (!isSaved.value) {
+    closeForm() // don't leave a half-open form behind after unsaving
   }
 }
 </script>
@@ -382,13 +421,162 @@ async function reloadRoute() {
         </section>
       </div>
 
+      
+    <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
+      <div class="route-detail-section">
+        <h2 id="gear-checklist-title" class="h4 mb-3">
+          Gear checklist
+        </h2>
 
-      <section class="mb-4" aria-labelledby="gear-checklist-title">
-        <h2 id="gear-checklist-title" class="h5">Gear checklist</h2>
-        <p class="alert alert-secondary mb-0">
-          The gear checklist is temporarily unavailable while its sign-in integration is being completed.
+        <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
+          <RouterLink
+            :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+          >
+            Sign in
+          </RouterLink>
+          to make a new checklist.
         </p>
-      </section>
+
+        <div v-else>
+          <!-- Generate and save buttons -->
+          <div class="d-flex flex-wrap gap-2 mb-2 route-checklist-toolbar">
+            <button
+              class="btn btn-sm btn-outline-primary"
+              :disabled="checklistStore.loading || isSaved"
+              @click="generateChecklist"
+            >
+              {{
+                checklistStore.loading
+                  ? 'Generating...'
+                  : checklistStore.items.length
+                    ? 'Regenerate'
+                    : 'Generate checklist'
+              }}
+            </button>
+
+            <button
+              v-if="checklistStore.checklist"
+              class="btn btn-sm"
+              :class="isSaved ? 'btn-warning' : 'btn-outline-warning'"
+              @click="onToggleSaved"
+            >
+              {{ isSaved ? '★ Saved' : '☆ Save checklist' }}
+            </button>
+          </div>
+
+          <p
+            v-if="checklistStore.checklist && !isSaved"
+            class="small text-muted"
+          >
+            Save this checklist to edit it and find it in your profile.
+          </p>
+
+          <p v-if="isSaved" class="small text-muted">
+            To generate a new checklist, unsave this one first by clicking
+            "★ Saved". Generating a new checklist deletes this one.
+          </p>
+
+          <p
+            v-if="isSaved && !checklistStore.items.length"
+            class="small text-muted"
+          >
+            This checklist is empty. Add items below, or unsave it to generate
+            a new one.
+          </p>
+
+          <div
+            v-if="checklistStore.error && !showForm"
+            class="alert alert-danger py-2 small"
+            role="alert"
+          >
+            {{ checklistStore.error }}
+          </div>
+
+          <!-- Checklist items -->
+          <ul
+            v-if="checklistStore.items.length"
+            class="mb-2 route-checklist-list"
+          >
+            <li
+              v-for="item in checklistStore.items"
+              :key="item.id"
+              class="route-checklist-row"
+            >
+              <input
+                class="form-check-input"
+                type="checkbox"
+                :checked="item.is_checked"
+                @change="
+                  checklistStore.toggleChecked(item.id, !item.is_checked)
+                "
+              />
+
+              <div class="route-checklist-item-content">
+                <span
+                  :class="{
+                    'text-decoration-line-through text-muted': item.is_checked
+                  }"
+                >
+                  {{ item.label }}
+                  <span v-if="item.quantity" class="text-muted">
+                    — {{ item.quantity }}
+                  </span>
+                </span>
+
+                <div v-if="item.reason" class="small text-muted">
+                  {{ item.reason }}
+                </div>
+              </div>
+
+              <div v-if="isSaved" class="route-checklist-item-actions">
+                <button
+                  class="btn btn-sm btn-link text-primary p-0"
+                  @click="openForm(item)"
+                >
+                  edit
+                </button>
+
+                <span aria-hidden="true">|</span>
+
+                <button
+                  class="btn btn-sm btn-link text-danger p-0"
+                  @click="checklistStore.deleteItem(item.id)"
+                >
+                  remove
+                </button>
+              </div>
+            </li>
+          </ul>
+
+          <!-- Add or edit an item -->
+          <div
+            v-if="checklistStore.checklist && isSaved"
+            class="checklist-form-area"
+          >
+            <button
+              v-if="!showForm"
+              class="btn btn-sm btn-outline-secondary"
+              @click="openForm()"
+            >
+              + Add item
+            </button>
+
+            <ChecklistForm
+              v-else
+              :key="editingItem?.id ?? 'new'"
+              :item="editingItem"
+              @done="closeForm"
+            />
+          </div>
+        </div>
+
+        <p class="small text-body-secondary mt-3 mb-0">
+          AI-generated. Adjust the list to your own experience and the
+          conditions on the day.
+        </p>
+      </div>
+    </section>
+
     </template>
   </main>
 </template>
@@ -396,6 +584,24 @@ async function reloadRoute() {
 <style scoped>
 .route-detail-page {
   max-width: 1200px;
+  animation: page-fade-in 0.5s ease;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-detail-page {
+    animation: none;
+  }
 }
 
 .back-link {
@@ -437,5 +643,64 @@ async function reloadRoute() {
 
 .route-match-checks li + li {
   margin-top: 0.75rem;
+}
+
+.route-checklist .route-detail-section {
+  border-color:  #dee2e6;
+}
+
+.route-checklist-toolbar {
+  align-items: center;
+}
+
+/* Checklist items container */
+.route-checklist-list {
+  margin-top: 0.75rem;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Individual checklist item */
+.route-checklist .route-checklist-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.route-checklist .route-checklist-row + .route-checklist-row {
+  border-top: 1px solid #dee2e6;
+}
+
+/* Checkbox */
+.route-checklist-row .form-check-input {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+/* Item name, quantity and reason */
+.route-checklist-item-content {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+/* Edit and remove actions */
+.route-checklist-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+/* Spacing around the add/edit form */
+.route-checklist .checklist-form-area {
+  margin-top: 1rem;
 }
 </style>
