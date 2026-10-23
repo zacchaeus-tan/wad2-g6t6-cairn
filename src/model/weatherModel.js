@@ -66,6 +66,7 @@ export function fetchSummitForecast(latitude, longitude, elevation) {
     latitude,
     longitude,
     elevation,
+    current: 'temperature_2m',
     daily: SUMMIT_DAILY,
     timezone: 'auto',
     forecast_days: '7',

@@ -32,13 +32,16 @@ function showVisibility(metres) {
     <div v-else-if="weather" class="card">
       <div class="card-body">
         <p class="mb-2">
-          Now at the start: <strong>{{ show(weather.current.temperature_2m, ' °C') }}</strong> ·
+          Current Weather: <strong>{{ show(weather.current.temperature_2m, ' °C') }}</strong> ·
           wind {{ show(weather.current.wind_speed_10m, ' km/h') }} ·
           humidity {{ show(weather.current.relative_humidity_2m, '%') }} ·
           rain {{ show(weather.current.precipitation, ' mm') }}
         </p>
+        <p v-if="weather.summitCurrent" class="mb-2">
+          At Summit: <strong>{{ show(weather.summitCurrent.temperature_2m, ' °C') }}</strong>
+        </p>
         <p v-if="weather.summitElevation" class="small text-muted">
-          Summit height: temperatures {{ weather.summitElevation }} m up at the route's location, its highest
+          At Summit temperatures are for {{ weather.summitElevation }} m up at the route's location, its highest
           point. Not a forecast for the exact summit spot.
         </p>
 
@@ -63,7 +66,7 @@ function showVisibility(metres) {
                   <td>
                     {{ show(day.max, '°') }} / {{ show(day.min, '°C') }}
                     <div v-if="day.summit" class="small text-muted">
-                      Summit height: {{ show(day.summit.max, '°') }} / {{ show(day.summit.min, '°C') }}
+                      At Summit: {{ show(day.summit.max, '°') }} / {{ show(day.summit.min, '°C') }}
                     </div>
                   </td>
                   <td>{{ show(day.rainChance, '%') }} · {{ show(day.rain, ' mm') }}</td>
@@ -85,7 +88,7 @@ function showVisibility(metres) {
                     <ul class="list-unstyled small mb-0">
                       <li>Feels like: {{ show(day.feelsMax, '°') }} / {{ show(day.feelsMin, '°C') }}</li>
                       <li v-if="day.summit">
-                        Feels like at summit height: {{ show(day.summit.feelsMax, '°') }} /
+                        At Summit, feels like: {{ show(day.summit.feelsMax, '°') }} /
                         {{ show(day.summit.feelsMin, '°C') }}
                       </li>
                       <li>Hours of rain: {{ show(day.rainHours, ' h') }}</li>

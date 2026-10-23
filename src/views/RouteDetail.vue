@@ -12,7 +12,9 @@ import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 import { checkRouteSuitability } from '@/lib/matching'
 import { useChecklistStore } from '@/controller/checklistStore'
-import ChecklistForm from '../components/checklist/ChecklistForm.vue'
+import ChecklistForm from '../components/checklist/checklistForm.vue'
+import { fetchRouteWeather } from '@/controller/weatherController'
+import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -131,6 +133,21 @@ function formatCompletionRate(value) {
     : value
 }
 
+// weather forecast
+const weather = ref(null)
+const weatherError = ref('')
+
+// The real reason goes to the console for developers; users only see a
+// generic message.
+async function loadWeather() {
+  try {
+    weather.value = await fetchRouteWeather(route.value)
+  } catch (err) {
+    console.error('Weather request failed:', err)
+    weatherError.value = 'Weather is unavailable right now.'
+  }
+}
+
 onMounted(async () => {
   checklistStore.reset()
   try {
@@ -146,7 +163,8 @@ onMounted(async () => {
     await Promise.all([
       reviewsStore.fetchForRoute(routeParams.params.id),
       reviewsStore.fetchCategories(),
-      checklistStore.loadForRoute(route.value.id)
+      checklistStore.loadForRoute(route.value.id),
+      loadWeather(),
     ])
   }
 })
@@ -312,12 +330,8 @@ async function onToggleSaved() {
                 </template>
               </ul>
 
-              <p
-                v-for="warning in suitability.warnings"
-                :key="warning"
-                class="alert alert-danger mt-4 mb-0"
-                role="note"
-              >
+              <p v-for="warning in suitability.warnings" :key="warning" class="alert alert-danger mt-4 mb-0"
+                role="note">
                 {{ warning }}
               </p>
 
@@ -352,6 +366,12 @@ async function onToggleSaved() {
           </div>
         </section>
 
+        <div class="col-12">
+          <div class="route-detail-section">
+            <WeatherForecast :weather="weather" :error="weatherError" />
+          </div>
+        </div>
+
         <section class="col-12" aria-labelledby="itinerary-title">
           <div class="route-detail-section">
             <h2 id="itinerary-title" class="h4 mb-2">Plan your itinerary</h2>
@@ -360,12 +380,7 @@ async function onToggleSaved() {
               a day-by-day plan.
             </p>
 
-            <ItineraryForm
-              v-if="auth.isLoggedIn"
-              :route="route"
-              :loading="itineraryLoading"
-              @generate="onGenerate"
-            />
+            <ItineraryForm v-if="auth.isLoggedIn" :route="route" :loading="itineraryLoading" @generate="onGenerate" />
             <p v-else class="alert alert-secondary mb-0">
               <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
               to generate an itinerary.
@@ -402,13 +417,8 @@ async function onToggleSaved() {
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
-            <ReviewForm
-              v-if="auth.isLoggedIn"
-              :route="route"
-              :user-id="auth.user.id"
-              @saved="reloadRoute"
-              @deleted="reloadRoute"
-            />
+            <ReviewForm v-if="auth.isLoggedIn" :route="route" :user-id="auth.user.id" @saved="reloadRoute"
+              @deleted="reloadRoute" />
             <p v-else class="alert alert-secondary">
               <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
               to leave a review.
@@ -421,161 +431,110 @@ async function onToggleSaved() {
         </section>
       </div>
 
-      
-    <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
-      <div class="route-detail-section">
-        <h2 id="gear-checklist-title" class="h4 mb-3">
-          Gear checklist
-        </h2>
 
-        <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
-          <RouterLink
-            :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-          >
-            Sign in
-          </RouterLink>
-          to make a new checklist.
-        </p>
+      <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
+        <div class="route-detail-section">
+          <h2 id="gear-checklist-title" class="h4 mb-3">
+            Gear checklist
+          </h2>
 
-        <div v-else>
-          <!-- Generate and save buttons -->
-          <div class="d-flex flex-wrap gap-2 mb-2 route-checklist-toolbar">
-            <button
-              class="btn btn-sm btn-outline-primary"
-              :disabled="checklistStore.loading || isSaved"
-              @click="generateChecklist"
-            >
-              {{
-                checklistStore.loading
-                  ? 'Generating...'
-                  : checklistStore.items.length
-                    ? 'Regenerate'
-                    : 'Generate checklist'
-              }}
-            </button>
-
-            <button
-              v-if="checklistStore.checklist"
-              class="btn btn-sm"
-              :class="isSaved ? 'btn-warning' : 'btn-outline-warning'"
-              @click="onToggleSaved"
-            >
-              {{ isSaved ? '★ Saved' : '☆ Save checklist' }}
-            </button>
-          </div>
-
-          <p
-            v-if="checklistStore.checklist && !isSaved"
-            class="small text-muted"
-          >
-            Save this checklist to edit it and find it in your profile.
+          <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
+            <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">
+              Sign in
+            </RouterLink>
+            to make a new checklist.
           </p>
 
-          <p v-if="isSaved" class="small text-muted">
-            To generate a new checklist, unsave this one first by clicking
-            "★ Saved". Generating a new checklist deletes this one.
-          </p>
+          <div v-else>
+            <!-- Generate and save buttons -->
+            <div class="d-flex flex-wrap gap-2 mb-2 route-checklist-toolbar">
+              <button class="btn btn-sm btn-outline-primary" :disabled="checklistStore.loading || isSaved"
+                @click="generateChecklist">
+                {{
+                  checklistStore.loading
+                    ? 'Generating...'
+                    : checklistStore.items.length
+                      ? 'Regenerate'
+                      : 'Generate checklist'
+                }}
+              </button>
 
-          <p
-            v-if="isSaved && !checklistStore.items.length"
-            class="small text-muted"
-          >
-            This checklist is empty. Add items below, or unsave it to generate
-            a new one.
-          </p>
+              <button v-if="checklistStore.checklist" class="btn btn-sm"
+                :class="isSaved ? 'btn-warning' : 'btn-outline-warning'" @click="onToggleSaved">
+                {{ isSaved ? '★ Saved' : '☆ Save checklist' }}
+              </button>
+            </div>
 
-          <div
-            v-if="checklistStore.error && !showForm"
-            class="alert alert-danger py-2 small"
-            role="alert"
-          >
-            {{ checklistStore.error }}
-          </div>
+            <p v-if="checklistStore.checklist && !isSaved" class="small text-muted">
+              Save this checklist to edit it and find it in your profile.
+            </p>
 
-          <!-- Checklist items -->
-          <ul
-            v-if="checklistStore.items.length"
-            class="mb-2 route-checklist-list"
-          >
-            <li
-              v-for="item in checklistStore.items"
-              :key="item.id"
-              class="route-checklist-row"
-            >
-              <input
-                class="form-check-input"
-                type="checkbox"
-                :checked="item.is_checked"
-                @change="
+            <p v-if="isSaved" class="small text-muted">
+              To generate a new checklist, unsave this one first by clicking
+              "★ Saved". Generating a new checklist deletes this one.
+            </p>
+
+            <p v-if="isSaved && !checklistStore.items.length" class="small text-muted">
+              This checklist is empty. Add items below, or unsave it to generate
+              a new one.
+            </p>
+
+            <div v-if="checklistStore.error && !showForm" class="alert alert-danger py-2 small" role="alert">
+              {{ checklistStore.error }}
+            </div>
+
+            <!-- Checklist items -->
+            <ul v-if="checklistStore.items.length" class="mb-2 route-checklist-list">
+              <li v-for="item in checklistStore.items" :key="item.id" class="route-checklist-row">
+                <input class="form-check-input" type="checkbox" :checked="item.is_checked" @change="
                   checklistStore.toggleChecked(item.id, !item.is_checked)
-                "
-              />
+                  " />
 
-              <div class="route-checklist-item-content">
-                <span
-                  :class="{
+                <div class="route-checklist-item-content">
+                  <span :class="{
                     'text-decoration-line-through text-muted': item.is_checked
-                  }"
-                >
-                  {{ item.label }}
-                  <span v-if="item.quantity" class="text-muted">
-                    — {{ item.quantity }}
+                  }">
+                    {{ item.label }}
+                    <span v-if="item.quantity" class="text-muted">
+                      — {{ item.quantity }}
+                    </span>
                   </span>
-                </span>
 
-                <div v-if="item.reason" class="small text-muted">
-                  {{ item.reason }}
+                  <div v-if="item.reason" class="small text-muted">
+                    {{ item.reason }}
+                  </div>
                 </div>
-              </div>
 
-              <div v-if="isSaved" class="route-checklist-item-actions">
-                <button
-                  class="btn btn-sm btn-link text-primary p-0"
-                  @click="openForm(item)"
-                >
-                  edit
-                </button>
+                <div v-if="isSaved" class="route-checklist-item-actions">
+                  <button class="btn btn-sm btn-link text-primary p-0" @click="openForm(item)">
+                    edit
+                  </button>
 
-                <span aria-hidden="true">|</span>
+                  <span aria-hidden="true">|</span>
 
-                <button
-                  class="btn btn-sm btn-link text-danger p-0"
-                  @click="checklistStore.deleteItem(item.id)"
-                >
-                  remove
-                </button>
-              </div>
-            </li>
-          </ul>
+                  <button class="btn btn-sm btn-link text-danger p-0" @click="checklistStore.deleteItem(item.id)">
+                    remove
+                  </button>
+                </div>
+              </li>
+            </ul>
 
-          <!-- Add or edit an item -->
-          <div
-            v-if="checklistStore.checklist && isSaved"
-            class="checklist-form-area"
-          >
-            <button
-              v-if="!showForm"
-              class="btn btn-sm btn-outline-secondary"
-              @click="openForm()"
-            >
-              + Add item
-            </button>
+            <!-- Add or edit an item -->
+            <div v-if="checklistStore.checklist && isSaved" class="checklist-form-area">
+              <button v-if="!showForm" class="btn btn-sm btn-outline-secondary" @click="openForm()">
+                + Add item
+              </button>
 
-            <ChecklistForm
-              v-else
-              :key="editingItem?.id ?? 'new'"
-              :item="editingItem"
-              @done="closeForm"
-            />
+              <ChecklistForm v-else :key="editingItem?.id ?? 'new'" :item="editingItem" @done="closeForm" />
+            </div>
           </div>
-        </div>
 
-        <p class="small text-body-secondary mt-3 mb-0">
-          AI-generated. Adjust the list to your own experience and the
-          conditions on the day.
-        </p>
-      </div>
-    </section>
+          <p class="small text-body-secondary mt-3 mb-0">
+            AI-generated. Adjust the list to your own experience and the
+            conditions on the day.
+          </p>
+        </div>
+      </section>
 
     </template>
   </main>
@@ -592,6 +551,7 @@ async function onToggleSaved() {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: none;
@@ -641,12 +601,12 @@ async function onToggleSaved() {
   margin-bottom: 0;
 }
 
-.route-match-checks li + li {
+.route-match-checks li+li {
   margin-top: 0.75rem;
 }
 
 .route-checklist .route-detail-section {
-  border-color:  #dee2e6;
+  border-color: #dee2e6;
 }
 
 .route-checklist-toolbar {
@@ -674,7 +634,7 @@ async function onToggleSaved() {
   background: transparent;
 }
 
-.route-checklist .route-checklist-row + .route-checklist-row {
+.route-checklist .route-checklist-row+.route-checklist-row {
   border-top: 1px solid #dee2e6;
 }
 

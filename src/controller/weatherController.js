@@ -63,7 +63,7 @@ export function warningsFor(day) {
 
   const coldest = day.summit ? day.summit.feelsMin : day.feelsMin
   if (coldest !== null && coldest <= NEAR_FREEZING_C) {
-    warnings.push(day.summit ? 'Near-freezing at summit height' : 'Near-freezing')
+    warnings.push(day.summit ? 'Near-freezing at summit' : 'Near-freezing')
   }
   if (STORM_CODES.includes(day.code) || day.maxCape >= STORM_CAPE) {
     warnings.push('Thunderstorm risk')
@@ -74,7 +74,7 @@ export function warningsFor(day) {
     day.morningRainChance <= MORNING_DRY_PERCENT &&
     day.afternoonRainChance >= AFTERNOON_WET_PERCENT
   ) {
-    warnings.push('Rain likely after midday: start early')
+    warnings.push('Rain likely after midday')
   }
   if (day.gustMax >= STRONG_GUST_KMH) {
     warnings.push('Strong gusts')
@@ -140,6 +140,7 @@ export function summariseWeather(start, summit, altitude) {
 
   return {
     current: start.current,
+    summitCurrent: showSummit ? summit.current : null,
     summitElevation: showSummit ? altitude : null,
     days,
   }
