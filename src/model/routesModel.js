@@ -24,3 +24,7 @@ export function getRouteGeometry(id) {
 export function getRoute(id) {
   return supabase.from('routes').select('*').eq('id', id).maybeSingle()
 }
+
+export function listRoutesByIds(ids) {
+  return supabase.from('routes').select('id, name, country').in('id', ids)
+}

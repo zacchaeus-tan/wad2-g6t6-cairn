@@ -1,7 +1,4 @@
-import { listRoutes, listRouteSummaries, getRoute, getRouteGeometry } from '@/model/routesModel'
-
-// Controller: checks input, calls the model, and turns database errors into
-// thrown errors so views can show them.
+import { listRoutes, listRouteSummaries, getRoute, getRouteGeometry, listRoutesByIds } from '@/model/routesModel'
 
 export async function fetchRoutes() {
   const { data, error } = await listRoutes()
@@ -41,6 +38,19 @@ export async function fetchRouteById(id) {
   }
 
   const { data, error } = await getRoute(id)
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchRoutesByIds(ids) {
+  if (!ids || ids.length === 0) {
+    return []
+  }
+
+  const { data, error } = await listRoutesByIds(ids)
   if (error) {
     throw error
   }
