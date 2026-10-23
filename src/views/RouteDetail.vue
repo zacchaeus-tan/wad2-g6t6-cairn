@@ -12,7 +12,7 @@ import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 import { checkRouteSuitability } from '@/lib/matching'
 import { useChecklistStore } from '@/controller/checklistStore'
-import ChecklistForm from '../components/checklist/checklistForm.vue'
+import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 
