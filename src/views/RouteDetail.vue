@@ -15,11 +15,13 @@ import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import { useUserRoutesStore } from '@/controller/userRoutesStore'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
 const checklistStore = useChecklistStore()
+const userRoutesStore = useUserRoutesStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -164,6 +166,7 @@ onMounted(async () => {
       reviewsStore.fetchForRoute(routeParams.params.id),
       reviewsStore.fetchCategories(),
       checklistStore.loadForRoute(route.value.id),
+      userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
   }
@@ -177,6 +180,29 @@ async function reloadRoute() {
   } catch (err) {
     console.warn('Could not reload the route after a review change:', err)
   }
+}
+
+// saved / completed route
+const routeStatus = computed(() => userRoutesStore.current?.status ?? null)
+
+async function onToggleRouteSaved() {
+  if (!routeStatus.value) {
+    await userRoutesStore.setStatus(route.value.id, 'saved')
+    return
+  }
+  if (
+    routeStatus.value === 'completed' &&
+    !confirm('Unsaving this route also removes it from your completed hikes. Continue?')
+  ) {
+    return
+  }
+  await userRoutesStore.remove(route.value.id)
+}
+
+// marking a route done also saves it; undoing keeps it saved
+async function onToggleRouteCompleted() {
+  const next = routeStatus.value === 'completed' ? 'saved' : 'completed'
+  await userRoutesStore.setStatus(route.value.id, next)
 }
 
 // gear checklist
@@ -228,6 +254,29 @@ async function onToggleSaved() {
         <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
         <p v-if="route.technical_rating" class="lead mb-0">
           Official rating: {{ route.technical_rating }}
+        </p>
+
+        <div v-if="auth.isLoggedIn" class="d-flex flex-wrap gap-2 mt-3">
+          <button type="button" class="btn btn-sm" :class="routeStatus ? 'btn-warning' : 'btn-outline-warning'"
+            :disabled="userRoutesStore.loading" :aria-pressed="Boolean(routeStatus)" @click="onToggleRouteSaved">
+            {{ routeStatus ? '★ Saved' : '☆ Save route' }}
+          </button>
+          <button type="button" class="btn btn-sm"
+            :class="routeStatus === 'completed' ? 'btn-success' : 'btn-outline-success'"
+            :disabled="userRoutesStore.loading" :aria-pressed="routeStatus === 'completed'"
+            @click="onToggleRouteCompleted">
+            {{ routeStatus === 'completed' ? '✓ Completed' : 'Mark as completed' }}
+          </button>
+        </div>
+        <p v-else class="small mt-3 mb-0">
+          <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+          to save this route.
+        </p>
+        <p v-if="userRoutesStore.error" class="alert alert-danger py-2 small mt-2 mb-0" role="alert">
+          {{ userRoutesStore.error }}
+        </p>
+        <p v-if="userRoutesStore.statsMessage" class="alert alert-success py-2 small mt-2 mb-0" role="status">
+          {{ userRoutesStore.statsMessage }}
         </p>
       </header>
 

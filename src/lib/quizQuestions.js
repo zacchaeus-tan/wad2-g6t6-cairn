@@ -62,6 +62,17 @@ export const quizQuestions = [
   },
 ]
 
+// The option a measured value falls in, e.g. 1600 m -> "1,500–2,000 m".
+// Options save the lower end of their range, so it's the highest one at or
+// below the value; anything below every option gets the first.
+export function quizOptionFor(question, value) {
+  let match = question.options[0]
+  for (const option of question.options) {
+    if (Number(option.val) <= value) match = option
+  }
+  return match
+}
+
 // The option the user picked for a question, or null if it isn't answered.
 export function quizAnswer(profile, question) {
   if (!profile) return null
