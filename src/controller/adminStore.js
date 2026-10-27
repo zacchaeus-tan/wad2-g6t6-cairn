@@ -38,7 +38,10 @@ export const useAdminStore = defineStore('admin', () => {
   // attention. It comes back once that alert ends or is taken down.
   function hasLiveAlert(routeId, reportRef) {
     return liveAlerts.value.some(
-      (a) => a.route_id === routeId && a.source === 'community' && a.external_ref?.startsWith(`${reportRef}:`),
+      (a) =>
+        a.route_id === routeId &&
+        a.source === 'community' &&
+        a.external_ref?.startsWith(`${reportRef}:`),
     )
   }
 

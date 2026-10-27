@@ -13,7 +13,14 @@ const adminStore = useAdminStore()
   <div v-else class="table-responsive">
     <table class="table table-sm align-middle mb-0">
       <caption class="small">
-        {{ adminStore.incompleteRoutes.length }} of {{ adminStore.routes.length }} routes are missing information.
+        {{
+          adminStore.incompleteRoutes.length
+        }}
+        of
+        {{
+          adminStore.routes.length
+        }}
+        routes are missing information.
       </caption>
       <thead>
         <tr>
@@ -24,10 +31,17 @@ const adminStore = useAdminStore()
       <tbody>
         <tr v-for="route in adminStore.incompleteRoutes" :key="route.id">
           <td>
-            <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{ route.name }}</RouterLink>
+            <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
+              route.name
+            }}</RouterLink>
           </td>
           <td>
-            <span v-for="item in route.missing" :key="item" class="badge text-bg-light border me-1">{{ item }}</span>
+            <span
+              v-for="item in route.missing"
+              :key="item"
+              class="badge text-bg-light border me-1"
+              >{{ item }}</span
+            >
           </td>
         </tr>
       </tbody>

@@ -90,22 +90,40 @@ async function submit() {
       </div>
 
       <div class="col-12">
-        <label for="alert-message" class="form-label">Details for hikers <span class="text-body-secondary">(optional)</span></label>
-        <textarea id="alert-message" v-model="form.message" class="form-control" rows="3"></textarea>
+        <label for="alert-message" class="form-label"
+          >Details for hikers <span class="text-body-secondary">(optional)</span></label
+        >
+        <textarea
+          id="alert-message"
+          v-model="form.message"
+          class="form-control"
+          rows="3"
+        ></textarea>
       </div>
 
       <div class="col-12 col-md-6">
-        <label for="alert-starts" class="form-label">Starts <span class="text-body-secondary">(blank = now)</span></label>
-        <input id="alert-starts" v-model="form.startsAt" type="datetime-local" class="form-control" />
+        <label for="alert-starts" class="form-label"
+          >Starts <span class="text-body-secondary">(blank = now)</span></label
+        >
+        <input
+          id="alert-starts"
+          v-model="form.startsAt"
+          type="datetime-local"
+          class="form-control"
+        />
       </div>
 
       <div class="col-12 col-md-6">
-        <label for="alert-ends" class="form-label">Ends <span class="text-body-secondary">(blank = until removed)</span></label>
+        <label for="alert-ends" class="form-label"
+          >Ends <span class="text-body-secondary">(blank = until removed)</span></label
+        >
         <input id="alert-ends" v-model="form.endsAt" type="datetime-local" class="form-control" />
       </div>
     </div>
 
-    <p v-if="adminStore.error" class="alert alert-danger mt-3 mb-0" role="alert">{{ adminStore.error }}</p>
+    <p v-if="adminStore.error" class="alert alert-danger mt-3 mb-0" role="alert">
+      {{ adminStore.error }}
+    </p>
     <p v-else-if="saved" class="alert alert-success mt-3 mb-0" role="status">Alert published.</p>
 
     <button type="submit" class="btn btn-success mt-3" :disabled="saving">

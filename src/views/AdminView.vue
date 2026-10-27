@@ -32,7 +32,12 @@ async function raiseAlert(draft) {
         <p class="admin-eyebrow mb-1">Admin</p>
         <h1 class="h2 mb-0">Route alerts and safety</h1>
       </div>
-      <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="adminStore.loading" @click="adminStore.fetchAll()">
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm"
+        :disabled="adminStore.loading"
+        @click="adminStore.fetchAll()"
+      >
         {{ adminStore.loading ? 'Refreshing…' : 'Refresh' }}
       </button>
     </header>
@@ -51,7 +56,9 @@ async function raiseAlert(draft) {
         <div class="admin-section">
           <h2 id="attention-title" class="h5 mb-3">
             Needs attention
-            <span v-if="adminStore.attentionCount" class="badge bg-danger ms-1">{{ adminStore.attentionCount }}</span>
+            <span v-if="adminStore.attentionCount" class="badge bg-danger ms-1">{{
+              adminStore.attentionCount
+            }}</span>
           </h2>
           <AttentionList @raise-alert="raiseAlert" />
         </div>

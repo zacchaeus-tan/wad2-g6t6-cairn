@@ -14,7 +14,17 @@ export function listAlerts() {
 }
 
 // source and externalRef are set when the alert was raised from a hiker report.
-export function insertAlert({ routeId, severity, title, message, startsAt, endsAt, createdBy, source, externalRef }) {
+export function insertAlert({
+  routeId,
+  severity,
+  title,
+  message,
+  startsAt,
+  endsAt,
+  createdBy,
+  source,
+  externalRef,
+}) {
   return supabase
     .from('route_alerts')
     .insert({
@@ -49,10 +59,7 @@ export function listHazardRoutes() {
 // Checkpoint hazards reported by at least two different hikers. This is a
 // view, so the route name is joined in the controller rather than embedded.
 export function listPointWarnings() {
-  return supabase
-    .from('route_point_warnings')
-    .select('*')
-    .order('severity', { ascending: false })
+  return supabase.from('route_point_warnings').select('*').order('severity', { ascending: false })
 }
 
 // Columns needed for the difficulty and data-quality checks, which are done

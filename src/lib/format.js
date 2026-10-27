@@ -81,9 +81,15 @@ export function formatDate(value) {
 }
 
 export function alertClass(severity) {
-  return { danger: 'alert-danger', warning: 'alert-warning', info: 'alert-info' }[severity] || 'alert-secondary'
+  return (
+    { danger: 'alert-danger', warning: 'alert-warning', info: 'alert-info' }[severity] ||
+    'alert-secondary'
+  )
 }
 
 export function safetyStatusClass(status) {
-  return { closed: 'bg-danger', caution: 'bg-warning text-dark', open: 'bg-success' }[status] || 'bg-secondary'
+  return (
+    { closed: 'bg-danger', caution: 'bg-warning text-dark', open: 'bg-success' }[status] ||
+    'bg-secondary'
+  )
 }

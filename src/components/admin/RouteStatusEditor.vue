@@ -21,7 +21,9 @@ const matches = computed(() => {
 const selected = computed(() => adminStore.routes.find((r) => r.id === selectedId.value) || null)
 
 // Routes an admin has already marked as caution or closed.
-const flaggedRoutes = computed(() => adminStore.routes.filter((r) => r.safety_status && r.safety_status !== 'open'))
+const flaggedRoutes = computed(() =>
+  adminStore.routes.filter((r) => r.safety_status && r.safety_status !== 'open'),
+)
 
 watch(selected, (route) => {
   saved.value = false
@@ -63,8 +65,12 @@ async function save() {
         class="list-group-item list-group-item-action d-flex justify-content-between"
         @click="choose(route)"
       >
-        <span>{{ route.name }} <span class="text-body-secondary small">{{ route.country }}</span></span>
-        <span class="badge" :class="safetyStatusClass(route.safety_status)">{{ route.safety_status || 'not set' }}</span>
+        <span
+          >{{ route.name }} <span class="text-body-secondary small">{{ route.country }}</span></span
+        >
+        <span class="badge" :class="safetyStatusClass(route.safety_status)">{{
+          route.safety_status || 'not set'
+        }}</span>
       </button>
     </div>
 
@@ -80,7 +86,9 @@ async function save() {
             name="safety-status"
             :value="status"
           />
-          <label class="btn btn-outline-secondary text-capitalize" :for="`status-${status}`">{{ status }}</label>
+          <label class="btn btn-outline-secondary text-capitalize" :for="`status-${status}`">{{
+            status
+          }}</label>
         </template>
       </div>
 
@@ -96,7 +104,9 @@ async function save() {
         placeholder="e.g. Closed by the park authority until the bridge is repaired"
       ></textarea>
 
-      <p v-if="adminStore.statusError" class="alert alert-danger mt-3 mb-0" role="alert">{{ adminStore.statusError }}</p>
+      <p v-if="adminStore.statusError" class="alert alert-danger mt-3 mb-0" role="alert">
+        {{ adminStore.statusError }}
+      </p>
       <p v-else-if="saved" class="alert alert-success mt-3 mb-0" role="status">Status saved.</p>
 
       <button type="submit" class="btn btn-success mt-3" :disabled="saving">
@@ -108,9 +118,15 @@ async function save() {
       <h3 class="h6 text-uppercase text-body-secondary mt-4">Not open</h3>
       <ul class="list-group">
         <li v-for="route in flaggedRoutes" :key="route.id" class="list-group-item">
-          <button type="button" class="btn btn-link p-0 text-start" @click="choose(route)">{{ route.name }}</button>
-          <span class="badge ms-2" :class="safetyStatusClass(route.safety_status)">{{ route.safety_status }}</span>
-          <span v-if="route.safety_status_note" class="small text-body-secondary"> — {{ route.safety_status_note }}</span>
+          <button type="button" class="btn btn-link p-0 text-start" @click="choose(route)">
+            {{ route.name }}
+          </button>
+          <span class="badge ms-2" :class="safetyStatusClass(route.safety_status)">{{
+            route.safety_status
+          }}</span>
+          <span v-if="route.safety_status_note" class="small text-body-secondary">
+            — {{ route.safety_status_note }}</span
+          >
         </li>
       </ul>
     </template>

@@ -44,7 +44,9 @@ function hikers(count) {
 
 // One row of the route_point_warnings view.
 export function draftFromPointWarning(warning) {
-  const place = warning.day_number ? `${warning.point_name} (day ${warning.day_number})` : warning.point_name
+  const place = warning.day_number
+    ? `${warning.point_name} (day ${warning.day_number})`
+    : warning.point_name
   const reported = `Reported by ${hikers(warning.reporter_count)}, most recently on ${formatDate(warning.last_reported_at)}.`
   const note = warning.latest_note ? ` Latest report: "${sentence(warning.latest_note)}"` : ''
 

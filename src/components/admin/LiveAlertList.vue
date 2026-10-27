@@ -11,7 +11,9 @@ function isScheduled(alert) {
 </script>
 
 <template>
-  <p v-if="!adminStore.liveAlerts.length" class="text-body-secondary mb-0">No alerts are published.</p>
+  <p v-if="!adminStore.liveAlerts.length" class="text-body-secondary mb-0">
+    No alerts are published.
+  </p>
 
   <ul v-else class="list-unstyled mb-0">
     <li
@@ -24,7 +26,9 @@ function isScheduled(alert) {
         <strong>{{ alert.title }}</strong>
         <span class="small">
           ·
-          <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{ alert.routes?.name }}</RouterLink>
+          <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
+            alert.routes?.name
+          }}</RouterLink>
         </span>
         <p v-if="alert.message" class="mb-1 small">{{ alert.message }}</p>
         <p class="mb-0 small">
@@ -33,7 +37,11 @@ function isScheduled(alert) {
           <template v-if="alert.ends_at"> · until {{ formatDate(alert.ends_at) }}</template>
         </p>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-dark" @click="adminStore.setAlertStatus(alert.id, 'dismissed')">
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-dark"
+        @click="adminStore.setAlertStatus(alert.id, 'dismissed')"
+      >
         Take down
       </button>
     </li>
