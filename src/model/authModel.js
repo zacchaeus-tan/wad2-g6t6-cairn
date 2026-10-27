@@ -37,7 +37,8 @@ export function updateQuizAnswers(userId, answers) {
       longest_distance_km: answers.longestDistanceKm,
       max_elevation_gain_m: answers.maxElevationGainM,
       highest_altitude_m: answers.highestAltitudeM,
-      goals_text: answers.goalsText,
+      longest_trek_days: answers.longestTrekDays,
+      quiz_completed_at: new Date().toISOString(),
     })
     .eq('id', userId)
 }
