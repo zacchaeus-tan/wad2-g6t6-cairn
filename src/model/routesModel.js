@@ -29,12 +29,16 @@ export function listRoutesByIds(ids) {
   return supabase.from('routes').select('id, name, country').in('id', ids)
 }
 
-// Row Level Security already hides alerts that are not active or are outside
-// their time window, so this returns only what hikers should see.
+// Only published alerts inside their time window. Row Level Security already
+// limits hikers to these, but admins can read every alert, so filter here too.
 export function listAlertsForRoute(routeId) {
+  const now = new Date().toISOString()
   return supabase
     .from('route_alerts')
     .select('id, severity, title, message, starts_at, ends_at')
     .eq('route_id', routeId)
+    .eq('status', 'active')
+    .lte('starts_at', now)
+    .or(`ends_at.is.null,ends_at.gt.${now}`)
     .order('starts_at', { ascending: false })
 }
