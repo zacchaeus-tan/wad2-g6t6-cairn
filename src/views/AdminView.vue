@@ -10,7 +10,7 @@ import DataQualityList from '@/components/admin/DataQualityList.vue'
 
 const adminStore = useAdminStore()
 const auth = useAuthStore()
-const alertRouteId = ref('')
+const alertForm = ref(null)
 const alertSection = ref(null)
 
 onMounted(() => {
@@ -19,7 +19,7 @@ onMounted(() => {
 
 // "Raise alert" on a hazard report fills in the route and jumps to the form.
 async function raiseAlert(routeId) {
-  alertRouteId.value = routeId
+  alertForm.value?.selectRoute(routeId)
   await nextTick()
   alertSection.value?.scrollIntoView({ behavior: 'smooth' })
 }
@@ -60,7 +60,7 @@ async function raiseAlert(routeId) {
       <section ref="alertSection" class="col-12 col-lg-7" aria-labelledby="new-alert-title">
         <div class="admin-section h-100">
           <h2 id="new-alert-title" class="h5 mb-3">Publish an alert</h2>
-          <AlertForm :user-id="auth.user.id" :route-id="alertRouteId" />
+          <AlertForm ref="alertForm" :user-id="auth.user.id" />
         </div>
       </section>
 

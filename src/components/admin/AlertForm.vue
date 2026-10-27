@@ -1,11 +1,9 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useAdminStore } from '@/controller/adminStore'
 
 const props = defineProps({
   userId: { type: String, required: true },
-  // Set when an admin clicks "Raise alert" on a reported hazard.
-  routeId: { type: String, default: '' },
 })
 
 const adminStore = useAdminStore()
@@ -13,17 +11,19 @@ const saving = ref(false)
 const saved = ref(false)
 
 function emptyForm() {
-  return { routeId: props.routeId, severity: 'warning', title: '', message: '', startsAt: '', endsAt: '' }
+  return { routeId: '', severity: 'warning', title: '', message: '', startsAt: '', endsAt: '' }
 }
 
 const form = ref(emptyForm())
 
-watch(
-  () => props.routeId,
-  (id) => {
-    form.value.routeId = id
-  },
-)
+// Called by the admin page when an admin clicks "Raise alert" on a reported
+// hazard. A method rather than a prop, so clicking the same route again still
+// resets the dropdown after the admin has changed it.
+function selectRoute(id) {
+  form.value.routeId = id
+}
+
+defineExpose({ selectRoute })
 
 // datetime-local gives local time without a zone; convert it before saving.
 function toIso(value) {
