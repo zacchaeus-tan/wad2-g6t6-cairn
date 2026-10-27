@@ -9,6 +9,7 @@ const props = defineProps({
 const adminStore = useAdminStore()
 const saving = ref(false)
 const saved = ref(false)
+const drafted = ref(false) // filled in from a hiker report, so worth a check
 
 function emptyForm() {
   return { routeId: '', severity: 'warning', title: '', message: '', startsAt: '', endsAt: '' }
@@ -17,13 +18,16 @@ function emptyForm() {
 const form = ref(emptyForm())
 
 // Called by the admin page when an admin clicks "Raise alert" on a reported
-// hazard. A method rather than a prop, so clicking the same route again still
-// resets the dropdown after the admin has changed it.
-function selectRoute(id) {
-  form.value.routeId = id
+// hazard. A method rather than a prop, so clicking the same report again
+// still resets the form after the admin has edited it.
+function fillDraft(draft) {
+  form.value = { ...emptyForm(), ...draft }
+  drafted.value = true
+  saved.value = false
+  adminStore.error = null
 }
 
-defineExpose({ selectRoute })
+defineExpose({ fillDraft })
 
 // datetime-local gives local time without a zone; convert it before saving.
 function toIso(value) {
@@ -42,6 +46,7 @@ async function submit() {
   saving.value = false
   if (ok) {
     form.value = emptyForm()
+    drafted.value = false
     saved.value = true
   }
 }
@@ -49,6 +54,9 @@ async function submit() {
 
 <template>
   <form novalidate @submit.prevent="submit">
+    <p v-if="drafted" class="alert alert-info small" role="status">
+      Filled in from hiker reports. Check the wording and dates, then publish.
+    </p>
     <div class="row g-3">
       <div class="col-12 col-md-8">
         <label for="alert-route" class="form-label">Route</label>

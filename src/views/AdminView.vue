@@ -17,9 +17,9 @@ onMounted(() => {
   adminStore.fetchAll()
 })
 
-// "Raise alert" on a hazard report fills in the route and jumps to the form.
-async function raiseAlert(routeId) {
-  alertForm.value?.selectRoute(routeId)
+// "Raise alert" on a hazard report fills in the form and jumps to it.
+async function raiseAlert(draft) {
+  alertForm.value?.fillDraft(draft)
   await nextTick()
   alertSection.value?.scrollIntoView({ behavior: 'smooth' })
 }

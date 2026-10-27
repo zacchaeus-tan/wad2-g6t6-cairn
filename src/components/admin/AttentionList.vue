@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { useAdminStore } from '@/controller/adminStore'
 import { alertClass, difficultyLabel, formatDate, hazardClass } from '@/lib/format'
+import { draftFromHazardRoute, draftFromPointWarning } from '@/lib/alertDrafts'
 
 const emit = defineEmits(['raise-alert'])
 
@@ -58,7 +59,7 @@ const adminStore = useAdminStore()
               — {{ route.community_hazard_note }}
             </span>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary" @click="emit('raise-alert', route.id)">
+          <button type="button" class="btn btn-sm btn-outline-primary" @click="emit('raise-alert', draftFromHazardRoute(route))">
             Raise alert
           </button>
         </li>
@@ -85,7 +86,7 @@ const adminStore = useAdminStore()
               <template v-if="warning.latest_note">: “{{ warning.latest_note }}”</template>
             </p>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary" @click="emit('raise-alert', warning.route_id)">
+          <button type="button" class="btn btn-sm btn-outline-primary" @click="emit('raise-alert', draftFromPointWarning(warning))">
             Raise alert
           </button>
         </li>
