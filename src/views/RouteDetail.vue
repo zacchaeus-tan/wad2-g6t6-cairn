@@ -243,7 +243,8 @@ async function onToggleSaved() {
         </p>
       </header>
 
-      <section v-if="alerts.length" class="mb-4" aria-label="Current alerts">
+      <section v-if="alerts.length" class="mb-4" aria-labelledby="trail-notices-title">
+        <h2 id="trail-notices-title" class="h5 mb-3">Trail notices</h2>
         <div v-for="alert in alerts" :key="alert.id" class="alert" :class="alertClass(alert.severity)" role="alert">
           <strong>{{ alert.title }}</strong>
           <p v-if="alert.message" class="mb-1">{{ alert.message }}</p>

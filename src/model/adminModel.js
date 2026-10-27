@@ -73,13 +73,3 @@ export function updateRouteSafety(routeId, { safetyStatus, safetyStatusNote }) {
     .select(`${ROUTE_SUMMARY}, safety_status, safety_status_note`)
     .single()
 }
-
-// Most recent runs of the scheduled jobs, newest first.
-export function listJobRuns() {
-  return supabase.from('job_runs').select('*').order('started_at', { ascending: false }).limit(10)
-}
-
-// The function checks that the caller is an admin before running.
-export function runWeatherCheck() {
-  return supabase.functions.invoke('check-weather')
-}

@@ -7,7 +7,6 @@ import AlertForm from '@/components/admin/AlertForm.vue'
 import LiveAlertList from '@/components/admin/LiveAlertList.vue'
 import RouteStatusEditor from '@/components/admin/RouteStatusEditor.vue'
 import DataQualityList from '@/components/admin/DataQualityList.vue'
-import AutomationStatus from '@/components/admin/AutomationStatus.vue'
 
 const adminStore = useAdminStore()
 const auth = useAuthStore()
@@ -83,13 +82,6 @@ async function raiseAlert(routeId) {
         <div class="admin-section h-100">
           <h2 id="data-quality-title" class="h5 mb-3">Missing route information</h2>
           <DataQualityList />
-        </div>
-      </section>
-
-      <section class="col-12" aria-labelledby="automation-title">
-        <div class="admin-section">
-          <h2 id="automation-title" class="h5 mb-3">Automated checks</h2>
-          <AutomationStatus />
         </div>
       </section>
     </div>

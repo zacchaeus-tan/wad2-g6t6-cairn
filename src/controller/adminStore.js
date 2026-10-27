@@ -16,9 +16,6 @@ export const useAdminStore = defineStore('admin', () => {
   const error = ref(null) // creating an alert: shown by AlertForm
   const statusError = ref(null) // saving a safety status: shown by RouteStatusEditor
   const actionError = ref(null) // publishing or taking down an alert: shown by the page
-  const jobRuns = ref([])
-  const jobRunning = ref(false)
-  const jobError = ref(null) // loading or running the weather job: shown by AutomationStatus
 
   function clearError() {
     error.value = null
@@ -72,19 +69,9 @@ export const useAdminStore = defineStore('admin', () => {
       difficultyMismatches.value.length,
   )
 
-  // Latest run of each job, for the automation section.
-  const latestRuns = computed(() => {
-    const latest = new Map()
-    for (const run of jobRuns.value) {
-      if (!latest.has(run.job)) latest.set(run.job, run)
-    }
-    return [...latest.values()]
-  })
-
   async function fetchAll() {
     loading.value = true
     loadError.value = null
-    fetchJobRuns()
 
     const [alertsRes, hazardsRes, warningsRes, routesRes] = await Promise.all([
       adminModel.listAlerts(),
@@ -104,35 +91,6 @@ export const useAdminStore = defineStore('admin', () => {
     hazardRoutes.value = hazardsRes.data
     pointWarnings.value = warningsRes.data
     routes.value = routesRes.data
-    return true
-  }
-
-  // Kept apart from fetchAll so a problem with the job table does not stop
-  // the rest of the page loading.
-  async function fetchJobRuns() {
-    const { data, error: err } = await adminModel.listJobRuns()
-    if (err) {
-      jobError.value = err.message
-      return false
-    }
-    jobRuns.value = data
-    return true
-  }
-
-  async function runWeatherCheck() {
-    jobRunning.value = true
-    jobError.value = null
-    const { error: err } = await adminModel.runWeatherCheck()
-    jobRunning.value = false
-    if (err) {
-      // The function's own { error } message is more useful than the
-      // generic "non-2xx status code" one supabase-js puts on err.
-      const body = await err.context?.json?.().catch(() => null)
-      jobError.value = body?.error || err.message
-      await fetchJobRuns()
-      return false
-    }
-    await fetchAll()
     return true
   }
 
@@ -214,10 +172,6 @@ export const useAdminStore = defineStore('admin', () => {
     error,
     statusError,
     actionError,
-    jobRuns,
-    jobRunning,
-    jobError,
-    latestRuns,
     pendingAlerts,
     liveAlerts,
     routeNames,
@@ -229,6 +183,5 @@ export const useAdminStore = defineStore('admin', () => {
     createAlert,
     setAlertStatus,
     saveRouteSafety,
-    runWeatherCheck,
   }
 })
