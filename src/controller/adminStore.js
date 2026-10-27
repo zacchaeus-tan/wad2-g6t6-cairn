@@ -59,7 +59,6 @@ export const useAdminStore = defineStore('admin', () => {
         }
         if (!r.country) missing.push('country')
         if (r.distance_km == null) missing.push('distance')
-        if (!r.route_points?.[0]?.count) missing.push('checkpoints')
         return { ...r, missing }
       })
       .filter((r) => r.missing.length),

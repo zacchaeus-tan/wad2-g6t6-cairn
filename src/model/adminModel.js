@@ -60,8 +60,7 @@ export function listRoutesForChecks() {
     .from('routes')
     .select(
       `${ROUTE_SUMMARY}, official_difficulty, effective_difficulty, review_count, distance_km,
-       latitude, longitude, safety_status, safety_status_note, geometry_present:geometry->>type,
-       route_points(count)`,
+       latitude, longitude, safety_status, safety_status_note, geometry_present:geometry->>type`,
     )
     .order('name')
 }

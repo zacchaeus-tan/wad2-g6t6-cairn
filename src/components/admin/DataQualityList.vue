@@ -7,7 +7,7 @@ const adminStore = useAdminStore()
 
 <template>
   <p v-if="!adminStore.incompleteRoutes.length" class="text-body-secondary mb-0">
-    Every route has its map location, country, distance and checkpoints.
+    Every route has its map location, country and distance.
   </p>
 
   <div v-else class="table-responsive">
