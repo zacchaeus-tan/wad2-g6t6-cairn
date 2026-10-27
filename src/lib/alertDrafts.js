@@ -24,6 +24,20 @@ function sentence(text) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
 }
 
+// Alerts raised from a report keep a reference to it in external_ref, so the
+// admin page can tell which reports already have a live alert. A timestamp is
+// added because external_ref is unique per route, and the same report may be
+// raised again once an earlier alert has ended.
+export function pointWarningRef(warning) {
+  return `point:${warning.point_id}:${warning.category}`
+}
+
+export const HAZARD_ROUTE_REF = 'route-hazard'
+
+function linkTo(reportRef) {
+  return { source: 'community', externalRef: `${reportRef}:${Date.now()}` }
+}
+
 function hikers(count) {
   return count === 1 ? '1 hiker' : `${count} hikers`
 }
@@ -40,6 +54,7 @@ export function draftFromPointWarning(warning) {
     title: `${warning.label} at ${place}`,
     message: `${reported}${note} Take extra care on this section.`,
     endsAt: draftEnd(),
+    ...linkTo(pointWarningRef(warning)),
   }
 }
 
@@ -53,5 +68,6 @@ export function draftFromHazardRoute(route) {
     title: `Hikers report ${route.community_hazard_level} hazards on this route`,
     message: `${note}Based on recent hiker reviews. Check conditions before you set out.`,
     endsAt: draftEnd(),
+    ...linkTo(HAZARD_ROUTE_REF),
   }
 }

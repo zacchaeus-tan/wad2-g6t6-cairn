@@ -42,11 +42,11 @@ const adminStore = useAdminStore()
       </ul>
     </template>
 
-    <template v-if="adminStore.hazardRoutes.length">
+    <template v-if="adminStore.openHazardRoutes.length">
       <h3 class="h6 text-uppercase text-body-secondary mt-2">Community hazard reports</h3>
       <ul class="list-group mb-4">
         <li
-          v-for="route in adminStore.hazardRoutes"
+          v-for="route in adminStore.openHazardRoutes"
           :key="route.id"
           class="list-group-item d-flex flex-wrap gap-2 justify-content-between align-items-center"
         >
@@ -66,11 +66,11 @@ const adminStore = useAdminStore()
       </ul>
     </template>
 
-    <template v-if="adminStore.pointWarnings.length">
+    <template v-if="adminStore.openPointWarnings.length">
       <h3 class="h6 text-uppercase text-body-secondary mt-2">Hazards confirmed at checkpoints</h3>
       <ul class="list-group mb-4">
         <li
-          v-for="warning in adminStore.pointWarnings"
+          v-for="warning in adminStore.openPointWarnings"
           :key="`${warning.point_id}-${warning.category}`"
           class="list-group-item d-flex flex-wrap gap-2 justify-content-between align-items-center"
         >

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as adminModel from '@/model/adminModel'
+import { HAZARD_ROUTE_REF, pointWarningRef } from '@/lib/alertDrafts'
 
 // Community difficulty must differ from the official grade by at least this
 // much (on the 1-4 scale) before an admin is asked to look at the grade.
@@ -33,6 +34,22 @@ export const useAdminStore = defineStore('admin', () => {
     )
   })
 
+  // True when a live alert was raised from this report, so it no longer needs
+  // attention. It comes back once that alert ends or is taken down.
+  function hasLiveAlert(routeId, reportRef) {
+    return liveAlerts.value.some(
+      (a) => a.route_id === routeId && a.source === 'community' && a.external_ref?.startsWith(`${reportRef}:`),
+    )
+  }
+
+  const openHazardRoutes = computed(() =>
+    hazardRoutes.value.filter((r) => !hasLiveAlert(r.id, HAZARD_ROUTE_REF)),
+  )
+
+  const openPointWarnings = computed(() =>
+    pointWarnings.value.filter((w) => !hasLiveAlert(w.route_id, pointWarningRef(w))),
+  )
+
   const routeNames = computed(() => new Map(routes.value.map((r) => [r.id, r.name])))
 
   const difficultyMismatches = computed(() =>
@@ -64,8 +81,8 @@ export const useAdminStore = defineStore('admin', () => {
   const attentionCount = computed(
     () =>
       pendingAlerts.value.length +
-      hazardRoutes.value.length +
-      pointWarnings.value.length +
+      openHazardRoutes.value.length +
+      openPointWarnings.value.length +
       difficultyMismatches.value.length,
   )
 
@@ -174,6 +191,8 @@ export const useAdminStore = defineStore('admin', () => {
     actionError,
     pendingAlerts,
     liveAlerts,
+    openHazardRoutes,
+    openPointWarnings,
     routeNames,
     difficultyMismatches,
     incompleteRoutes,

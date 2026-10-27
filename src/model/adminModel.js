@@ -13,12 +13,14 @@ export function listAlerts() {
     .order('created_at', { ascending: false })
 }
 
-export function insertAlert({ routeId, severity, title, message, startsAt, endsAt, createdBy }) {
+// source and externalRef are set when the alert was raised from a hiker report.
+export function insertAlert({ routeId, severity, title, message, startsAt, endsAt, createdBy, source, externalRef }) {
   return supabase
     .from('route_alerts')
     .insert({
       route_id: routeId,
-      source: 'manual',
+      source: source || 'manual',
+      external_ref: externalRef || null,
       severity,
       title,
       message: message || null,
