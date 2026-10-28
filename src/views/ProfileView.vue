@@ -67,15 +67,15 @@ const routeStatusBadges = {
   completed: { text: 'Completed', class: 'bg-success' },
 }
 
-// clicking again undoes it; the route stays saved either way
-async function onToggleCompleted(r) {
-  await userRoutesStore.setStatus(r.route_id, r.status === 'completed' ? 'saved' : 'completed')
+// a completed route is locked: it can't be un-completed or removed
+async function onMarkCompleted(r) {
+  if (r.status === 'completed') return
+  if (!confirm('Have you completed the hike?')) return
+  await userRoutesStore.setStatus(r.route_id, 'completed')
 }
 
 async function onRemoveRoute(r) {
-  if (r.status === 'completed' && !confirm('Removing this route also removes it from your completed hikes. Continue?')) {
-    return
-  }
+  if (r.status === 'completed') return
   await userRoutesStore.remove(r.route_id)
 }
 
@@ -231,7 +231,7 @@ function packedCount(items) {
     </template>
 
     <section class="mb-4" aria-labelledby="saved-routes-title">
-      <h2 id="saved-routes-title" class="h4 mb-3">My saved routes</h2>
+      <h2 id="saved-routes-title" class="h6 text-muted text-uppercase mb-2">My routes</h2>
 
       <p v-if="userRoutesStore.savedLoading && !userRoutesStore.savedRoutes.length" role="status">
         Loading your routes...
@@ -270,14 +270,16 @@ function packedCount(items) {
             type="button"
             class="btn btn-sm"
             :class="r.status === 'completed' ? 'btn-success' : 'btn-outline-success'"
-            :disabled="userRoutesStore.loading"
+            :hidden="r.status === 'completed'"
+            :disabled="userRoutesStore.loading || r.status === 'completed'"
             :aria-pressed="r.status === 'completed'"
-            @click="onToggleCompleted(r)"
+            @click="onMarkCompleted(r)"
           >
-            {{ r.status === 'completed' ? '✓ Completed' : 'Mark as completed' }}
+            ✓ Completed
           </button>
           <RouterLink class="btn btn-sm btn-outline-secondary" :to="'/routes/' + r.route_id">View route</RouterLink>
           <button
+            v-if="r.status !== 'completed'"
             type="button"
             class="btn btn-sm btn-outline-danger"
             :disabled="userRoutesStore.loading"

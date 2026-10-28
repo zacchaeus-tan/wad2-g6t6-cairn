@@ -23,6 +23,7 @@ function unwrap(result) {
 
 // Saved and completed routes. A route has one row per user: saving creates it
 // as 'saved', marking it done changes it to 'completed', unsaving deletes it.
+// Once completed, a route can't be changed back or removed.
 export const useUserRoutesStore = defineStore('userRoutes', () => {
   const current = ref(null) // the user's row for the open route, or null
   const savedRoutes = ref([]) // every saved or completed route, for the profile page
@@ -41,6 +42,12 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
     statsMessage.value = null
   }
 
+  // completed routes are locked: no un-completing and no removing
+  function isCompleted(routeId) {
+    if (current.value?.route_id === routeId) return current.value.status === 'completed'
+    return savedRoutes.value.some((r) => r.route_id === routeId && r.status === 'completed')
+  }
+
   // The hike's figures as quiz option values, so retaking the quiz shows them selected.
   function asQuizAnswers(experience) {
     const answers = {}
@@ -52,7 +59,6 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
   }
 
   // A completed hike counts as experience: any stat it beats goes up on the profile.
-  // Undoing a completion leaves the stats as they are.
   async function raiseExperienceFrom(routeId) {
     try {
       const route = unwrap(await routesModel.getRouteExperience(routeId))
@@ -87,6 +93,10 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
       error.value = 'Please sign in to save routes.'
       return false
     }
+    if (isCompleted(routeId)) {
+      error.value = 'This route is already completed and cannot be changed.'
+      return false
+    }
     loading.value = true
     clearError()
 
@@ -112,6 +122,10 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
 
   async function remove(routeId) {
     if (!userId()) return false
+    if (isCompleted(routeId)) {
+      error.value = 'Completed routes cannot be removed.'
+      return false
+    }
     loading.value = true
     clearError()
 

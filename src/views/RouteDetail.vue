@@ -185,24 +185,23 @@ async function reloadRoute() {
 // saved / completed route
 const routeStatus = computed(() => userRoutesStore.current?.status ?? null)
 
+// a completed route is locked: it can't be unsaved or un-completed
+const isRouteCompleted = computed(() => routeStatus.value === 'completed')
+
 async function onToggleRouteSaved() {
+  if (isRouteCompleted.value) return
   if (!routeStatus.value) {
     await userRoutesStore.setStatus(route.value.id, 'saved')
-    return
-  }
-  if (
-    routeStatus.value === 'completed' &&
-    !confirm('Unsaving this route also removes it from your completed hikes. Continue?')
-  ) {
     return
   }
   await userRoutesStore.remove(route.value.id)
 }
 
-// marking a route done also saves it; undoing keeps it saved
+// marking a route done also saves it, and can't be undone
 async function onToggleRouteCompleted() {
-  const next = routeStatus.value === 'completed' ? 'saved' : 'completed'
-  await userRoutesStore.setStatus(route.value.id, next)
+  if (isRouteCompleted.value) return
+  if (!confirm('Have you completed the hike?')) return
+  await userRoutesStore.setStatus(route.value.id, 'completed')
 }
 
 // gear checklist
@@ -258,12 +257,13 @@ async function onToggleSaved() {
 
         <div v-if="auth.isLoggedIn" class="d-flex flex-wrap gap-2 mt-3">
           <button type="button" class="btn btn-sm" :class="routeStatus ? 'btn-warning' : 'btn-outline-warning'"
-            :disabled="userRoutesStore.loading" :aria-pressed="Boolean(routeStatus)" @click="onToggleRouteSaved">
+            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="Boolean(routeStatus)"
+            @click="onToggleRouteSaved">
             {{ routeStatus ? '★ Saved' : '☆ Save route' }}
           </button>
           <button type="button" class="btn btn-sm"
             :class="routeStatus === 'completed' ? 'btn-success' : 'btn-outline-success'"
-            :disabled="userRoutesStore.loading" :aria-pressed="routeStatus === 'completed'"
+            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="isRouteCompleted"
             @click="onToggleRouteCompleted">
             {{ routeStatus === 'completed' ? '✓ Completed' : 'Mark as completed' }}
           </button>
