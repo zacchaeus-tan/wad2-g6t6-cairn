@@ -162,7 +162,9 @@ function packedCount(items) {
               {{ auth.profile.experience_level || 'Experience not set' }}
             </span>
           </div>
-          <p v-if="auth.profile.about" class="small mb-0" style="white-space: pre-line">{{ auth.profile.about }}</p>
+          <p v-if="auth.profile.about" class="small mb-0" style="white-space: pre-line">
+            {{ auth.profile.about }}
+          </p>
         </div>
       </div>
     </div>
@@ -194,7 +196,9 @@ function packedCount(items) {
             <div class="card-body">
               <div class="small text-muted">{{ stat.label }}</div>
               <div class="h4 mb-0">
-                <template v-if="stat.value != null">{{ stat.value }} <span class="fs-6">{{ stat.unit }}</span></template>
+                <template v-if="stat.value != null"
+                  >{{ stat.value }} <span class="fs-6">{{ stat.unit }}</span></template
+                >
                 <template v-else>—</template>
               </div>
             </div>
@@ -204,29 +208,35 @@ function packedCount(items) {
       <p class="small text-muted mb-4">Hike tracking is coming soon.</p>
     </template>
 
-    <!-- saved gear checklists go here once the checklist store supports listing them -->
     <section class="checklists" aria-labelledby="saved-checklists-title">
-      <h2 id="saved-checklists-title" class="h4 mb-3">My saved gear checklists</h2>
+      <h2 id="saved-checklists-title" class="h4 mb-3">My Saved Gear Checklists</h2>
 
       <p v-if="checklistStore.savedLoading && !checklistStore.savedChecklists.length" role="status">
         Loading your checklists...
       </p>
 
-      <div v-if="checklistStore.error && !formState" class="alert alert-danger py-2 small" role="alert">
+      <div
+        v-if="checklistStore.error && !formState"
+        class="alert alert-danger py-2 small"
+        role="alert"
+      >
         {{ checklistStore.error }}
       </div>
 
       <p
-        v-if="!checklistStore.savedLoading && !checklistStore.error && !checklistStore.savedChecklists.length"
+        v-if="
+          !checklistStore.savedLoading &&
+          !checklistStore.error &&
+          !checklistStore.savedChecklists.length
+        "
         class="alert alert-secondary"
       >
-        You have no saved checklists yet. Open a route, generate a gear checklist and click
-        "Save checklist" to see it here.
+        You have no saved checklists yet. Open a route, generate a gear checklist and click "Save
+        checklist" to see it here.
       </p>
 
       <div v-for="c in checklistStore.savedChecklists" :key="c.id" class="card mb-3">
         <div class="card-body">
-         
           <div class="checklist-header">
             <button
               type="button"
@@ -269,24 +279,41 @@ function packedCount(items) {
                   <div class="checklist-item-text">
                     <span :class="{ 'checklist-item-done': item.is_checked }">
                       {{ item.label }}
-                      <span v-if="item.quantity" class="checklist-meta-inline">— {{ item.quantity }}</span>
+                      <span v-if="item.quantity" class="checklist-meta-inline"
+                        >— {{ item.quantity }}</span
+                      >
                     </span>
                     <div v-if="item.reason" class="checklist-meta">{{ item.reason }}</div>
                   </div>
                   <div class="checklist-actions">
-                    <button type="button" class="checklist-action-edit" @click="openForm(c.id, item)">edit</button>
-                    <span aria-hidden="true">|</span>
-                    <button type="button" class="checklist-action-remove" @click="onRemove(item)">remove</button>
+                    <button
+                      type="button"
+                      class="checklist-action-edit"
+                      @click="openForm(c.id, item)"
+                    >
+                      edit
+                    </button>
+                    <span aria-hidden="true"> | </span>
+                    <button type="button" class="checklist-action-remove" @click="onRemove(item)">
+                      remove
+                    </button>
                   </div>
+                  <ChecklistForm
+                    v-if="formState?.checklistId === c.id && formState.item?.id === item.id"
+                    :key="item.id"
+                    class="w-100"
+                    :item="formState.item"
+                    :checklist-id="c.id"
+                    @done="onFormDone"
+                  />
                 </li>
               </ul>
             </div>
 
             <div class="checklist-form-area">
               <ChecklistForm
-                v-if="formState?.checklistId === c.id"
-                :key="formState.item?.id ?? 'new'"
-                :item="formState.item"
+                v-if="formState?.checklistId === c.id && !formState.item"
+                key="new"
                 :checklist-id="c.id"
                 @done="onFormDone"
               />
@@ -337,7 +364,7 @@ function packedCount(items) {
 }
 
 .checklist-meta-inline {
-  color:  #6c757d;
+  color: #6c757d;
 }
 
 .checklist-body {
@@ -366,6 +393,7 @@ function packedCount(items) {
 .checklist-item {
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
 }
@@ -380,6 +408,8 @@ function packedCount(items) {
 
 .checklist-item-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .checklist-item-done {
@@ -389,6 +419,7 @@ function packedCount(items) {
 
 /* edit | remove */
 .checklist-actions {
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
