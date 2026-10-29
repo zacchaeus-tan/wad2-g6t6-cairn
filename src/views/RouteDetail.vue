@@ -15,6 +15,7 @@ import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import RouteBanner from '@/components/routes/RouteBanner.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -215,22 +216,20 @@ async function onToggleSaved() {
 </script>
 
 <template>
-  <main class="container route-detail-page py-5">
-    <RouterLink class="back-link mb-4" to="/routes">Back to all routes</RouterLink>
-
-    <p v-if="loading" role="status">Loading route...</p>
-    <p v-else-if="error" class="route-detail-message" role="alert">{{ error }}</p>
-    <p v-else-if="!route" class="route-detail-message">This route could not be found.</p>
+  <div class="cairn route-detail">
+    <div v-if="loading || error || !route" class="route-detail-state">
+      <div class="cairn-wrap">
+        <p v-if="loading" role="status">Loading route...</p>
+        <p v-else-if="error" role="alert">{{ error }}</p>
+        <p v-else>This route could not be found.</p>
+        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes">Back to all routes</RouterLink>
+      </div>
+    </div>
 
     <template v-else>
-      <header class="route-detail-heading mb-5">
-        <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
-        <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
-        <p v-if="route.technical_rating" class="lead mb-0">
-          Official rating: {{ route.technical_rating }}
-        </p>
-      </header>
+      <RouteBanner :route="route" />
 
+      <div class="container route-detail-sections py-5">
       <div class="row g-4">
         <section class="col-12 col-lg-6" aria-labelledby="route-overview-title">
           <div class="route-detail-section h-100">
@@ -428,7 +427,7 @@ async function onToggleSaved() {
           </div>
         </section>
 
-        <section class="col-12" aria-labelledby="route-reviews-title">
+        <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
@@ -575,51 +574,34 @@ async function onToggleSaved() {
           </p>
         </div>
       </section>
+      </div>
     </template>
-  </main>
+  </div>
 </template>
 
 <style scoped>
-.route-detail-page {
+.route-detail {
+  min-height: 100vh;
+}
+
+/* Loading and error states sit on a dark band so the overlaid navbar stays readable */
+.route-detail-state {
+  padding: calc(var(--nav-height) + 96px) 0 96px;
+  background: #0d1411;
+  color: var(--paper);
+}
+
+.route-detail-state .cairn-wrap {
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+}
+
+.route-detail-sections {
   max-width: 1200px;
-  animation: page-fade-in 0.5s ease;
 }
 
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .route-detail-page {
-    animation: none;
-  }
-}
-
-.back-link {
-  display: inline-block;
-}
-
-.route-detail-heading {
-  max-width: 760px;
-}
-
-.route-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.route-detail-section,
-.route-detail-message {
+.route-detail-section {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
