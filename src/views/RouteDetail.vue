@@ -5,7 +5,6 @@ import { fetchRouteById } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
-import ReviewSummary from '../components/reviews/ReviewSummary.vue'
 import ReviewForm from '../components/reviews/ReviewForm.vue'
 import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
@@ -17,6 +16,7 @@ import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
+import GradeDial from '@/components/routes/GradeDial.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -77,27 +77,12 @@ const statusBadges = {
   unknown: { text: 'Unknown', class: 'bg-secondary' },
 }
 
-const difficultyLabels = {
-  1: 'Easy',
-  2: 'Moderate',
-  3: 'Hard',
-  4: 'Strenuous',
-}
-
 function formatValue(value, unit = '') {
   if (value == null || value === '') {
     return 'Not listed'
   }
 
   return `${value}${unit}`
-}
-
-function formatDifficulty(value) {
-  if (value == null || value === '') {
-    return 'Not rated'
-  }
-
-  return difficultyLabels[value] ?? value
 }
 
 function formatCompletionRate(value) {
@@ -209,18 +194,14 @@ async function onToggleSaved() {
 
       <div class="container route-detail-sections py-5">
       <div class="row g-4">
+        <section class="col-12">
+          <GradeDial :route="route" />
+        </section>
+
         <section class="col-12" aria-labelledby="route-feedback-title">
           <div class="route-detail-section h-100">
-            <h2 id="route-feedback-title" class="h4 mb-4">Difficulty and community feedback</h2>
+            <h2 id="route-feedback-title" class="h4 mb-4">Community feedback</h2>
             <dl class="route-detail-facts">
-              <div>
-                <dt>Official difficulty</dt>
-                <dd>{{ formatDifficulty(route.official_difficulty ?? route.technical_rating) }}</dd>
-              </div>
-              <div>
-                <dt>Community-adjusted difficulty</dt>
-                <dd>{{ formatDifficulty(route.effective_difficulty) }}</dd>
-              </div>
               <div>
                 <dt>Average perceived difficulty</dt>
                 <dd>{{ formatValue(route.avg_perceived_difficulty, ' / 4') }}</dd>
@@ -367,7 +348,6 @@ async function onToggleSaved() {
         <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
-            <ReviewSummary :route="route" />
             <ReviewForm
               v-if="auth.isLoggedIn"
               :route="route"
