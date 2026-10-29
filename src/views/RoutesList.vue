@@ -229,6 +229,47 @@ const tripSummary = computed(() =>
   selectedTrips.value.length ? selectedTrips.value.map((trip) => TRIP_LABELS[trip]).join(', ') : 'Any',
 )
 
+// One pill per applied filter, each with its own way to remove it
+const activeFilters = computed(() => {
+  const pills = []
+  if (searchTerm.value.trim()) {
+    pills.push({ key: 'search', label: `“${searchTerm.value.trim()}”`, remove: () => (searchTerm.value = '') })
+  }
+  if (selectedCountry.value) {
+    pills.push({ key: 'country', label: selectedCountry.value, remove: () => (selectedCountry.value = '') })
+  }
+  for (const grade of selectedGrades.value) {
+    pills.push({
+      key: `grade-${grade}`,
+      label: GRADES[grade].label,
+      remove: () => (selectedGrades.value = selectedGrades.value.filter((g) => g !== grade)),
+    })
+  }
+  for (const trip of selectedTrips.value) {
+    pills.push({
+      key: `trip-${trip}`,
+      label: TRIP_LABELS[trip],
+      remove: () => (selectedTrips.value = selectedTrips.value.filter((t) => t !== trip)),
+    })
+  }
+  if (distanceSummary.value !== 'Any') {
+    pills.push({ key: 'distance', label: distanceSummary.value, remove: () => (distanceRange.value = [0, 100]) })
+  }
+  if (climbSummary.value !== 'Any') {
+    pills.push({ key: 'climb', label: `Climb ${climbSummary.value}`, remove: () => (climbRange.value = [0, 100]) })
+  }
+  return pills
+})
+
+function clearFilters() {
+  searchTerm.value = ''
+  selectedCountry.value = ''
+  selectedGrades.value = []
+  selectedTrips.value = []
+  distanceRange.value = [0, 100]
+  climbRange.value = [0, 100]
+}
+
 function photoFor(route, index) {
   return TILE_PHOTOS[((route.name?.length ?? 0) + index) % TILE_PHOTOS.length]
 }
@@ -457,12 +498,32 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 
       <section class="cairn-wrap routes-results" aria-label="Route results">
         <div class="routes-results-top">
+          <div class="routes-active">
+            <button
+              v-for="pill in activeFilters"
+              :key="pill.key"
+              type="button"
+              class="routes-pill"
+              @click="pill.remove()"
+            >
+              {{ pill.label }}
+              <span class="cairn-visually-hidden">(remove filter)</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+            <button v-if="activeFilters.length" type="button" class="cairn-link routes-clear" @click="clearFilters">
+              Clear all filters
+            </button>
+          </div>
           <ul class="routes-key" aria-label="Difficulty key: line colour and label shape">
             <li v-for="grade in [1, 2, 3, 4]" :key="grade"><DifficultyMark :grade="grade" /></li>
           </ul>
         </div>
 
-        <p v-if="filteredRoutes.length === 0" class="routes-no-match mb-0">No routes match these filters.</p>
+        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status">
+          <h2>No routes match these filters</h2>
+          <p>Try a wider distance or climb range, or include more difficulty grades.</p>
+          <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">Clear all filters</button>
+        </div>
 
         <div v-else class="routes-tiles">
           <RouteTile
@@ -824,6 +885,46 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   padding: 28px 0;
 }
 
+.routes-active {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.routes-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: 700 13px/1 var(--font);
+  cursor: pointer;
+}
+
+.routes-pill:hover {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.routes-pill svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.routes-clear {
+  margin-left: 8px;
+  font-size: 13px;
+}
+
 .routes-key {
   display: flex;
   flex-wrap: wrap;
@@ -840,10 +941,18 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   gap: 56px 28px;
 }
 
-.routes-no-match {
-  border: 1px solid currentColor;
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
+.routes-empty {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  max-width: 560px;
+  padding: 32px;
+  border: 2px solid var(--ink);
+}
+
+.routes-empty h2 {
+  font-size: 22px;
+  font-weight: 900;
 }
 
 .routes-message {
