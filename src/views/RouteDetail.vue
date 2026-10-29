@@ -315,11 +315,9 @@ async function onToggleSaved() {
           </div>
         </section>
 
-        <div class="col-12">
-          <div class="route-detail-section">
-            <WeatherForecast :weather="weather" :error="weatherError" />
-          </div>
-        </div>
+        <section class="col-12">
+          <WeatherForecast :weather="weather" :error="weatherError" />
+        </section>
 
         <section id="plan" class="col-12" aria-labelledby="plan-title">
           <article class="route-plan">
