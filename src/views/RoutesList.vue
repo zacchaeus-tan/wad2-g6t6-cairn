@@ -1,6 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { fetchRoutes } from '../controller/routesController'
+import DifficultyMark from '@/components/common/DifficultyMark.vue'
+import RouteTile from '@/components/routes/RouteTile.vue'
+import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
+import photoLakePeaks from '@/assets/img/card-lake-peaks.jpg'
+import photoMistyLake from '@/assets/img/card-misty-lake.jpg'
+import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
+
+// Stock photos behind the route lines until each route has its own photo.
+const TILE_PHOTOS = [photoLakePeaks, photoAlpinePath, photoRidgeHikers, photoMistyLake]
 
 const routes = ref([])
 const loading = ref(true)
@@ -82,52 +91,8 @@ const displayedRoutes = computed(() => {
   return sortedRoutes
 })
 
-const difficultyLabels = {
-  1: 'Easy',
-  2: 'Moderate',
-  3: 'Hard',
-  4: 'Strenuous',
-}
-
-function formatDifficulty(route) {
-  const value =
-    route.effective_difficulty ?? route.official_difficulty ?? route.technical_rating
-
-  if (value == null || value === '') {
-    return 'Not rated'
-  }
-
-  return difficultyLabels[value] ?? value
-}
-
-function formatDistance(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  const distance = Number(value)
-  return Number.isFinite(distance)
-    ? `${distance.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`
-    : `${value} km`
-}
-
-function formatElevation(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  const elevation = Number(value)
-  return Number.isFinite(elevation)
-    ? `${elevation.toLocaleString()} m`
-    : `${value} m`
-}
-
-function formatDuration(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value} ${Number(value) === 1 ? 'day' : 'days'}`
+function photoFor(route, index) {
+  return TILE_PHOTOS[((route.name?.length ?? 0) + index) % TILE_PHOTOS.length]
 }
 
 onMounted(async () => {
@@ -143,7 +108,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="container routes-page py-5">
+  <div class="cairn routes-page">
+  <div class="cairn-wrap py-5">
     <header class="routes-heading mb-5">
       <p class="routes-eyebrow mb-2">Explore</p>
       <h1 class="display-5 fw-semibold mb-3">All routes</h1>
@@ -156,7 +122,7 @@ onMounted(async () => {
       No routes are available right now.
     </p>
 
-    <section v-else aria-label="Route search results">
+    <section v-else class="routes-results" aria-label="Route search results">
       <div class="mb-4">
         <label class="form-label" for="route-search">Search routes by name</label>
         <input
@@ -189,106 +155,88 @@ onMounted(async () => {
         </div>
       </div>
 
+      <div class="routes-results-top">
+        <ul class="routes-key" aria-label="Difficulty key: line colour and label shape">
+          <li v-for="grade in [1, 2, 3, 4]" :key="grade"><DifficultyMark :grade="grade" /></li>
+        </ul>
+      </div>
+
       <p v-if="displayedRoutes.length === 0" class="routes-message mb-0">
         No routes match the selected search and country filters.
       </p>
 
-      <div v-else class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        <div v-for="route in displayedRoutes" :key="route.id" class="col">
-          <RouterLink
-            class="route-link"
-            :to="{ name: 'route-detail', params: { id: route.id } }"
-            :aria-label="`View details for ${route.name}`"
-          >
-            <article class="card route-card h-100">
-              <div class="card-body d-flex flex-column p-4">
-                <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
-                <h2 class="h4 mb-4">{{ route.name }}</h2>
-
-                <dl class="route-facts row row-cols-2 g-3 mb-4">
-                  <div class="col">
-                    <dt class="small">Distance</dt>
-                    <dd class="mb-0">{{ formatDistance(route.distance_km) }}</dd>
-                  </div>
-                  <div class="col">
-                    <dt class="small">Elevation gain</dt>
-                    <dd class="mb-0">{{ formatElevation(route.elevation_gain_m) }}</dd>
-                  </div>
-                  <div class="col">
-                    <dt class="small">Duration</dt>
-                    <dd class="mb-0">{{ formatDuration(route.duration_days) }}</dd>
-                  </div>
-                  <div class="col">
-                    <dt class="small">Difficulty</dt>
-                    <dd class="mb-0">{{ formatDifficulty(route) }}</dd>
-                  </div>
-                </dl>
-
-                <div class="route-footer mt-auto">
-                  <p v-if="route.safety_status" class="mb-2">
-                    <strong>Safety:</strong> {{ route.safety_status }}
-                  </p>
-                  <p v-if="route.safety_status_note" class="mb-2">
-                    {{ route.safety_status_note }}
-                  </p>
-                  <p v-if="route.avg_rating != null" class="small mb-0">
-                    Rating: {{ route.avg_rating }}<span v-if="route.review_count != null">
-                      · {{ route.review_count }} reviews</span
-                    >
-                  </p>
-                </div>
-              </div>
-            </article>
-          </RouterLink>
-        </div>
+      <div v-else class="routes-tiles">
+        <RouteTile
+          v-for="(route, index) in displayedRoutes"
+          :key="route.id"
+          :route="route"
+          :photo="photoFor(route, index)"
+        />
       </div>
     </section>
-  </main>
+  </div>
+  </div>
 </template>
 
 <style scoped>
-.routes-page {
-  max-width: 1200px;
-}
-
 .routes-heading {
   max-width: 760px;
 }
 
-.routes-eyebrow,
-.route-eyebrow {
+.routes-eyebrow {
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.route-card {
-  border-color: currentColor;
-  border-radius: 0.75rem;
+.routes-results {
+  padding-bottom: 120px;
 }
 
-.route-link {
-  display: block;
-  height: 100%;
-  color: inherit;
-  cursor: pointer;
-  text-decoration: none;
+.routes-results-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 28px 0;
 }
 
-.route-link:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
-  border-radius: 0.75rem;
+.routes-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
 }
 
-.route-facts dt {
-  font-weight: 600;
+.routes-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 56px 28px;
 }
 
-.route-footer {
-  border-top: 1px solid currentColor;
-  padding-top: 1rem;
+@media (max-width: 1100px) {
+  .routes-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .routes-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px 16px;
+  }
+}
+
+@media (max-width: 700px) {
+  .routes-key {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 .routes-message {
