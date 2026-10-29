@@ -16,6 +16,7 @@ import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
+import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -97,30 +98,6 @@ function formatDifficulty(value) {
   }
 
   return difficultyLabels[value] ?? value
-}
-
-function formatBoolean(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Required' : 'Not required'
-}
-
-function formatYesNo(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Yes' : 'No'
-}
-
-function formatDuration(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value} ${Number(value) === 1 ? 'day' : 'days'}`
 }
 
 function formatCompletionRate(value) {
@@ -228,46 +205,11 @@ async function onToggleSaved() {
 
     <template v-else>
       <RouteBanner :route="route" />
+      <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">
       <div class="row g-4">
-        <section class="col-12 col-lg-6" aria-labelledby="route-overview-title">
-          <div class="route-detail-section h-100">
-            <h2 id="route-overview-title" class="h4 mb-4">Route overview</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Distance</dt>
-                <dd>{{ formatValue(route.distance_km, ' km') }}</dd>
-              </div>
-              <div>
-                <dt>Elevation gain</dt>
-                <dd>{{ formatValue(route.elevation_gain_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Duration</dt>
-                <dd>{{ formatDuration(route.duration_days) }}</dd>
-              </div>
-              <div>
-                <dt>Maximum altitude</dt>
-                <dd>{{ formatValue(route.altitude_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Multiday route</dt>
-                <dd>{{ formatYesNo(route.is_multiday) }}</dd>
-              </div>
-              <div>
-                <dt>Permit</dt>
-                <dd>{{ formatBoolean(route.permit_required) }}</dd>
-              </div>
-              <div>
-                <dt>Guide</dt>
-                <dd>{{ formatBoolean(route.guide_required) }}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-
-        <section class="col-12 col-lg-6" aria-labelledby="route-feedback-title">
+        <section class="col-12" aria-labelledby="route-feedback-title">
           <div class="route-detail-section h-100">
             <h2 id="route-feedback-title" class="h4 mb-4">Difficulty and community feedback</h2>
             <dl class="route-detail-facts">
