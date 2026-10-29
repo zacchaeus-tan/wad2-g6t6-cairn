@@ -15,6 +15,8 @@ import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import RouteBanner from '@/components/routes/RouteBanner.vue'
+import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -96,30 +98,6 @@ function formatDifficulty(value) {
   }
 
   return difficultyLabels[value] ?? value
-}
-
-function formatBoolean(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Required' : 'Not required'
-}
-
-function formatYesNo(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Yes' : 'No'
-}
-
-function formatDuration(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value} ${Number(value) === 1 ? 'day' : 'days'}`
 }
 
 function formatCompletionRate(value) {
@@ -215,60 +193,23 @@ async function onToggleSaved() {
 </script>
 
 <template>
-  <main class="container route-detail-page py-5">
-    <RouterLink class="back-link mb-4" to="/routes">Back to all routes</RouterLink>
-
-    <p v-if="loading" role="status">Loading route...</p>
-    <p v-else-if="error" class="route-detail-message" role="alert">{{ error }}</p>
-    <p v-else-if="!route" class="route-detail-message">This route could not be found.</p>
+  <div class="cairn route-detail">
+    <div v-if="loading || error || !route" class="route-detail-state">
+      <div class="cairn-wrap">
+        <p v-if="loading" role="status">Loading route...</p>
+        <p v-else-if="error" role="alert">{{ error }}</p>
+        <p v-else>This route could not be found.</p>
+        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes">Back to all routes</RouterLink>
+      </div>
+    </div>
 
     <template v-else>
-      <header class="route-detail-heading mb-5">
-        <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
-        <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
-        <p v-if="route.technical_rating" class="lead mb-0">
-          Official rating: {{ route.technical_rating }}
-        </p>
-      </header>
+      <RouteBanner :route="route" />
+      <RouteNumbers :route="route" />
 
+      <div class="container route-detail-sections py-5">
       <div class="row g-4">
-        <section class="col-12 col-lg-6" aria-labelledby="route-overview-title">
-          <div class="route-detail-section h-100">
-            <h2 id="route-overview-title" class="h4 mb-4">Route overview</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Distance</dt>
-                <dd>{{ formatValue(route.distance_km, ' km') }}</dd>
-              </div>
-              <div>
-                <dt>Elevation gain</dt>
-                <dd>{{ formatValue(route.elevation_gain_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Duration</dt>
-                <dd>{{ formatDuration(route.duration_days) }}</dd>
-              </div>
-              <div>
-                <dt>Maximum altitude</dt>
-                <dd>{{ formatValue(route.altitude_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Multiday route</dt>
-                <dd>{{ formatYesNo(route.is_multiday) }}</dd>
-              </div>
-              <div>
-                <dt>Permit</dt>
-                <dd>{{ formatBoolean(route.permit_required) }}</dd>
-              </div>
-              <div>
-                <dt>Guide</dt>
-                <dd>{{ formatBoolean(route.guide_required) }}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-
-        <section class="col-12 col-lg-6" aria-labelledby="route-feedback-title">
+        <section class="col-12" aria-labelledby="route-feedback-title">
           <div class="route-detail-section h-100">
             <h2 id="route-feedback-title" class="h4 mb-4">Difficulty and community feedback</h2>
             <dl class="route-detail-facts">
@@ -380,55 +321,50 @@ async function onToggleSaved() {
           </div>
         </div>
 
-        <section class="col-12" aria-labelledby="itinerary-title">
-          <div class="route-detail-section">
-            <h2 id="itinerary-title" class="h4 mb-2">Plan your itinerary</h2>
-            <p class="mb-4">
-              Choose when you're starting, how many days you have and your pace, and we'll suggest a
-              day-by-day plan.
+        <section id="plan" class="col-12" aria-labelledby="plan-title">
+          <article class="route-plan">
+            <div class="route-plan-head">
+              <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
+              <span class="route-ai-tag">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+                </svg>
+                AI-generated
+              </span>
+            </div>
+            <p class="route-plan-intro">
+              Choose when you're starting, how many days you have and your pace, and we'll suggest a day-by-day
+              plan.
             </p>
 
-            <ItineraryForm
-              v-if="auth.isLoggedIn"
-              :route="route"
-              :loading="itineraryLoading"
-              @generate="onGenerate"
-            />
-            <p v-else class="alert alert-secondary mb-0">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-                >Sign in</RouterLink
-              >
+            <ItineraryForm v-if="auth.isLoggedIn" :route="route" :loading="itineraryLoading" @generate="onGenerate" />
+            <p v-else class="route-plan-intro">
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
               to generate an itinerary.
             </p>
 
-            <p v-if="itineraryError" class="alert alert-danger mt-4 mb-0" role="alert">
-              {{ itineraryError }}
-            </p>
+            <p v-if="itineraryError" class="route-plan-error" role="alert">{{ itineraryError }}</p>
 
             <template v-if="itinerary">
-              <p v-if="itinerary.summary" class="lead mt-4">{{ itinerary.summary }}</p>
+              <p v-if="itinerary.summary" class="route-plan-summary">{{ itinerary.summary }}</p>
 
-              <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
-                <div v-for="day in itinerary.days" :key="day.day" class="col">
-                  <ItineraryDay :day="day" />
-                </div>
+              <div class="route-plan-days">
+                <ItineraryDay v-for="day in itinerary.days" :key="day.day" :day="day" />
               </div>
 
               <template v-if="itinerary.tips && itinerary.tips.length">
-                <h3 class="h5 mt-4">Tips</h3>
-                <ul>
+                <h3 class="route-plan-tips-title">Tips</h3>
+                <ul class="route-plan-tips">
                   <li v-for="tip in itinerary.tips" :key="tip">{{ tip }}</li>
                 </ul>
               </template>
 
-              <p class="small text-body-secondary mt-3 mb-0">
-                AI-generated. Check trail conditions, weather and permits before you hike.
-              </p>
+              <p class="cairn-fine">AI-generated. Check trail conditions, weather and permits before you hike.</p>
             </template>
-          </div>
+          </article>
         </section>
 
-        <section class="col-12" aria-labelledby="route-reviews-title">
+        <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
             <ReviewSummary :route="route" />
@@ -575,51 +511,34 @@ async function onToggleSaved() {
           </p>
         </div>
       </section>
+      </div>
     </template>
-  </main>
+  </div>
 </template>
 
 <style scoped>
-.route-detail-page {
+.route-detail {
+  min-height: 100vh;
+}
+
+/* Loading and error states sit on a dark band so the overlaid navbar stays readable */
+.route-detail-state {
+  padding: calc(var(--nav-height) + 96px) 0 96px;
+  background: #0d1411;
+  color: var(--paper);
+}
+
+.route-detail-state .cairn-wrap {
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+}
+
+.route-detail-sections {
   max-width: 1200px;
-  animation: page-fade-in 0.5s ease;
 }
 
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .route-detail-page {
-    animation: none;
-  }
-}
-
-.back-link {
-  display: inline-block;
-}
-
-.route-detail-heading {
-  max-width: 760px;
-}
-
-.route-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.route-detail-section,
-.route-detail-message {
+.route-detail-section {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
@@ -638,6 +557,77 @@ async function onToggleSaved() {
 
 .route-detail-facts dd {
   margin-bottom: 0;
+}
+
+/* Plan your itinerary */
+.route-plan {
+  display: grid;
+  gap: 20px;
+  padding: clamp(24px, 3vw, 44px);
+  background: #d6e4ec;
+  box-shadow: var(--shadow-stop);
+}
+
+.route-plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.route-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--granite-700);
+  color: var(--granite-700);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-ai-tag svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.route-plan-intro {
+  max-width: 60ch;
+  color: var(--granite-700);
+  font-size: 16px;
+}
+
+.route-plan-error {
+  padding: 10px 12px;
+  background: #fdecea;
+  color: #b42318;
+}
+
+.route-plan-summary {
+  max-width: 65ch;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.route-plan-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+
+.route-plan-tips-title {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.route-plan-tips {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 24px;
 }
 
 .route-match-checks li + li {
