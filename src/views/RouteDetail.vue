@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
-import ReviewList from '../components/reviews/ReviewList.vue'
-import ReviewForm from '../components/reviews/ReviewForm.vue'
+import TrailRegister from '@/components/reviews/TrailRegister.vue'
 import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
@@ -85,17 +84,6 @@ function formatValue(value, unit = '') {
   return `${value}${unit}`
 }
 
-function formatCompletionRate(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  const rate = Number(value)
-  return Number.isFinite(rate)
-    ? `${(rate * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}%`
-    : value
-}
-
 // weather forecast
 const weather = ref(null)
 const weatherError = ref('')
@@ -125,12 +113,23 @@ onMounted(async () => {
   if (route.value) {
     await Promise.all([
       reviewsStore.fetchForRoute(routeParams.params.id),
+      reviewsStore.fetchMyReview(routeParams.params.id, auth.user?.id),
       reviewsStore.fetchCategories(),
       checklistStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
   }
 })
+
+// Signing in or out on this page changes whose review the form edits
+watch(
+  () => auth.user?.id,
+  (userId) => {
+    if (route.value) {
+      reviewsStore.fetchMyReview(route.value.id, userId)
+    }
+  },
+)
 
 // After a review is saved or deleted, reload the route so its community
 // stats (average rating, effective difficulty, hazard) show the new values.
@@ -196,30 +195,6 @@ async function onToggleSaved() {
       <div class="row g-4">
         <section class="col-12">
           <GradeDial :route="route" />
-        </section>
-
-        <section class="col-12" aria-labelledby="route-feedback-title">
-          <div class="route-detail-section h-100">
-            <h2 id="route-feedback-title" class="h4 mb-4">Community feedback</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Average perceived difficulty</dt>
-                <dd>{{ formatValue(route.avg_perceived_difficulty, ' / 4') }}</dd>
-              </div>
-              <div>
-                <dt>Average rating</dt>
-                <dd>{{ formatValue(route.avg_rating, ' / 5') }}</dd>
-              </div>
-              <div>
-                <dt>Reviews</dt>
-                <dd>{{ formatValue(route.review_count) }}</dd>
-              </div>
-              <div>
-                <dt>Completion rate</dt>
-                <dd>{{ formatCompletionRate(route.completion_rate) }}</dd>
-              </div>
-            </dl>
-          </div>
         </section>
 
         <section class="col-12" aria-labelledby="route-match-title">
@@ -341,29 +316,6 @@ async function onToggleSaved() {
               <p class="cairn-fine">AI-generated. Check trail conditions, weather and permits before you hike.</p>
             </template>
           </article>
-        </section>
-
-        <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
-          <div class="route-detail-section">
-            <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
-            <ReviewForm
-              v-if="auth.isLoggedIn"
-              :route="route"
-              :user-id="auth.user.id"
-              @saved="reloadRoute"
-              @deleted="reloadRoute"
-            />
-            <p v-else class="alert alert-secondary">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-                >Sign in</RouterLink
-              >
-              to leave a review.
-            </p>
-            <p v-if="reviewsStore.loadError" role="alert">
-              Unable to load reviews: {{ reviewsStore.loadError }}
-            </p>
-            <ReviewList v-else :reviews="reviewsStore.reviews" />
-          </div>
         </section>
       </div>
 
@@ -488,6 +440,16 @@ async function onToggleSaved() {
             AI-generated. Adjust the list to your own experience and the conditions on the day.
           </p>
         </div>
+      </section>
+
+      <section id="reviews" class="mt-4">
+        <TrailRegister
+          :route="route"
+          :user-id="auth.user?.id ?? null"
+          :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+          @saved="reloadRoute"
+          @deleted="reloadRoute"
+        />
       </section>
       </div>
     </template>
