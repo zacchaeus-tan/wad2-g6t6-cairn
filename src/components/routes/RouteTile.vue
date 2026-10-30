@@ -36,7 +36,7 @@ function formatDays(value) {
 </script>
 
 <template>
-  <RouterLink class="route-tile" :to="{ name: 'route-detail', params: { id: route.id } }">
+  <RouterLink class="route-tile" data-testid="route-tile" :to="{ name: 'route-detail', params: { id: route.id } }">
     <span class="route-tile-field">
       <img class="route-tile-photo" :src="photo" alt="" loading="lazy" />
       <span class="route-tile-line"><RouteLine :path="route.line_svg" :geometry="route.geometry" :color="lineColor" /></span>
@@ -60,7 +60,7 @@ function formatDays(value) {
       </span>
     </span>
     <h2 class="route-tile-name">{{ route.name }}</h2>
-    <p class="route-tile-facts cairn-data">
+    <p class="route-tile-facts cairn-data" data-testid="route-tile-facts">
       {{ formatDistance(route.distance_km) }} · {{ formatClimb(route.elevation_gain_m) }} ·
       {{ formatDays(route.duration_days) }}
     </p>
