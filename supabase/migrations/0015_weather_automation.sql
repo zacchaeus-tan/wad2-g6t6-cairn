@@ -2,7 +2,7 @@
 --
 -- The job inserts alerts as 'pending' and skips any it has raised before, so
 -- an admin who dismisses one is not asked about it again. That needs a real
--- unique constraint: PostgREST's upsert cannot target the partial index 0012
+-- unique constraint: PostgREST's upsert cannot target the partial index 0014
 -- created. Manual alerts have no external_ref, and nulls never clash, so they
 -- are unaffected.
 drop index if exists public.route_alerts_external_uniq;
