@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useScroll } from 'motion-v'
 import { fetchRouteById } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
@@ -16,6 +17,7 @@ import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
+import WalkedTrail from '@/components/routes/WalkedTrail.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -166,6 +168,14 @@ async function onToggleSaved() {
     closeForm() // don't leave a half-open form behind after unsaving
   }
 }
+
+// How far the trail is drawn: it starts as the sections reach the middle of the screen
+// and finishes as they end at the bottom, so the page can't run out before it does
+const journey = ref(null)
+const { scrollYProgress: trailProgress } = useScroll({
+  target: journey,
+  offset: ['start 0.55', 'end end'],
+})
 </script>
 
 <template>
@@ -183,13 +193,16 @@ async function onToggleSaved() {
       <RouteBanner :route="route" />
       <RouteNumbers :route="route" />
 
+      <div ref="journey" class="route-journey">
+      <WalkedTrail :progress="trailProgress" />
+
       <div class="container route-detail-sections py-5">
       <div class="row g-4">
-        <section class="col-12">
+        <section class="col-12 route-stop">
           <GradeDial :route="route" />
         </section>
 
-        <section class="col-12" aria-labelledby="route-match-title">
+        <section class="col-12 route-stop" aria-labelledby="route-match-title">
           <div class="route-detail-section">
             <h2 id="route-match-title" class="h4 mb-4">Is this route right for you?</h2>
 
@@ -239,11 +252,11 @@ async function onToggleSaved() {
           </div>
         </section>
 
-        <section class="col-12">
+        <section class="col-12 route-stop">
           <WeatherForecast :weather="weather" :error="weatherError" />
         </section>
 
-        <section id="plan" class="col-12" aria-labelledby="plan-title">
+        <section id="plan" class="col-12 route-stop" aria-labelledby="plan-title">
           <article class="route-plan">
             <div class="route-plan-head">
               <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
@@ -287,7 +300,7 @@ async function onToggleSaved() {
         </section>
       </div>
 
-      <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
+      <section class="mt-4 route-stop route-checklist" aria-labelledby="gear-checklist-title">
         <div class="route-detail-section">
           <h2 id="gear-checklist-title" class="h4 mb-3">Gear checklist</h2>
 
@@ -410,7 +423,7 @@ async function onToggleSaved() {
         </div>
       </section>
 
-      <section id="reviews" class="mt-4">
+      <section id="reviews" class="mt-4 route-stop">
         <TrailRegister
           :route="route"
           :user-id="auth.user?.id ?? null"
@@ -419,6 +432,7 @@ async function onToggleSaved() {
           @deleted="reloadRoute"
         />
       </section>
+      </div>
       </div>
     </template>
   </div>
@@ -446,10 +460,30 @@ async function onToggleSaved() {
   max-width: 1200px;
 }
 
+/* The sections sit along the walked trail, far enough apart for it to show between them */
+.route-journey {
+  position: relative;
+}
+
+.route-stop {
+  position: relative;
+  z-index: 1;
+  margin-bottom: clamp(96px, 12vw, 160px);
+  scroll-margin-top: 80px;
+}
+
+/* Solid behind the text, because the trail passes underneath */
+#reviews {
+  margin-bottom: 0;
+  padding: 24px;
+  background: var(--ground);
+}
+
 .route-detail-section {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
+  background: var(--ground);
 }
 
 /* Plan your itinerary */
