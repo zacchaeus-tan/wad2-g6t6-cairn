@@ -1,5 +1,6 @@
 import {
   listRoutes,
+  listRouteTiles,
   listRouteSummaries,
   getRoute,
   getRouteGeometry,
@@ -7,11 +8,17 @@ import {
   listAlertsForRoute,
 } from '@/model/routesModel'
 
-// Controller: checks input, calls the model, and turns database errors into
-// thrown errors so views can show them.
-
 export async function fetchRoutes() {
   const { data, error } = await listRoutes()
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchRouteTiles() {
+  const { data, error } = await listRouteTiles()
   if (error) {
     throw error
   }

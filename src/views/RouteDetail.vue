@@ -6,7 +6,6 @@ import { alertClass, formatDate } from '@/lib/format'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
-import ReviewSummary from '../components/reviews/ReviewSummary.vue'
 import ReviewForm from '../components/reviews/ReviewForm.vue'
 import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
@@ -16,6 +15,9 @@ import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import RouteBanner from '@/components/routes/RouteBanner.vue'
+import RouteNumbers from '@/components/routes/RouteNumbers.vue'
+import GradeDial from '@/components/routes/GradeDial.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -77,51 +79,12 @@ const statusBadges = {
   unknown: { text: 'Unknown', class: 'bg-secondary' },
 }
 
-const difficultyLabels = {
-  1: 'Easy',
-  2: 'Moderate',
-  3: 'Hard',
-  4: 'Strenuous',
-}
-
 function formatValue(value, unit = '') {
   if (value == null || value === '') {
     return 'Not listed'
   }
 
   return `${value}${unit}`
-}
-
-function formatDifficulty(value) {
-  if (value == null || value === '') {
-    return 'Not rated'
-  }
-
-  return difficultyLabels[value] ?? value
-}
-
-function formatBoolean(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Required' : 'Not required'
-}
-
-function formatYesNo(value) {
-  if (value == null) {
-    return 'Not listed'
-  }
-
-  return value ? 'Yes' : 'No'
-}
-
-function formatDuration(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value} ${Number(value) === 1 ? 'day' : 'days'}`
 }
 
 function formatCompletionRate(value) {
@@ -227,88 +190,47 @@ async function onToggleSaved() {
 </script>
 
 <template>
-  <main class="container route-detail-page py-5">
-    <RouterLink class="back-link mb-4" to="/routes">Back to all routes</RouterLink>
-
-    <p v-if="loading" role="status">Loading route...</p>
-    <p v-else-if="error" class="route-detail-message" role="alert">{{ error }}</p>
-    <p v-else-if="!route" class="route-detail-message">This route could not be found.</p>
+  <div class="cairn route-detail">
+    <div v-if="loading || error || !route" class="route-detail-state">
+      <div class="cairn-wrap">
+        <p v-if="loading" role="status">Loading route...</p>
+        <p v-else-if="error" role="alert">{{ error }}</p>
+        <p v-else>This route could not be found.</p>
+        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes">Back to all routes</RouterLink>
+      </div>
+    </div>
 
     <template v-else>
-      <header class="route-detail-heading mb-5">
-        <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
-        <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
-        <p v-if="route.technical_rating" class="lead mb-0">
-          Official rating: {{ route.technical_rating }}
-        </p>
-      </header>
+      <RouteBanner :route="route" />
+      <RouteNumbers :route="route" />
 
-      <section v-if="alerts.length" class="mb-4" aria-labelledby="trail-notices-title">
-        <h2 id="trail-notices-title" class="h5 mb-3">Trail notices</h2>
-        <div
-          v-for="alert in alerts"
-          :key="alert.id"
-          class="alert"
-          :class="alertClass(alert.severity)"
-          role="alert"
-        >
-          <strong>{{ alert.title }}</strong>
-          <p v-if="alert.message" class="mb-1">{{ alert.message }}</p>
-          <p v-if="alert.ends_at" class="small mb-0">
-            Expected until {{ formatDate(alert.ends_at) }}
-          </p>
-        </div>
-      </section>
-
-      <div class="row g-4">
-        <section class="col-12 col-lg-6" aria-labelledby="route-overview-title">
-          <div class="route-detail-section h-100">
-            <h2 id="route-overview-title" class="h4 mb-4">Route overview</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Distance</dt>
-                <dd>{{ formatValue(route.distance_km, ' km') }}</dd>
-              </div>
-              <div>
-                <dt>Elevation gain</dt>
-                <dd>{{ formatValue(route.elevation_gain_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Duration</dt>
-                <dd>{{ formatDuration(route.duration_days) }}</dd>
-              </div>
-              <div>
-                <dt>Maximum altitude</dt>
-                <dd>{{ formatValue(route.altitude_m, ' m') }}</dd>
-              </div>
-              <div>
-                <dt>Multiday route</dt>
-                <dd>{{ formatYesNo(route.is_multiday) }}</dd>
-              </div>
-              <div>
-                <dt>Permit</dt>
-                <dd>{{ formatBoolean(route.permit_required) }}</dd>
-              </div>
-              <div>
-                <dt>Guide</dt>
-                <dd>{{ formatBoolean(route.guide_required) }}</dd>
-              </div>
-            </dl>
+      <div class="container route-detail-sections py-5">
+        <section v-if="alerts.length" class="mb-4" aria-labelledby="trail-notices-title">
+          <h2 id="trail-notices-title" class="h5 mb-3">Trail notices</h2>
+          <div
+            v-for="alert in alerts"
+            :key="alert.id"
+            class="alert"
+            :class="alertClass(alert.severity)"
+            role="alert"
+          >
+            <strong>{{ alert.title }}</strong>
+            <p v-if="alert.message" class="mb-1">{{ alert.message }}</p>
+            <p v-if="alert.ends_at" class="small mb-0">
+              Expected until {{ formatDate(alert.ends_at) }}
+            </p>
           </div>
         </section>
 
-        <section class="col-12 col-lg-6" aria-labelledby="route-feedback-title">
+      <div class="row g-4">
+        <section class="col-12">
+          <GradeDial :route="route" />
+        </section>
+
+        <section class="col-12" aria-labelledby="route-feedback-title">
           <div class="route-detail-section h-100">
-            <h2 id="route-feedback-title" class="h4 mb-4">Difficulty and community feedback</h2>
+            <h2 id="route-feedback-title" class="h4 mb-4">Community feedback</h2>
             <dl class="route-detail-facts">
-              <div>
-                <dt>Official difficulty</dt>
-                <dd>{{ formatDifficulty(route.official_difficulty ?? route.technical_rating) }}</dd>
-              </div>
-              <div>
-                <dt>Community-adjusted difficulty</dt>
-                <dd>{{ formatDifficulty(route.effective_difficulty) }}</dd>
-              </div>
               <div>
                 <dt>Average perceived difficulty</dt>
                 <dd>{{ formatValue(route.avg_perceived_difficulty, ' / 4') }}</dd>
@@ -334,7 +256,9 @@ async function onToggleSaved() {
             <h2 id="route-match-title" class="h4 mb-4">Is this route right for you?</h2>
 
             <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+                >Sign in</RouterLink
+              >
               to compare this route with your hiking experience.
             </p>
 
@@ -344,7 +268,8 @@ async function onToggleSaved() {
               <p class="alert mb-4" :class="verdictClasses[suitability.verdict]">
                 <strong>{{ verdictLabels[suitability.verdict] }}</strong>
                 <template v-if="suitability.verdict === 'unknown'">
-                  — <RouterLink to="/quiz">update your hiking profile</RouterLink> to see how this route compares.
+                  — <RouterLink to="/quiz">update your hiking profile</RouterLink> to see how this
+                  route compares.
                 </template>
               </p>
 
@@ -359,13 +284,18 @@ async function onToggleSaved() {
                 </template>
               </ul>
 
-              <p v-for="warning in suitability.warnings" :key="warning" class="alert alert-danger mt-4 mb-0"
-                role="note">
+              <p
+                v-for="warning in suitability.warnings"
+                :key="warning"
+                class="alert alert-danger mt-4 mb-0"
+                role="note"
+              >
                 {{ warning }}
               </p>
 
               <p class="small text-body-secondary mt-3 mb-0">
-                Based on your quiz answers. Only you know your real fitness, so treat this as a guide.
+                Based on your quiz answers. Only you know your real fitness, so treat this as a
+                guide.
               </p>
             </template>
           </div>
@@ -395,61 +325,67 @@ async function onToggleSaved() {
           </div>
         </section>
 
-        <div class="col-12">
-          <div class="route-detail-section">
-            <WeatherForecast :weather="weather" :error="weatherError" />
-          </div>
-        </div>
+        <section class="col-12">
+          <WeatherForecast :weather="weather" :error="weatherError" />
+        </section>
 
-        <section class="col-12" aria-labelledby="itinerary-title">
-          <div class="route-detail-section">
-            <h2 id="itinerary-title" class="h4 mb-2">Plan your itinerary</h2>
-            <p class="mb-4">
-              Choose when you're starting, how many days you have and your pace, and we'll suggest
-              a day-by-day plan.
+        <section id="plan" class="col-12" aria-labelledby="plan-title">
+          <article class="route-plan">
+            <div class="route-plan-head">
+              <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
+              <span class="route-ai-tag">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+                </svg>
+                AI-generated
+              </span>
+            </div>
+            <p class="route-plan-intro">
+              Choose when you're starting, how many days you have and your pace, and we'll suggest a day-by-day
+              plan.
             </p>
 
             <ItineraryForm v-if="auth.isLoggedIn" :route="route" :loading="itineraryLoading" @generate="onGenerate" />
-            <p v-else class="alert alert-secondary mb-0">
+            <p v-else class="route-plan-intro">
               <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
               to generate an itinerary.
             </p>
 
-            <p v-if="itineraryError" class="alert alert-danger mt-4 mb-0" role="alert">
-              {{ itineraryError }}
-            </p>
+            <p v-if="itineraryError" class="route-plan-error" role="alert">{{ itineraryError }}</p>
 
             <template v-if="itinerary">
-              <p v-if="itinerary.summary" class="lead mt-4">{{ itinerary.summary }}</p>
+              <p v-if="itinerary.summary" class="route-plan-summary">{{ itinerary.summary }}</p>
 
-              <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
-                <div v-for="day in itinerary.days" :key="day.day" class="col">
-                  <ItineraryDay :day="day" />
-                </div>
+              <div class="route-plan-days">
+                <ItineraryDay v-for="day in itinerary.days" :key="day.day" :day="day" />
               </div>
 
               <template v-if="itinerary.tips && itinerary.tips.length">
-                <h3 class="h5 mt-4">Tips</h3>
-                <ul>
+                <h3 class="route-plan-tips-title">Tips</h3>
+                <ul class="route-plan-tips">
                   <li v-for="tip in itinerary.tips" :key="tip">{{ tip }}</li>
                 </ul>
               </template>
 
-              <p class="small text-body-secondary mt-3 mb-0">
-                AI-generated. Check trail conditions, weather and permits before you hike.
-              </p>
+              <p class="cairn-fine">AI-generated. Check trail conditions, weather and permits before you hike.</p>
             </template>
-          </div>
+          </article>
         </section>
 
-        <section class="col-12" aria-labelledby="route-reviews-title">
+        <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
           <div class="route-detail-section">
             <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
-            <ReviewSummary :route="route" />
-            <ReviewForm v-if="auth.isLoggedIn" :route="route" :user-id="auth.user.id" @saved="reloadRoute"
-              @deleted="reloadRoute" />
+            <ReviewForm
+              v-if="auth.isLoggedIn"
+              :route="route"
+              :user-id="auth.user.id"
+              @saved="reloadRoute"
+              @deleted="reloadRoute"
+            />
             <p v-else class="alert alert-secondary">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+                >Sign in</RouterLink
+              >
               to leave a review.
             </p>
             <p v-if="reviewsStore.loadError" role="alert">
@@ -460,12 +396,9 @@ async function onToggleSaved() {
         </section>
       </div>
 
-
       <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
         <div class="route-detail-section">
-          <h2 id="gear-checklist-title" class="h4 mb-3">
-            Gear checklist
-          </h2>
+          <h2 id="gear-checklist-title" class="h4 mb-3">Gear checklist</h2>
 
           <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
             <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">
@@ -477,8 +410,11 @@ async function onToggleSaved() {
           <div v-else>
             <!-- Generate and save buttons -->
             <div class="d-flex flex-wrap gap-2 mb-2 route-checklist-toolbar">
-              <button class="btn btn-sm btn-outline-primary" :disabled="checklistStore.loading || isSaved"
-                @click="generateChecklist">
+              <button
+                class="btn btn-sm btn-outline-primary"
+                :disabled="checklistStore.loading || isSaved"
+                @click="generateChecklist"
+              >
                 {{
                   checklistStore.loading
                     ? 'Generating...'
@@ -488,8 +424,12 @@ async function onToggleSaved() {
                 }}
               </button>
 
-              <button v-if="checklistStore.checklist" class="btn btn-sm"
-                :class="isSaved ? 'btn-warning' : 'btn-outline-warning'" @click="onToggleSaved">
+              <button
+                v-if="checklistStore.checklist"
+                class="btn btn-sm"
+                :class="isSaved ? 'btn-warning' : 'btn-outline-warning'"
+                @click="onToggleSaved"
+              >
                 {{ isSaved ? '★ Saved' : '☆ Save checklist' }}
               </button>
             </div>
@@ -499,34 +439,40 @@ async function onToggleSaved() {
             </p>
 
             <p v-if="isSaved" class="small text-muted">
-              To generate a new checklist, unsave this one first by clicking
-              "★ Saved". Generating a new checklist deletes this one.
+              To generate a new checklist, unsave this one first by clicking "★ Saved". Generating a
+              new checklist deletes this one.
             </p>
 
             <p v-if="isSaved && !checklistStore.items.length" class="small text-muted">
-              This checklist is empty. Add items below, or unsave it to generate
-              a new one.
+              This checklist is empty. Add items below, or unsave it to generate a new one.
             </p>
 
-            <div v-if="checklistStore.error && !showForm" class="alert alert-danger py-2 small" role="alert">
+            <div
+              v-if="checklistStore.error && !showForm"
+              class="alert alert-danger py-2 small"
+              role="alert"
+            >
               {{ checklistStore.error }}
             </div>
 
             <!-- Checklist items -->
             <ul v-if="checklistStore.items.length" class="mb-2 route-checklist-list">
               <li v-for="item in checklistStore.items" :key="item.id" class="route-checklist-row">
-                <input class="form-check-input" type="checkbox" :checked="item.is_checked" @change="
-                  checklistStore.toggleChecked(item.id, !item.is_checked)
-                  " />
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  :checked="item.is_checked"
+                  @change="checklistStore.toggleChecked(item.id, !item.is_checked)"
+                />
 
                 <div class="route-checklist-item-content">
-                  <span :class="{
-                    'text-decoration-line-through text-muted': item.is_checked
-                  }">
+                  <span
+                    :class="{
+                      'text-decoration-line-through text-muted': item.is_checked,
+                    }"
+                  >
                     {{ item.label }}
-                    <span v-if="item.quantity" class="text-muted">
-                      — {{ item.quantity }}
-                    </span>
+                    <span v-if="item.quantity" class="text-muted"> — {{ item.quantity }} </span>
                   </span>
 
                   <div v-if="item.reason" class="small text-muted">
@@ -539,77 +485,67 @@ async function onToggleSaved() {
                     edit
                   </button>
 
-                  <span aria-hidden="true">|</span>
+                  <span aria-hidden="true"> | </span>
 
-                  <button class="btn btn-sm btn-link text-danger p-0" @click="checklistStore.deleteItem(item.id)">
+                  <button
+                    class="btn btn-sm btn-link text-danger p-0"
+                    @click="checklistStore.deleteItem(item.id)"
+                  >
                     remove
                   </button>
                 </div>
+                <ChecklistForm
+                  v-if="showForm && editingItem?.id === item.id"
+                  :key="editingItem?.id"
+                  class="w-100"
+                  :item="editingItem"
+                  @done="closeForm"
+                />
               </li>
             </ul>
 
             <!-- Add or edit an item -->
             <div v-if="checklistStore.checklist && isSaved" class="checklist-form-area">
-              <button v-if="!showForm" class="btn btn-sm btn-outline-secondary" @click="openForm()">
+              <ChecklistForm v-if="showForm && !editingItem" key="new" @done="closeForm" />
+              <button v-else class="btn btn-sm btn-outline-secondary" @click="openForm()">
                 + Add item
               </button>
-
-              <ChecklistForm v-else :key="editingItem?.id ?? 'new'" :item="editingItem" @done="closeForm" />
             </div>
           </div>
 
           <p class="small text-body-secondary mt-3 mb-0">
-            AI-generated. Adjust the list to your own experience and the
-            conditions on the day.
+            AI-generated. Adjust the list to your own experience and the conditions on the day.
           </p>
         </div>
       </section>
-
+      </div>
     </template>
-  </main>
+  </div>
 </template>
 
 <style scoped>
-.route-detail-page {
+.route-detail {
+  min-height: 100vh;
+}
+
+/* Loading and error states sit on a dark band so the overlaid navbar stays readable */
+.route-detail-state {
+  padding: calc(var(--nav-height) + 96px) 0 96px;
+  background: #0d1411;
+  color: var(--paper);
+}
+
+.route-detail-state .cairn-wrap {
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+}
+
+.route-detail-sections {
   max-width: 1200px;
-  animation: page-fade-in 0.5s ease;
 }
 
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .route-detail-page {
-    animation: none;
-  }
-}
-
-.back-link {
-  display: inline-block;
-}
-
-.route-detail-heading {
-  max-width: 760px;
-}
-
-.route-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.route-detail-section,
-.route-detail-message {
+.route-detail-section {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
@@ -630,7 +566,78 @@ async function onToggleSaved() {
   margin-bottom: 0;
 }
 
-.route-match-checks li+li {
+/* Plan your itinerary */
+.route-plan {
+  display: grid;
+  gap: 20px;
+  padding: clamp(24px, 3vw, 44px);
+  background: #d6e4ec;
+  box-shadow: var(--shadow-stop);
+}
+
+.route-plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.route-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--granite-700);
+  color: var(--granite-700);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-ai-tag svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.route-plan-intro {
+  max-width: 60ch;
+  color: var(--granite-700);
+  font-size: 16px;
+}
+
+.route-plan-error {
+  padding: 10px 12px;
+  background: #fdecea;
+  color: #b42318;
+}
+
+.route-plan-summary {
+  max-width: 65ch;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.route-plan-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+
+.route-plan-tips-title {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.route-plan-tips {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 24px;
+}
+
+.route-match-checks li + li {
   margin-top: 0.75rem;
 }
 
@@ -655,6 +662,7 @@ async function onToggleSaved() {
 /* Individual checklist item */
 .route-checklist .route-checklist-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem;
@@ -663,7 +671,7 @@ async function onToggleSaved() {
   background: transparent;
 }
 
-.route-checklist .route-checklist-row+.route-checklist-row {
+.route-checklist .route-checklist-row + .route-checklist-row {
   border-top: 1px solid #dee2e6;
 }
 
@@ -677,12 +685,14 @@ async function onToggleSaved() {
 .route-checklist-item-content {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
   line-height: 1.5;
 }
 
 /* Edit and remove actions */
 .route-checklist-item-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 0.35rem;
   white-space: nowrap;
