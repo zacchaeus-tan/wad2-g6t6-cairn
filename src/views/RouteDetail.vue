@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById, fetchRouteAlerts } from '../controller/routesController'
-import { alertClass, formatDate } from '@/lib/format'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import ReviewList from '../components/reviews/ReviewList.vue'
@@ -17,6 +16,7 @@ import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
+import TrailNotices from '@/components/routes/TrailNotices.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
 
 const routeParams = useRoute()
@@ -205,22 +205,7 @@ async function onToggleSaved() {
       <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">
-        <section v-if="alerts.length" class="mb-4" aria-labelledby="trail-notices-title">
-          <h2 id="trail-notices-title" class="h5 mb-3">Trail notices</h2>
-          <div
-            v-for="alert in alerts"
-            :key="alert.id"
-            class="alert"
-            :class="alertClass(alert.severity)"
-            role="alert"
-          >
-            <strong>{{ alert.title }}</strong>
-            <p v-if="alert.message" class="mb-1">{{ alert.message }}</p>
-            <p v-if="alert.ends_at" class="small mb-0">
-              Expected until {{ formatDate(alert.ends_at) }}
-            </p>
-          </div>
-        </section>
+        <TrailNotices :alerts="alerts" />
 
       <div class="row g-4">
         <section class="col-12">

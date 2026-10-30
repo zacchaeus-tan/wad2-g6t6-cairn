@@ -1,0 +1,276 @@
+/* Admin page, built on the CAIRN tokens in cairn.css. Imported by AdminView. */
+
+.admin-page {
+  min-height: 100vh;
+  padding: 56px 0 96px;
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 32px;
+}
+
+.admin-header h1 {
+  margin-top: 8px;
+}
+
+/* A section of the page: white card with a heavy top rule */
+.admin-panel {
+  height: 100%;
+  padding: clamp(20px, 2.4vw, 32px);
+  border-top: 4px solid var(--ink);
+  background: var(--white);
+  box-shadow: 0 1px 0 var(--granite-200);
+}
+
+.admin-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.admin-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  background: var(--blaze);
+  color: var(--white);
+  font: 700 13px/1 var(--font-data);
+}
+
+.admin-group + .admin-group {
+  margin-top: 28px;
+}
+
+.admin-group > .cairn-label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* Rows in a list of reports, alerts or routes */
+.admin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--granite-200);
+}
+
+.admin-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--granite-200);
+}
+
+.admin-item-body {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.admin-item-body p + p {
+  margin-top: 4px;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Severity marks the left edge of an alert */
+.admin-alert {
+  padding-left: 14px;
+  border-left: 4px solid var(--granite-300);
+}
+
+.admin-alert.is-info {
+  border-left-color: var(--lake);
+}
+
+.admin-alert.is-warning {
+  border-left-color: var(--hazard);
+}
+
+.admin-alert.is-danger {
+  border-left-color: var(--blaze);
+}
+
+/* Small square tags: hazard level, route status, missing fields */
+.admin-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--granite-300);
+  background: var(--granite-100);
+  color: var(--granite-700);
+  font: 700 11px/18px var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-tag.is-warning,
+.admin-tag.is-moderate,
+.admin-tag.is-caution {
+  border-color: var(--hazard);
+  background: var(--warning-mist);
+  color: var(--warning);
+}
+
+.admin-tag.is-danger,
+.admin-tag.is-elevated,
+.admin-tag.is-closed {
+  border-color: var(--blaze);
+  background: var(--blaze);
+  color: var(--white);
+}
+
+.admin-tag.is-open {
+  border-color: var(--sage);
+  background: var(--pine-mist);
+  color: var(--pine-deep);
+}
+
+/* Messages after an action */
+.admin-note {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--pine);
+  background: var(--pine-mist);
+  font-size: 15px;
+}
+
+.admin-note.is-error {
+  border-left-color: var(--blaze);
+  background: #fbe9e2;
+}
+
+.admin-note.is-info {
+  border-left-color: var(--lake);
+  background: #e3eef6;
+}
+
+.admin-empty {
+  color: var(--granite-500);
+}
+
+/* Forms */
+.admin-field {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-field .cairn-label {
+  color: var(--granite-700);
+}
+
+.admin-field textarea.cairn-input {
+  min-height: 88px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  resize: vertical;
+}
+
+.admin-hint {
+  font-size: 13px;
+  color: var(--granite-500);
+}
+
+/* Square segmented choice, e.g. open / caution / closed */
+.admin-choice {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.admin-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.admin-choice label {
+  margin: 0 -1.5px 0 0;
+  padding: 10px 16px;
+  border: 1.5px solid var(--granite-300);
+  background: var(--white);
+  font: 700 13px/1 var(--font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-choice input:checked + label {
+  position: relative;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.admin-choice input:focus-visible + label {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+}
+
+/* Route search results */
+.admin-results {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1.5px solid var(--granite-300);
+  border-top: 0;
+}
+
+.admin-results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-top: 1px solid var(--granite-200);
+  background: var(--white);
+  color: var(--ink);
+  text-align: left;
+}
+
+.admin-results button:hover {
+  background: var(--granite-100);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.admin-table caption {
+  caption-side: top;
+  padding: 0 0 10px;
+  color: var(--granite-500);
+  font-size: 14px;
+}
+
+.admin-table th {
+  padding: 8px 8px 8px 0;
+  border-bottom: 2px solid var(--ink);
+  text-align: left;
+}
+
+.admin-table td {
+  padding: 10px 8px 10px 0;
+  border-bottom: 1px solid var(--granite-200);
+  vertical-align: top;
+}

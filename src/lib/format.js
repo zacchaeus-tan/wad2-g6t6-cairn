@@ -80,16 +80,4 @@ export function formatDate(value) {
   return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function alertClass(severity) {
-  return (
-    { danger: 'alert-danger', warning: 'alert-warning', info: 'alert-info' }[severity] ||
-    'alert-secondary'
-  )
-}
 
-export function safetyStatusClass(status) {
-  return (
-    { closed: 'bg-danger', caution: 'bg-warning text-dark', open: 'bg-success' }[status] ||
-    'bg-secondary'
-  )
-}

@@ -6,13 +6,13 @@ const adminStore = useAdminStore()
 </script>
 
 <template>
-  <p v-if="!adminStore.incompleteRoutes.length" class="text-body-secondary mb-0">
+  <p v-if="!adminStore.incompleteRoutes.length" class="admin-empty">
     Every route has its map location, country and distance.
   </p>
 
   <div v-else class="table-responsive">
-    <table class="table table-sm align-middle mb-0">
-      <caption class="small">
+    <table class="admin-table">
+      <caption>
         {{
           adminStore.incompleteRoutes.length
         }}
@@ -36,12 +36,7 @@ const adminStore = useAdminStore()
             }}</RouterLink>
           </td>
           <td>
-            <span
-              v-for="item in route.missing"
-              :key="item"
-              class="badge text-bg-light border me-1"
-              >{{ item }}</span
-            >
+            <span v-for="item in route.missing" :key="item" class="admin-tag">{{ item }}</span>
           </td>
         </tr>
       </tbody>

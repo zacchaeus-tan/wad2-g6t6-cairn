@@ -5,11 +5,16 @@ import { supabase } from '@/lib/supabase'
 
 const ROUTE_SUMMARY = 'id, name, country'
 
-// Every alert regardless of status; admins can read them all.
+// Every alert regardless of status; admins can read them all. creator and
+// editor are the admins who published it and who last changed it.
 export function listAlerts() {
   return supabase
     .from('route_alerts')
-    .select(`*, routes(${ROUTE_SUMMARY})`)
+    .select(
+      `*, routes(${ROUTE_SUMMARY}),
+       creator:profiles!route_alerts_created_by_fkey(display_name),
+       editor:profiles!route_alerts_updated_by_fkey(display_name)`,
+    )
     .order('created_at', { ascending: false })
 }
 
@@ -47,11 +52,48 @@ export function updateAlertStatus(alertId, status) {
   return supabase.from('route_alerts').update({ status }).eq('id', alertId)
 }
 
+export function updateAlert(alertId, { routeId, severity, title, message, startsAt, endsAt }) {
+  return supabase
+    .from('route_alerts')
+    .update({
+      route_id: routeId,
+      severity,
+      title,
+      message: message || null,
+      starts_at: startsAt || new Date().toISOString(),
+      ends_at: endsAt || null,
+    })
+    .eq('id', alertId)
+}
+
+// Reports an admin marked "Reviewed, no action".
+export function listReportReviews() {
+  return supabase.from('admin_report_reviews').select('*')
+}
+
+export function markReportReviewed(routeId, reportRef) {
+  return supabase
+    .from('admin_report_reviews')
+    .upsert(
+      { route_id: routeId, report_ref: reportRef, reviewed_at: new Date().toISOString() },
+      { onConflict: 'route_id,report_ref' },
+    )
+    .select()
+    .single()
+}
+
+// A database trigger recalculates the route's community figures afterwards.
+export function updateOfficialDifficulty(routeId, grade) {
+  return supabase.from('routes').update({ official_difficulty: grade }).eq('id', routeId)
+}
+
 // Routes the community has flagged as more hazardous than usual.
 export function listHazardRoutes() {
   return supabase
     .from('routes')
-    .select(`${ROUTE_SUMMARY}, community_hazard_level, community_hazard_note, review_count`)
+    .select(
+      `${ROUTE_SUMMARY}, community_hazard_level, community_hazard_note, review_count, stats_updated_at`,
+    )
     .neq('community_hazard_level', 'low')
     .order('community_hazard_level', { ascending: true })
 }
@@ -68,7 +110,7 @@ export function listRoutesForChecks() {
   return supabase
     .from('routes')
     .select(
-      `${ROUTE_SUMMARY}, official_difficulty, effective_difficulty, review_count, distance_km,
+      `${ROUTE_SUMMARY}, official_difficulty, effective_difficulty, review_count, stats_updated_at, distance_km,
        latitude, longitude, safety_status, safety_status_note, geometry_present:geometry->>type`,
     )
     .order('name')

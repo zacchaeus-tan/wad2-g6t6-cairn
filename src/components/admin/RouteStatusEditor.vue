@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAdminStore } from '@/controller/adminStore'
-import { safetyStatusClass } from '@/lib/format'
 
 const adminStore = useAdminStore()
 const search = ref('')
@@ -48,87 +47,87 @@ async function save() {
 
 <template>
   <div>
-    <label for="status-search" class="form-label">Find a route</label>
-    <input
-      id="status-search"
-      v-model="search"
-      type="search"
-      class="form-control"
-      placeholder="Route name or country"
-      autocomplete="off"
-    />
-    <div v-if="matches.length" class="list-group mt-1">
-      <button
-        v-for="route in matches"
-        :key="route.id"
-        type="button"
-        class="list-group-item list-group-item-action d-flex justify-content-between"
-        @click="choose(route)"
-      >
-        <span
-          >{{ route.name }} <span class="text-body-secondary small">{{ route.country }}</span></span
-        >
-        <span class="badge" :class="safetyStatusClass(route.safety_status)">{{
-          route.safety_status || 'not set'
-        }}</span>
-      </button>
+    <div class="admin-field">
+      <label for="status-search" class="cairn-label">Find a route</label>
+      <input
+        id="status-search"
+        v-model="search"
+        type="search"
+        class="cairn-input"
+        placeholder="Route name or country"
+        autocomplete="off"
+      />
     </div>
+    <ul v-if="matches.length" class="admin-results">
+      <li v-for="route in matches" :key="route.id">
+        <button type="button" @click="choose(route)">
+          <span
+            >{{ route.name }} <span class="admin-hint">{{ route.country }}</span></span
+          >
+          <span class="admin-tag" :class="`is-${route.safety_status}`">{{
+            route.safety_status || 'not set'
+          }}</span>
+        </button>
+      </li>
+    </ul>
 
     <form v-if="selected" class="mt-4" novalidate @submit.prevent="save">
-      <h3 class="h6">{{ selected.name }}</h3>
-      <div class="btn-group mb-3" role="group" aria-label="Safety status">
+      <h3 class="h5 fw-bold mb-3">{{ selected.name }}</h3>
+      <div class="admin-choice mb-3" role="radiogroup" aria-label="Safety status">
         <template v-for="status in ['open', 'caution', 'closed']" :key="status">
           <input
             :id="`status-${status}`"
             v-model="form.safetyStatus"
             type="radio"
-            class="btn-check"
             name="safety-status"
             :value="status"
           />
-          <label class="btn btn-outline-secondary text-capitalize" :for="`status-${status}`">{{
-            status
-          }}</label>
+          <label :for="`status-${status}`">{{ status }}</label>
         </template>
       </div>
 
-      <label for="status-note" class="form-label d-block">
-        Note for hikers
-        <span v-if="form.safetyStatus === 'open'" class="text-body-secondary">(optional)</span>
-      </label>
-      <textarea
-        id="status-note"
-        v-model="form.safetyStatusNote"
-        class="form-control"
-        rows="2"
-        placeholder="e.g. Closed by the park authority until the bridge is repaired"
-      ></textarea>
+      <div class="admin-field">
+        <label for="status-note" class="cairn-label">
+          Note for hikers<template v-if="form.safetyStatus === 'open'"> (optional)</template>
+        </label>
+        <textarea
+          id="status-note"
+          v-model="form.safetyStatusNote"
+          class="cairn-input"
+          rows="2"
+          placeholder="e.g. Closed by the park authority until the bridge is repaired"
+        ></textarea>
+      </div>
 
-      <p v-if="adminStore.statusError" class="alert alert-danger mt-3 mb-0" role="alert">
+      <p v-if="adminStore.statusError" class="admin-note is-error" role="alert">
         {{ adminStore.statusError }}
       </p>
-      <p v-else-if="saved" class="alert alert-success mt-3 mb-0" role="status">Status saved.</p>
+      <p v-else-if="saved" class="admin-note" role="status">Status saved.</p>
 
-      <button type="submit" class="btn btn-success mt-3" :disabled="saving">
+      <button type="submit" class="cairn-btn is-small mt-3" :disabled="saving">
         {{ saving ? 'Saving…' : 'Save status' }}
       </button>
     </form>
 
-    <template v-if="flaggedRoutes.length">
-      <h3 class="h6 text-uppercase text-body-secondary mt-4">Not open</h3>
-      <ul class="list-group">
-        <li v-for="route in flaggedRoutes" :key="route.id" class="list-group-item">
-          <button type="button" class="btn btn-link p-0 text-start" @click="choose(route)">
-            {{ route.name }}
-          </button>
-          <span class="badge ms-2" :class="safetyStatusClass(route.safety_status)">{{
-            route.safety_status
-          }}</span>
-          <span v-if="route.safety_status_note" class="small text-body-secondary">
-            — {{ route.safety_status_note }}</span
-          >
+    <div v-if="flaggedRoutes.length" class="admin-group mt-4">
+      <h3 class="cairn-label">Not open</h3>
+      <ul class="admin-list">
+        <li v-for="route in flaggedRoutes" :key="route.id" class="admin-item">
+          <div class="admin-item-body">
+            <p>
+              <span class="admin-tag" :class="`is-${route.safety_status}`">{{
+                route.safety_status
+              }}</span>
+              <button type="button" class="cairn-link" @click="choose(route)">
+                {{ route.name }}
+              </button>
+            </p>
+            <p v-if="route.safety_status_note" class="cairn-fine">
+              {{ route.safety_status_note }}
+            </p>
+          </div>
         </li>
       </ul>
-    </template>
+    </div>
   </div>
 </template>

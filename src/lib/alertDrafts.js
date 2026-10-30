@@ -11,8 +11,9 @@ const CATEGORY_SEVERITY = { 1: 'info', 2: 'warning', 3: 'danger' }
 
 const HAZARD_SEVERITY = { moderate: 'warning', elevated: 'danger' }
 
-// A datetime-local input value (local time, no zone) DRAFT_DAYS from now.
-function draftEnd() {
+// A datetime-local input value (local time, no zone) DRAFT_DAYS from now. Also
+// the default end for alerts typed in by hand, so none stay up forever.
+export function defaultAlertEnd() {
   const end = new Date(Date.now() + DRAFT_DAYS * 24 * 60 * 60 * 1000)
   end.setMinutes(end.getMinutes() - end.getTimezoneOffset())
   return end.toISOString().slice(0, 16)
@@ -33,6 +34,9 @@ export function pointWarningRef(warning) {
 }
 
 export const HAZARD_ROUTE_REF = 'route-hazard'
+
+// Used when an admin keeps a route's grade after a difficulty mismatch.
+export const DIFFICULTY_REF = 'difficulty'
 
 function linkTo(reportRef) {
   return { source: 'community', externalRef: `${reportRef}:${Date.now()}` }
@@ -55,7 +59,7 @@ export function draftFromPointWarning(warning) {
     severity: CATEGORY_SEVERITY[warning.severity] || 'warning',
     title: `${warning.label} at ${place}`,
     message: `${reported}${note} Take extra care on this section.`,
-    endsAt: draftEnd(),
+    endsAt: defaultAlertEnd(),
     ...linkTo(pointWarningRef(warning)),
   }
 }
@@ -69,7 +73,7 @@ export function draftFromHazardRoute(route) {
     severity: HAZARD_SEVERITY[route.community_hazard_level] || 'warning',
     title: `Hikers report ${route.community_hazard_level} hazards on this route`,
     message: `${note}Based on recent hiker reviews. Check conditions before you set out.`,
-    endsAt: draftEnd(),
+    endsAt: defaultAlertEnd(),
     ...linkTo(HAZARD_ROUTE_REF),
   }
 }

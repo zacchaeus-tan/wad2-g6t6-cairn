@@ -1,135 +1,164 @@
 <script setup>
+import { reactive } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAdminStore } from '@/controller/adminStore'
-import { alertClass, difficultyLabel, formatDate, hazardClass } from '@/lib/format'
-import { draftFromHazardRoute, draftFromPointWarning } from '@/lib/alertDrafts'
+import { difficultyLabel, formatDate } from '@/lib/format'
+import {
+  DIFFICULTY_REF,
+  HAZARD_ROUTE_REF,
+  draftFromHazardRoute,
+  draftFromPointWarning,
+  pointWarningRef,
+} from '@/lib/alertDrafts'
 
 const emit = defineEmits(['raise-alert'])
 
 const adminStore = useAdminStore()
+
+const GRADES = [1, 2, 3, 4]
+
+// The grade picked in each mismatch row, keyed by route id. Starts at the
+// grade hikers are pointing to.
+const newGrades = reactive({})
+
+function gradeFor(route) {
+  return newGrades[route.id] ?? Math.round(route.effective_difficulty)
+}
 </script>
 
 <template>
   <div>
-    <p v-if="!adminStore.attentionCount" class="alert alert-success mb-0">
-      Nothing needs attention right now.
-    </p>
+    <p v-if="!adminStore.attentionCount" class="admin-empty">Nothing needs attention right now.</p>
 
-    <template v-if="adminStore.pendingAlerts.length">
-      <h3 class="h6 text-uppercase text-body-secondary mt-2">Alerts waiting for approval</h3>
-      <ul class="list-unstyled mb-4">
-        <li
-          v-for="alert in adminStore.pendingAlerts"
-          :key="alert.id"
-          class="alert d-flex flex-wrap gap-2 justify-content-between align-items-start"
-          :class="alertClass(alert.severity)"
-        >
-          <div>
-            <strong>{{ alert.title }}</strong>
-            <span class="small"> · {{ alert.routes?.name }} · from {{ alert.source }}</span>
-            <span v-if="alert.ends_at" class="small"> · {{ formatDate(alert.starts_at) }}</span>
-            <p v-if="alert.message" class="mb-0 small">{{ alert.message }}</p>
-          </div>
-          <div class="d-flex gap-2">
-            <button
-              type="button"
-              class="btn btn-sm btn-success"
-              @click="adminStore.setAlertStatus(alert.id, 'active')"
-            >
-              Publish
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-secondary"
-              @click="adminStore.setAlertStatus(alert.id, 'dismissed')"
-            >
-              Dismiss
-            </button>
-          </div>
-        </li>
-      </ul>
-    </template>
-
-    <template v-if="adminStore.openHazardRoutes.length">
-      <h3 class="h6 text-uppercase text-body-secondary mt-2">Community hazard reports</h3>
-      <ul class="list-group mb-4">
-        <li
-          v-for="route in adminStore.openHazardRoutes"
-          :key="route.id"
-          class="list-group-item d-flex flex-wrap gap-2 justify-content-between align-items-center"
-        >
-          <div>
-            <span class="badge me-2" :class="hazardClass(route.community_hazard_level)">
-              {{ route.community_hazard_level }}
-            </span>
-            <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
-              route.name
-            }}</RouterLink>
-            <span v-if="route.community_hazard_note" class="small text-body-secondary">
-              — {{ route.community_hazard_note }}
-            </span>
-          </div>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            @click="emit('raise-alert', draftFromHazardRoute(route))"
-          >
-            Raise alert
-          </button>
-        </li>
-      </ul>
-    </template>
-
-    <template v-if="adminStore.openPointWarnings.length">
-      <h3 class="h6 text-uppercase text-body-secondary mt-2">Hazards confirmed at checkpoints</h3>
-      <ul class="list-group mb-4">
+    <div v-if="adminStore.openPointWarnings.length" class="admin-group">
+      <h3 class="cairn-label">Hazards confirmed at checkpoints</h3>
+      <ul class="admin-list">
         <li
           v-for="warning in adminStore.openPointWarnings"
           :key="`${warning.point_id}-${warning.category}`"
-          class="list-group-item d-flex flex-wrap gap-2 justify-content-between align-items-center"
+          class="admin-item"
         >
-          <div>
-            <strong>{{ warning.label }}</strong>
-            at {{ warning.point_name
-            }}<span v-if="warning.day_number"> (day {{ warning.day_number }})</span>
-            on
-            <RouterLink :to="{ name: 'route-detail', params: { id: warning.route_id } }">
-              {{ adminStore.routeNames.get(warning.route_id) || 'a route' }}
-            </RouterLink>
-            <p class="mb-0 small text-body-secondary">
+          <div class="admin-item-body">
+            <p>
+              <strong>{{ warning.label }}</strong>
+              at {{ warning.point_name
+              }}<template v-if="warning.day_number"> (day {{ warning.day_number }})</template>
+              on
+              <RouterLink :to="{ name: 'route-detail', params: { id: warning.route_id } }">{{
+                adminStore.routeNames.get(warning.route_id) || 'a route'
+              }}</RouterLink>
+            </p>
+            <p class="cairn-fine">
               {{ warning.reporter_count }} hikers, last on
               {{ formatDate(warning.last_reported_at) }}
               <template v-if="warning.latest_note">: “{{ warning.latest_note }}”</template>
             </p>
           </div>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            @click="emit('raise-alert', draftFromPointWarning(warning))"
-          >
-            Raise alert
-          </button>
+          <div class="admin-actions">
+            <button
+              type="button"
+              class="cairn-btn is-small"
+              @click="emit('raise-alert', draftFromPointWarning(warning))"
+            >
+              Raise alert
+            </button>
+            <button
+              type="button"
+              class="cairn-link"
+              @click="adminStore.markReviewed(warning.route_id, pointWarningRef(warning))"
+            >
+              Reviewed, no action
+            </button>
+          </div>
         </li>
       </ul>
-    </template>
+    </div>
 
-    <template v-if="adminStore.difficultyMismatches.length">
-      <h3 class="h6 text-uppercase text-body-secondary mt-2">Difficulty may need regrading</h3>
-      <ul class="list-group mb-0">
-        <li
-          v-for="route in adminStore.difficultyMismatches"
-          :key="route.id"
-          class="list-group-item"
-        >
-          <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
-            route.name
-          }}</RouterLink>
-          is graded {{ difficultyLabel(route.official_difficulty) }}, but {{ route.review_count }}
-          {{ route.review_count === 1 ? 'hiker rates' : 'hikers rate' }} it closer to
-          {{ difficultyLabel(route.effective_difficulty) }}
-          ({{ route.gap > 0 ? 'harder' : 'easier' }}).
+    <div v-if="adminStore.openHazardRoutes.length" class="admin-group">
+      <h3 class="cairn-label">Community hazard reports</h3>
+      <ul class="admin-list">
+        <li v-for="route in adminStore.openHazardRoutes" :key="route.id" class="admin-item">
+          <div class="admin-item-body">
+            <p>
+              <span class="admin-tag" :class="`is-${route.community_hazard_level}`">{{
+                route.community_hazard_level
+              }}</span>
+              <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
+                route.name
+              }}</RouterLink>
+            </p>
+            <p v-if="route.community_hazard_note" class="cairn-fine">
+              {{ route.community_hazard_note }}
+            </p>
+          </div>
+          <div class="admin-actions">
+            <button
+              type="button"
+              class="cairn-btn is-small"
+              @click="emit('raise-alert', draftFromHazardRoute(route))"
+            >
+              Raise alert
+            </button>
+            <button
+              type="button"
+              class="cairn-link"
+              @click="adminStore.markReviewed(route.id, HAZARD_ROUTE_REF)"
+            >
+              Reviewed, no action
+            </button>
+          </div>
         </li>
       </ul>
-    </template>
+    </div>
+
+    <div v-if="adminStore.difficultyMismatches.length" class="admin-group">
+      <h3 class="cairn-label">Difficulty may need regrading</h3>
+      <ul class="admin-list">
+        <li v-for="route in adminStore.difficultyMismatches" :key="route.id" class="admin-item">
+          <div class="admin-item-body">
+            <p>
+              <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
+                route.name
+              }}</RouterLink>
+              is graded <strong>{{ difficultyLabel(route.official_difficulty) }}</strong>
+            </p>
+            <p class="cairn-fine">
+              {{ route.review_count }}
+              {{ route.review_count === 1 ? 'hiker rates' : 'hikers rate' }} it closer to
+              {{ difficultyLabel(route.effective_difficulty) }}
+              ({{ route.gap > 0 ? 'harder' : 'easier' }}).
+            </p>
+          </div>
+          <div class="admin-actions">
+            <label class="cairn-visually-hidden" :for="`grade-${route.id}`">New grade</label>
+            <select
+              :id="`grade-${route.id}`"
+              class="cairn-input w-auto"
+              :value="gradeFor(route)"
+              @change="newGrades[route.id] = Number($event.target.value)"
+            >
+              <option v-for="grade in GRADES" :key="grade" :value="grade">
+                {{ difficultyLabel(grade) }}
+              </option>
+            </select>
+            <button
+              type="button"
+              class="cairn-btn is-small"
+              :disabled="gradeFor(route) === route.official_difficulty"
+              @click="adminStore.regradeRoute(route.id, gradeFor(route))"
+            >
+              Regrade
+            </button>
+            <button
+              type="button"
+              class="cairn-link"
+              @click="adminStore.markReviewed(route.id, DIFFICULTY_REF)"
+            >
+              Keep grade
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
