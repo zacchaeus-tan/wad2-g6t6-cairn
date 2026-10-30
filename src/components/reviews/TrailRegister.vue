@@ -21,6 +21,14 @@ const formOpen = ref(false)
 
 const hasOwnReview = computed(() => Boolean(reviewsStore.myReview(props.userId)))
 
+// One row per star rating, 5 first; share is that rating's slice of all reviews (0 to 1)
+const starRows = computed(() =>
+  [5, 4, 3, 2, 1].map((stars) => {
+    const count = props.route.rating_counts?.[stars] ?? 0
+    return { stars, count, share: count / (props.route.review_count || 1) }
+  }),
+)
+
 // The averages are empty until a route has its first review
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`
@@ -79,13 +87,20 @@ function onDeleted() {
 
         <!-- Placeholder: the star breakdown needs counts stored on the route (a later task) -->
         <div class="register-stars">
-          <div v-for="stars in [5, 4, 3, 2, 1]" :key="stars" class="register-stars-row cairn-data">
-            <span>{{ stars }}</span>
-            <span class="register-stars-bar"></span>
-            <span>—</span>
+          <div v-for="row in starRows" :key="row.stars" class="register-stars-row cairn-data">
+            <span>{{ row.stars }}</span>
+            <span class="register-stars-bar">
+              <motion.span
+                class="register-stars-fill"
+                :initial="{ scaleX: 0 }"
+                :animate="{ scaleX: row.share }"
+                :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                :style="{ originX: 0 }"
+              />
+            </span>
+            <span>{{ row.count }}</span>
           </div>
         </div>
-        <p class="register-placeholder-note">Star breakdown coming soon.</p>
 
         <dl class="register-facts">
           <div>
@@ -199,10 +214,10 @@ function onDeleted() {
   background: var(--granite-200);
 }
 
-.register-placeholder-note {
-  margin-top: -8px !important;
-  color: var(--granite-700);
-  font-size: 13px;
+.register-stars-fill {
+  display: block;
+  height: 100%;
+  background: var(--blaze);
 }
 
 .register-facts {
