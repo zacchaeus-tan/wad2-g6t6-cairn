@@ -4,7 +4,7 @@ export function listIncidentCategories() {
   return supabase.from('incident_categories').select('*').order('sort_order')
 }
 
-const REVIEW_FIELDS = '*, profiles(display_name), review_incidents(*)'
+const REVIEW_FIELDS = '*, profiles(display_name), review_incidents(*, incident_categories(label))'
 
 // One page of a route's reviews, newest first. from and to are row positions
 // (inclusive, starting at 0); count is the route's total number of reviews.

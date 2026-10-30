@@ -2,13 +2,14 @@
 import { AnimatePresence, motion } from 'motion-v'
 import { difficultyLabel, formatDate } from '@/lib/format'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
+import DifficultyMark from '@/components/common/DifficultyMark.vue'
+import StarIcon from '@/components/common/StarIcon.vue'
+import WarningIcon from '@/components/common/WarningIcon.vue'
 
 // no need to declare a variable as it is only used in the template
 defineProps({
   reviews: { type: Array, required: true },
 })
-
-const STAR = 'm12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z'
 
 // display_name can be empty, so fall back to a generic name
 function nameOf(review) {
@@ -41,14 +42,7 @@ function nameOf(review) {
           <strong>
             {{ nameOf(review) }}
             <span class="review-entry-stars">
-              <svg
-                v-for="n in 5"
-                :key="n"
-                viewBox="0 0 24 24"
-                :class="{ 'is-off': n > review.rating }"
-              >
-                <path :d="STAR" />
-              </svg>
+              <StarIcon v-for="n in 5" :key="n" :fill="n <= review.rating ? 1 : 0" />
             </span>
           </strong>
           <time :datetime="review.created_at">{{ formatDate(review.created_at) }}</time>
@@ -59,24 +53,22 @@ function nameOf(review) {
         <div class="review-entry-meta">
           <span class="review-entry-felt">
             Felt {{ difficultyLabel(review.perceived_difficulty) }}
-            <span class="review-entry-meter">
-              <i v-for="n in 4" :key="n" :class="{ 'is-on': n <= review.perceived_difficulty }"></i>
-            </span>
+            <DifficultyMark :grade="review.perceived_difficulty" :show-label="false" />
           </span>
           <span :class="review.completed ? 'is-done' : 'is-turned'">
             {{ review.completed ? 'Completed' : 'Did not complete' }}
           </span>
-          <span
+          <div
             v-for="incident in review.review_incidents"
             :key="incident.id"
             class="review-entry-incident"
           >
-            <svg viewBox="0 0 24 24">
-              <path d="M12 4 2.8 19.5h18.4z" />
-              <path d="M12 10v4.5M12 17.2v.1" />
-            </svg>
-            {{ incident.category }} — {{ incident.note }}
-          </span>
+            <WarningIcon />
+            <div>
+              <strong>{{ incident.incident_categories.label }}</strong>
+              <p>{{ incident.note }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </motion.article>
@@ -135,6 +127,7 @@ function nameOf(review) {
 }
 
 .review-entry-stars {
+  --star-off: var(--granite-300);
   display: inline-flex;
   gap: 2px;
 }
@@ -142,11 +135,6 @@ function nameOf(review) {
 .review-entry-stars svg {
   width: 15px;
   height: 15px;
-  fill: var(--blaze);
-}
-
-.review-entry-stars svg.is-off {
-  fill: var(--granite-300);
 }
 
 .review-entry-text {
@@ -171,21 +159,6 @@ function nameOf(review) {
   gap: 6px;
 }
 
-.review-entry-meter {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.review-entry-meter i {
-  width: 14px;
-  height: 6px;
-  background: var(--granite-200);
-}
-
-.review-entry-meter i.is-on {
-  background: var(--ink);
-}
-
 .is-done {
   color: var(--pine);
   font-weight: 700;
@@ -197,20 +170,23 @@ function nameOf(review) {
 }
 
 .review-entry-incident {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  flex-basis: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
   background: var(--warning-mist);
   color: #5c3d00;
-  font-weight: 700;
 }
 
 .review-entry-incident svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
+  width: 20px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+}
+
+.review-entry-incident p {
+  margin: 0;
 }
 </style>

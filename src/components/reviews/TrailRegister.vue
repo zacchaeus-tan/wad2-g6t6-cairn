@@ -104,16 +104,6 @@ function onDeleted() {
 
         <dl class="register-facts">
           <div>
-            <dt class="cairn-label">Felt like</dt>
-            <dd class="cairn-data">
-              {{
-                route.avg_perceived_difficulty == null
-                  ? '—'
-                  : `${route.avg_perceived_difficulty} / 4`
-              }}
-            </dd>
-          </div>
-          <div>
             <dt class="cairn-label">Completed</dt>
             <dd class="cairn-data">{{ formatPercent(route.completion_rate) }}</dd>
           </div>
@@ -222,7 +212,7 @@ function onDeleted() {
 
 .register-facts {
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(2, auto);
   justify-content: start;
   gap: 12px 24px;
   margin: 0;
