@@ -6,8 +6,8 @@ import SiteFooter from '@/components/common/SiteFooter.vue'
 
 const currentRoute = useRoute()
 
-// The route detail page opens on a dark photo, so the navbar sits on top of it.
-const navOverlay = computed(() => currentRoute.name === 'route-detail')
+// Browse and route detail open on a photo, so the navbar sits on top of it.
+const navOverlay = computed(() => ['routes-list', 'route-detail'].includes(currentRoute.name))
 
 // The globe fills the screen below the navbar, so it has no footer.
 const showFooter = computed(() => currentRoute.name !== 'routes-globe')

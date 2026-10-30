@@ -5,7 +5,7 @@ import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
 import WarningIcon from '@/components/common/WarningIcon.vue'
-import PlaceholderLine from './PlaceholderLine.vue'
+import RouteLine from './RouteLine.vue'
 import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 
 const props = defineProps({
@@ -71,7 +71,7 @@ const warnings = computed(() => {
         </p>
       </div>
       <div class="route-banner-art">
-        <PlaceholderLine class="route-banner-line" :color="lineColor" :width="5" />
+        <RouteLine class="route-banner-line" :geometry="route.geometry" :color="lineColor" :width="5" />
       </div>
     </div>
   </section>
