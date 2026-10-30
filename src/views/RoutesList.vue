@@ -193,17 +193,19 @@ const displayedRoutes = computed(() => filteredRoutes.value.slice(0, visibleCoun
 const filterBar = ref(null)
 const results = ref(null)
 
-// Bring the first result back into view, just under the sticky bar. Only scrolls up,
-// so typing in the banner search doesn't pull the page down to the results.
-function scrollToResults() {
+// Bring the first result into view, just under the sticky bar. upOnly stops it pulling
+// the page down while someone is still typing in the banner search.
+function scrollToResults(upOnly = false) {
   if (!results.value) {
     return
   }
   const barHeight = wideScreen.matches && filterBar.value ? filterBar.value.offsetHeight : 0
-  const offset = results.value.getBoundingClientRect().top - barHeight
-  if (offset < 0) {
-    window.scrollTo({ top: window.scrollY + offset, behavior: reduceMotion.value ? 'auto' : 'smooth' })
+  // One pixel past the bar's resting point, so it counts as stuck and shows its own search
+  const offset = results.value.getBoundingClientRect().top - barHeight + 1
+  if (upOnly && offset >= 0) {
+    return
   }
+  window.scrollTo({ top: window.scrollY + offset, behavior: reduceMotion.value ? 'auto' : 'smooth' })
 }
 
 // Start again from the first page, at the top of the results, whenever the results change
@@ -211,7 +213,7 @@ watch(
   [searchTerm, selectedCountry, selectedGrades, selectedTrips, distanceRange, climbRange, sortBy],
   () => {
     visibleCount.value = PAGE_SIZE
-    scrollToResults()
+    scrollToResults(true)
   },
   { deep: true },
 )
@@ -371,7 +373,13 @@ onBeforeUnmount(() => stickObserver?.disconnect())
         <label class="routes-banner-search">
           <span class="cairn-visually-hidden">Search routes by name</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></svg>
-          <input v-model="searchTerm" type="search" placeholder="Search a route, like Kinabalu" />
+          <!-- Enter takes you down to what the search found -->
+          <input
+            v-model="searchTerm"
+            type="search"
+            placeholder="Search a route, like Kinabalu"
+            @keydown.enter="scrollToResults()"
+          />
         </label>
       </motion.div>
     </section>
@@ -507,6 +515,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
               type="search"
               placeholder="Search a route, like Kinabalu"
               :tabindex="barIsStuck ? 0 : -1"
+              @keydown.enter="scrollToResults()"
             />
           </label>
 
