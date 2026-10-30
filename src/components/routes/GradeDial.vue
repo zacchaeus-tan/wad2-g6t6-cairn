@@ -114,7 +114,7 @@ const communityNeedle = computed(() =>
             stroke-width="30"
             :variants="band.variants"
           />
-          <g fill="#3a4540" font-size="12" font-weight="700" letter-spacing="1">
+          <g fill="var(--granite-700)" font-size="12" font-weight="700" letter-spacing="1">
             <text x="40" y="228" text-anchor="middle">1 EASY</text>
             <text
               v-for="mark in edgeLabels"
@@ -134,11 +134,11 @@ const communityNeedle = computed(() =>
               y1="200"
               x2="200"
               y2="66"
-              stroke="#c2481a"
+              stroke="var(--blaze)"
               stroke-width="5"
               stroke-linecap="round"
             />
-            <path d="M200 46 L189 70 L211 70 Z" fill="#c2481a" />
+            <path d="M200 46 L189 70 L211 70 Z" fill="var(--blaze)" />
           </motion.g>
           <motion.g :variants="officialNeedle" :style="NEEDLE_PIVOT">
             <line
@@ -146,13 +146,13 @@ const communityNeedle = computed(() =>
               y1="200"
               x2="200"
               y2="66"
-              stroke="#17201c"
+              stroke="var(--ink)"
               stroke-width="5"
               stroke-linecap="round"
             />
-            <path d="M200 46 L189 70 L211 70 Z" fill="#17201c" />
+            <path d="M200 46 L189 70 L211 70 Z" fill="var(--ink)" />
           </motion.g>
-          <circle cx="200" cy="200" r="13" fill="#17201c" />
+          <circle cx="200" cy="200" r="13" fill="var(--ink)" />
         </svg>
       </motion.div>
 

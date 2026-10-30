@@ -76,14 +76,6 @@ const statusBadges = {
   unknown: { text: 'Unknown', class: 'bg-secondary' },
 }
 
-function formatValue(value, unit = '') {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value}${unit}`
-}
-
 // weather forecast
 const weather = ref(null)
 const weatherError = ref('')
@@ -244,30 +236,6 @@ async function onToggleSaved() {
                 guide.
               </p>
             </template>
-          </div>
-        </section>
-
-        <section class="col-12" aria-labelledby="route-safety-title">
-          <div class="route-detail-section">
-            <h2 id="route-safety-title" class="h4 mb-4">Safety and hazards</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Safety status</dt>
-                <dd>{{ formatValue(route.safety_status) }}</dd>
-              </div>
-              <div>
-                <dt>Safety note</dt>
-                <dd>{{ formatValue(route.safety_status_note) }}</dd>
-              </div>
-              <div>
-                <dt>Community hazard level</dt>
-                <dd>{{ formatValue(route.community_hazard_level) }}</dd>
-              </div>
-              <div>
-                <dt>Community hazard note</dt>
-                <dd>{{ formatValue(route.community_hazard_note) }}</dd>
-              </div>
-            </dl>
           </div>
         </section>
 
@@ -482,21 +450,6 @@ async function onToggleSaved() {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
-}
-
-.route-detail-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  gap: 1.25rem;
-  margin-bottom: 0;
-}
-
-.route-detail-facts dt {
-  font-weight: 600;
-}
-
-.route-detail-facts dd {
-  margin-bottom: 0;
 }
 
 /* Plan your itinerary */
