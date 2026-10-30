@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion-v'
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'motion-v'
 import { fetchRoutes } from '../controller/routesController'
 import { tripType } from '@/lib/matching'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
@@ -17,6 +17,9 @@ import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
 
 // Stock photos behind the route lines until each route has its own photo.
 const TILE_PHOTOS = [photoLakePeaks, photoAlpinePath, photoRidgeHikers, photoMistyLake]
+
+// How many tiles show at first, and how many more each "Show more" adds.
+const PAGE_SIZE = 24
 
 const TRIP_LABELS = { day: 'Day hike', overnight: 'Overnight', multiday: 'Multi-day' }
 
@@ -45,6 +48,7 @@ const selectedTrips = ref([])
 const distanceRange = ref([0, 100])
 const climbRange = ref([0, 100])
 const sortBy = ref('name')
+const visibleCount = ref(PAGE_SIZE)
 
 // Which filter panel is open ('country', 'grade', ...), or '' for none
 const openFilter = ref('')
@@ -183,6 +187,34 @@ const filteredRoutes = computed(() => {
 
   return sortedRoutes
 })
+
+const displayedRoutes = computed(() => filteredRoutes.value.slice(0, visibleCount.value))
+
+const filterBar = ref(null)
+const results = ref(null)
+
+// Bring the first result back into view, just under the sticky bar. Only scrolls up,
+// so typing in the banner search doesn't pull the page down to the results.
+function scrollToResults() {
+  if (!results.value) {
+    return
+  }
+  const barHeight = wideScreen.matches && filterBar.value ? filterBar.value.offsetHeight : 0
+  const offset = results.value.getBoundingClientRect().top - barHeight
+  if (offset < 0) {
+    window.scrollTo({ top: window.scrollY + offset, behavior: reduceMotion.value ? 'auto' : 'smooth' })
+  }
+}
+
+// Start again from the first page, at the top of the results, whenever the results change
+watch(
+  [searchTerm, selectedCountry, selectedGrades, selectedTrips, distanceRange, climbRange, sortBy],
+  () => {
+    visibleCount.value = PAGE_SIZE
+    scrollToResults()
+  },
+  { deep: true },
+)
 
 function countFor(skip, test) {
   return routes.value.filter((route) => matchesFilters(route, skip) && test(route)).length
@@ -350,7 +382,13 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 
     <template v-else>
       <div ref="barSentinel" aria-hidden="true"></div>
-      <div class="routes-bar" :class="{ 'is-stuck': barIsStuck }" role="group" aria-label="Filter routes">
+      <div
+        ref="filterBar"
+        class="routes-bar"
+        :class="{ 'is-stuck': barIsStuck }"
+        role="group"
+        aria-label="Filter routes"
+      >
         <div class="cairn-wrap routes-bar-inner">
           <FilterDropdown
             label="Country"
@@ -496,7 +534,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
         </div>
       </div>
 
-      <section class="cairn-wrap routes-results" aria-label="Route results">
+      <section ref="results" class="cairn-wrap routes-results" aria-label="Route results">
         <div class="routes-results-top">
           <div class="routes-active">
             <button
@@ -525,13 +563,22 @@ onBeforeUnmount(() => stickObserver?.disconnect())
           <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">Clear all filters</button>
         </div>
 
-        <div v-else class="routes-tiles">
-          <RouteTile
-            v-for="(route, index) in filteredRoutes"
+        <AnimatePresence v-else as="div" class="routes-tiles">
+          <motion.div
+            v-for="(route, index) in displayedRoutes"
             :key="route.id"
-            :route="route"
-            :photo="photoFor(route, index)"
-          />
+            layout
+            :initial="{ opacity: 0, y: 16 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :exit="{ opacity: 0, transition: { duration: 0.15 } }"
+            :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
+          >
+            <RouteTile :route="route" :photo="photoFor(route, index)" />
+          </motion.div>
+        </AnimatePresence>
+
+        <div v-if="displayedRoutes.length < filteredRoutes.length" class="routes-more">
+          <button type="button" class="cairn-btn is-ghost" @click="visibleCount += PAGE_SIZE">Show more</button>
         </div>
       </section>
     </template>
@@ -939,6 +986,12 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 56px 28px;
+}
+
+.routes-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 64px;
 }
 
 .routes-empty {
