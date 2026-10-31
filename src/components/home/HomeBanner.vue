@@ -60,9 +60,9 @@ const footOpacity = useTransform(scrollY, (y) => Math.max(0, 1 - (y / window.inn
 .banner {
   --h: max(640px, 100svh);
   --pad: calc(65px + clamp(48px, 10vh, 110px));
-  --font: clamp(120px, 27vw, 420px);
+  --word-size: clamp(120px, 27vw, 420px);
   /* The stack's top reaches halfway up the wordmark */
-  --stack-top: calc(var(--pad) + var(--font) * 0.5);
+  --stack-top: calc(var(--pad) + var(--word-size) * 0.5);
   /* Photo width: wide enough to reach the banner's foot */
   --w: max(100vw, (var(--h) - var(--stack-top)) / 0.621);
   /* The stack is 68.1% across the photo, and its top is 84.06% of the photo's width down */
@@ -94,7 +94,7 @@ const footOpacity = useTransform(scrollY, (y) => Math.max(0, 1 - (y / window.inn
 }
 
 .banner-word span {
-  font-size: var(--font);
+  font-size: var(--word-size);
   line-height: 0.8;
   font-weight: 900;
   letter-spacing: -0.05em;
