@@ -77,6 +77,13 @@ function hazardNote(incidents, level) {
   return `${users.size} ${users.size === 1 ? 'hiker' : 'hikers'} reported: ${label.toLowerCase()}`
 }
 
+// How many reviews gave each star rating, e.g. { 1: 0, 2: 1, 3: 0, 4: 2, 5: 4 }.
+export function calcRatingCounts(reviews) {
+  const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  for (const review of reviews) counts[review.rating] += 1
+  return counts
+}
+
 // Every cached community column on `routes`, ready to pass to .update().
 export function computeRouteStats(official, reviews, incidents) {
   const avgRating = average(reviews.map((r) => r.rating))
@@ -91,6 +98,7 @@ export function computeRouteStats(official, reviews, incidents) {
     avg_rating: avgRating == null ? null : round(avgRating, 2),
     avg_perceived_difficulty: avgPerceived == null ? null : round(avgPerceived, 2),
     review_count: reviews.length,
+    rating_counts: calcRatingCounts(reviews),
     completion_rate: completionRate == null ? null : round(completionRate, 3),
     effective_difficulty: calcEffectiveDifficulty(official, reviews),
     community_hazard_level: hazardLevel,
