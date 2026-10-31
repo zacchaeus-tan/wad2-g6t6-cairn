@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
 import { difficultyLabel, formatDate } from '@/lib/format'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
@@ -7,9 +8,25 @@ import StarIcon from '@/components/common/StarIcon.vue'
 import WarningIcon from '@/components/common/WarningIcon.vue'
 
 // no need to declare a variable as it is only used in the template
-defineProps({
+const props = defineProps({
   reviews: { type: Array, required: true },
+  userId: { type: String, default: null },
+  isAdmin: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['edit', 'delete'])
+
+// Deleting can't be undone, so it takes a second click
+const confirmingId = ref(null)
+
+function isOwn(review) {
+  return Boolean(props.userId) && review.user_id === props.userId
+}
+
+function confirmDelete(review) {
+  confirmingId.value = null
+  emit('delete', review)
+}
 
 // display_name can be empty, so fall back to a generic name
 function nameOf(review) {
@@ -58,6 +75,22 @@ function nameOf(review) {
           <span :class="review.completed ? 'is-done' : 'is-turned'">
             {{ review.completed ? 'Completed' : 'Did not complete' }}
           </span>
+          <span v-if="isOwn(review) || isAdmin" class="review-entry-actions">
+            <template v-if="confirmingId === review.id">
+              <button type="button" class="cairn-link is-danger" @click="confirmDelete(review)">
+                Confirm delete
+              </button>
+              <button type="button" class="cairn-link" @click="confirmingId = null">Cancel</button>
+            </template>
+            <template v-else>
+              <button v-if="isOwn(review)" type="button" class="cairn-link" @click="emit('edit')">
+                Edit
+              </button>
+              <button type="button" class="cairn-link" @click="confirmingId = review.id">
+                Delete
+              </button>
+            </template>
+          </span>
           <div
             v-for="incident in review.review_incidents"
             :key="incident.id"
@@ -104,6 +137,16 @@ function nameOf(review) {
   color: var(--paper);
   font-size: 17px;
   font-weight: 900;
+}
+
+.review-entry-actions {
+  display: inline-flex;
+  gap: 14px;
+  font-size: 14px;
+}
+
+.review-entry-actions .is-danger {
+  color: var(--blaze-deep);
 }
 
 .review-entry-top {

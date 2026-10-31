@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 
 const ROUTE_SUMMARY = 'id, name, country'
 
+// How many reviews the moderation list shows.
+const RECENT_REVIEWS = 50
+
 // Every alert regardless of status; admins can read them all. creator and
 // editor are the admins who published it and who last changed it.
 export function listAlerts() {
@@ -103,6 +106,36 @@ export function listPointWarnings() {
   return supabase.from('route_point_warnings').select('*').order('severity', { ascending: false })
 }
 
+// Every severity 3 incident in the last 12 months, the same window the hazard
+// level uses. The controller picks out those only one hiker has reported.
+export function listSeriousIncidents() {
+  const since = new Date()
+  since.setMonth(since.getMonth() - 12)
+  return supabase
+    .from('review_incidents')
+    .select(
+      `id, route_id, point_id, category, note, created_at,
+       incident_categories!inner(label, severity),
+       route_points(name, day_number),
+       reviews!inner(user_id, profiles(display_name))`,
+    )
+    .eq('incident_categories.severity', 3)
+    .gt('created_at', since.toISOString())
+    .order('created_at', { ascending: false })
+}
+
+export function listRecentReviews() {
+  return supabase
+    .from('reviews')
+    .select(
+      `id, route_id, rating, perceived_difficulty, review_text, completed, created_at,
+       profiles(display_name), routes(name),
+       review_incidents(id, note, incident_categories(label))`,
+    )
+    .order('created_at', { ascending: false })
+    .limit(RECENT_REVIEWS)
+}
+
 // Columns needed for the difficulty and data-quality checks, which are done
 // in the controller because PostgREST cannot filter on a computed difference.
 export function listRoutesForChecks() {
@@ -110,7 +143,8 @@ export function listRoutesForChecks() {
     .from('routes')
     .select(
       `${ROUTE_SUMMARY}, official_difficulty, effective_difficulty, review_count, stats_updated_at, distance_km,
-       latitude, longitude, safety_status, safety_status_note, geometry_present:geometry->>type`,
+       elevation_gain_m, altitude_m, latitude, longitude, safety_status, safety_status_note,
+       geometry_present:geometry->>type`,
     )
     .order('name')
 }
@@ -121,5 +155,15 @@ export function updateRouteSafety(routeId, { safetyStatus, safetyStatusNote }) {
     .update({ safety_status: safetyStatus, safety_status_note: safetyStatusNote || null })
     .eq('id', routeId)
     .select(`${ROUTE_SUMMARY}, safety_status, safety_status_note`)
+    .single()
+}
+
+// fields holds only the columns being changed.
+export function updateRouteInfo(routeId, fields) {
+  return supabase
+    .from('routes')
+    .update(fields)
+    .eq('id', routeId)
+    .select(`${ROUTE_SUMMARY}, distance_km, elevation_gain_m, altitude_m, latitude, longitude`)
     .single()
 }

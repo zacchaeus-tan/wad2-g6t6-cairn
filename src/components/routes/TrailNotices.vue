@@ -1,9 +1,12 @@
 <script setup>
+import { RouterLink } from 'vue-router'
 import { formatDate } from '@/lib/format'
 
-// Published route alerts, from the admin page.
+// Published route alerts, from the admin page. An alert with a route_name also
+// links to its route, for lists that cover more than one route.
 defineProps({
   alerts: { type: Array, required: true },
+  title: { type: String, default: 'Trail notices' },
 })
 
 const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
@@ -13,7 +16,7 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
   <!-- A plain labelled section, not role="alert": the notices are part of the
        page, so screen readers should not announce them on load. -->
   <section v-if="alerts.length" class="trail-notices" aria-labelledby="trail-notices-title">
-    <h2 id="trail-notices-title" class="cairn-label">Trail notices</h2>
+    <h2 id="trail-notices-title" class="cairn-label">{{ title }}</h2>
     <ul class="trail-notices-list">
       <li
         v-for="alert in alerts"
@@ -23,6 +26,11 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
       >
         <p class="trail-notice-severity">{{ SEVERITY_LABELS[alert.severity] || 'Notice' }}</p>
         <p class="trail-notice-title">{{ alert.title }}</p>
+        <p v-if="alert.route_name" class="cairn-fine">
+          <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
+            alert.route_name
+          }}</RouterLink>
+        </p>
         <p v-if="alert.message" class="trail-notice-message">{{ alert.message }}</p>
         <p v-if="alert.ends_at" class="cairn-fine">
           Expected until {{ formatDate(alert.ends_at) }}
@@ -52,6 +60,15 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
   border-left: 6px solid var(--lake);
   background: #e3eef6;
   color: var(--ink);
+}
+
+/* The profile page sits outside .cairn, so set these here for every page */
+.trail-notice p {
+  margin: 0;
+}
+
+.trail-notice a {
+  color: var(--pine);
 }
 
 .trail-notice.is-warning {

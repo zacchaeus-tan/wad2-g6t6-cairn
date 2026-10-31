@@ -8,7 +8,9 @@ import {
   HAZARD_ROUTE_REF,
   draftFromHazardRoute,
   draftFromPointWarning,
+  draftFromUnconfirmedReport,
   pointWarningRef,
+  unconfirmedRef,
 } from '@/lib/alertDrafts'
 
 const emit = defineEmits(['raise-alert'])
@@ -49,9 +51,8 @@ function gradeFor(route) {
               }}</RouterLink>
             </p>
             <p class="cairn-fine">
-              {{ warning.reporter_count }} hikers, last on
-              {{ formatDate(warning.last_reported_at) }}
-              <template v-if="warning.latest_note">: “{{ warning.latest_note }}”</template>
+              {{ warning.reporter_count }} hikers, last on {{ formatDate(warning.last_reported_at)
+              }}<template v-if="warning.latest_note">: “{{ warning.latest_note }}”</template>
             </p>
           </div>
           <div class="admin-actions">
@@ -66,6 +67,55 @@ function gradeFor(route) {
               type="button"
               class="cairn-link"
               @click="adminStore.markReviewed(warning.route_id, pointWarningRef(warning))"
+            >
+              Reviewed, no action
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div v-if="adminStore.unconfirmedReports.length" class="admin-group">
+      <h3 class="cairn-label">Serious reports, not yet confirmed</h3>
+      <p class="admin-hint mb-2">
+        One hiker each, so hikers don't see these until you raise an alert.
+      </p>
+      <ul class="admin-list">
+        <li
+          v-for="report in adminStore.unconfirmedReports"
+          :key="`${report.route_id}-${report.point_id}-${report.category}`"
+          class="admin-item"
+        >
+          <div class="admin-item-body">
+            <p>
+              <span class="admin-tag">Unconfirmed</span>
+              <strong>{{ report.label }}</strong>
+              <template v-if="report.point_name">
+                at {{ report.point_name
+                }}<template v-if="report.day_number"> (day {{ report.day_number }})</template>
+              </template>
+              on
+              <RouterLink :to="{ name: 'route-detail', params: { id: report.route_id } }">{{
+                adminStore.routeNames.get(report.route_id) || 'a route'
+              }}</RouterLink>
+            </p>
+            <p class="cairn-fine">
+              {{ report.reporter || 'A hiker' }}, {{ formatDate(report.created_at)
+              }}<template v-if="report.note">: “{{ report.note }}”</template>
+            </p>
+          </div>
+          <div class="admin-actions">
+            <button
+              type="button"
+              class="cairn-btn is-small"
+              @click="emit('raise-alert', draftFromUnconfirmedReport(report))"
+            >
+              Raise alert
+            </button>
+            <button
+              type="button"
+              class="cairn-link"
+              @click="adminStore.markReviewed(report.route_id, unconfirmedRef(report))"
             >
               Reviewed, no action
             </button>

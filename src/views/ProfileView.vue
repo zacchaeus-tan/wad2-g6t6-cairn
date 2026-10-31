@@ -5,6 +5,7 @@ import { useAuthStore } from '@/controller/authStore'
 import { useChecklistStore } from '@/controller/checklistStore'
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import ChecklistForm from '@/components/checklist/ChecklistForm.vue'
+import TrailNotices from '@/components/routes/TrailNotices.vue'
 import { genderLabels } from '@/lib/countries'
 import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
 
@@ -165,6 +166,11 @@ function packedCount(items) {
 <template>
   <div class="container" style="max-width: 720px">
     <h1 class="h3 mb-3">My profile</h1>
+
+    <TrailNotices
+      :alerts="userRoutesStore.savedRouteNotices"
+      title="Notices on your saved routes"
+    />
 
     <div v-if="!auth.profile" class="alert alert-warning">
       We couldn't load your profile. Try refreshing the page.

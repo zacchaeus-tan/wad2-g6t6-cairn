@@ -484,6 +484,7 @@ async function onToggleSaved() {
         <TrailRegister
           :route="route"
           :user-id="auth.user?.id ?? null"
+          :is-admin="auth.isAdmin"
           :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
           @saved="reloadRoute"
           @deleted="reloadRoute"

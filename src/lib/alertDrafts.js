@@ -38,6 +38,11 @@ export const HAZARD_ROUTE_REF = 'route-hazard'
 // Used when an admin keeps a route's grade after a difficulty mismatch.
 export const DIFFICULTY_REF = 'difficulty'
 
+// One grouped report from the store's unconfirmedReports.
+export function unconfirmedRef(report) {
+  return `unconfirmed:${report.point_id ?? 'route'}:${report.category}`
+}
+
 function linkTo(reportRef) {
   return { source: 'community', externalRef: `${reportRef}:${Date.now()}` }
 }
@@ -61,6 +66,23 @@ export function draftFromPointWarning(warning) {
     message: `${reported}${note} Take extra care on this section.`,
     endsAt: defaultAlertEnd(),
     ...linkTo(pointWarningRef(warning)),
+  }
+}
+
+// One hiker's serious report. Only "warning" because nobody has confirmed it yet.
+export function draftFromUnconfirmedReport(report) {
+  const place = report.point_name
+    ? `at ${report.day_number ? `${report.point_name} (day ${report.day_number})` : report.point_name}`
+    : 'on this route'
+  const note = report.note ? ` Their report: "${sentence(report.note)}"` : ''
+
+  return {
+    routeId: report.route_id,
+    severity: 'warning',
+    title: `${report.label} reported ${place}`,
+    message: `Reported by 1 hiker on ${formatDate(report.created_at)} and not yet confirmed.${note} Check conditions before you set out.`,
+    endsAt: defaultAlertEnd(),
+    ...linkTo(unconfirmedRef(report)),
   }
 }
 

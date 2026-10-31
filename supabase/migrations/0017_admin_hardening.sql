@@ -35,7 +35,8 @@ create trigger profiles_protect_admin
 --
 -- One row per report the admin marked "Reviewed, no action". The report stays
 -- hidden until something newer comes in. report_ref is 'route-hazard',
--- 'difficulty' or 'point:<point id>:<category>', as built in src/lib/alertDrafts.js.
+-- 'difficulty', 'point:<point id>:<category>' or 'unconfirmed:<point id or route>:<category>',
+-- as built in src/lib/alertDrafts.js.
 create table if not exists public.admin_report_reviews (
   route_id    uuid not null references public.routes(id) on delete cascade,
   report_ref  text not null,

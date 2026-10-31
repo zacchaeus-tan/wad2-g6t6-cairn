@@ -7,6 +7,7 @@ import AlertForm from '@/components/admin/AlertForm.vue'
 import LiveAlertList from '@/components/admin/LiveAlertList.vue'
 import RouteStatusEditor from '@/components/admin/RouteStatusEditor.vue'
 import DataQualityList from '@/components/admin/DataQualityList.vue'
+import ReviewModeration from '@/components/admin/ReviewModeration.vue'
 import '@/assets/admin.css'
 
 const adminStore = useAdminStore()
@@ -101,6 +102,13 @@ function editAlert(alert) {
           <div class="admin-panel">
             <h2 id="data-quality-title" class="admin-panel-title">Missing route information</h2>
             <DataQualityList />
+          </div>
+        </section>
+
+        <section class="col-12" aria-labelledby="reviews-title">
+          <div class="admin-panel">
+            <h2 id="reviews-title" class="admin-panel-title">Recent reviews</h2>
+            <ReviewModeration />
           </div>
         </section>
       </div>
