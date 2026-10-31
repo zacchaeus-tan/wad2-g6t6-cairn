@@ -53,7 +53,6 @@ export function calcHazardScore(incidents, reviewCount) {
 
 // The level stays low until at least this many different hikers have reported
 // incidents, so one person cannot mark a route as hazardous on their own.
-// Must match recalc_route_stats() in migration 0017.
 const MIN_HAZARD_REPORTERS = 2
 
 export function calcHazardLevel(score, reporterCount = MIN_HAZARD_REPORTERS) {

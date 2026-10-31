@@ -82,7 +82,6 @@ export function markReportReviewed(routeId, reportRef) {
     .single()
 }
 
-// A database trigger recalculates the route's community figures afterwards.
 export function updateOfficialDifficulty(routeId, grade) {
   return supabase.from('routes').update({ official_difficulty: grade }).eq('id', routeId)
 }

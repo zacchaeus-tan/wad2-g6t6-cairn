@@ -1,6 +1,6 @@
 -- Admin page fixes: lock down admin access, let admins clear reports without
--- an alert, record who changes alerts, recalculate stats after a regrade, and
--- stop one hiker's report from marking a whole route as hazardous.
+-- an alert, record who changes alerts, and stop one hiker's report from marking
+-- a whole route as hazardous.
 
 -- 1. Only the project owner can grant admin access -----------------------------
 --
@@ -72,121 +72,23 @@ create trigger route_alerts_set_updated_by
   before update on public.route_alerts
   for each row execute function public.route_alerts_set_updated_by();
 
--- 4. Regrading recalculates the community figures ------------------------------
+-- 4. A route needs two different hikers before it counts as hazardous --------
 --
--- effective_difficulty is blended from the official grade, so it is stale the
--- moment an admin changes that grade.
-create or replace function public.routes_regrade_recalc()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  perform public.recalc_route_stats(new.id);
-  return null;
-end;
-$$;
+-- The recalc-route-stats edge function now applies this rule, and it is what
+-- writes these columns: the SQL stats functions from 0006 are not in the live
+-- database. It only runs when a review changes, so clear the routes it would
+-- now rate 'low' here. Same 12-month window as the edge function.
+update public.routes as rt
+   set community_hazard_level = 'low',
+       community_hazard_note  = null
+ where rt.community_hazard_level <> 'low'
+   and (
+     select count(distinct r.user_id)
+       from public.review_incidents ri
+       join public.reviews r on r.id = ri.review_id
+      where r.route_id = rt.id
+        and ri.created_at > now() - interval '12 months'
+   ) < 2;
 
-drop trigger if exists routes_regrade_recalc on public.routes;
-create trigger routes_regrade_recalc
-  after update of official_difficulty on public.routes
-  for each row
-  when (old.official_difficulty is distinct from new.official_difficulty)
-  execute function public.routes_regrade_recalc();
-
--- 5. A route needs two different hikers before it counts as hazardous --------
---
--- The +3 smoothing in calc_hazard_score did not stop a single serious report
--- (severity 3 on a route with one review scores 0.75, "elevated"). The level
--- now stays 'low' unless at least two hikers reported incidents. The window is
--- 12 months to match the recalc-route-stats edge function, which previously
--- disagreed with this function's 24 months. Otherwise unchanged from 0006.
-create or replace function public.recalc_route_stats(p_route_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_official   numeric;
-  v_perceived  integer[];
-  v_completed  boolean[];
-  v_count      integer := 0;
-  v_avg_rating numeric;
-  v_avg_pd     numeric;
-  v_completion numeric;
-  v_sev        integer[];
-  v_reporters  integer := 0;
-  v_score      numeric;
-  v_level      text;
-  v_note       text;
-  v_eff        numeric;
-  v_top_label  text;
-  v_top_users  integer;
-begin
-  select official_difficulty into v_official from public.routes where id = p_route_id;
-  if v_official is null then
-    return;
-  end if;
-
-  select count(*),
-         round(avg(rating)::numeric, 2),
-         round(avg(perceived_difficulty)::numeric, 2),
-         round(avg(case when completed then 1 else 0 end)::numeric, 3),
-         array_agg(perceived_difficulty order by created_at),
-         array_agg(completed order by created_at)
-    into v_count, v_avg_rating, v_avg_pd, v_completion, v_perceived, v_completed
-    from public.reviews
-   where route_id = p_route_id;
-
-  v_eff := public.calc_effective_difficulty(v_official, v_perceived, v_completed);
-
-  select array_agg(c.severity), count(distinct r.user_id)
-    into v_sev, v_reporters
-    from public.review_incidents ri
-    join public.reviews r on r.id = ri.review_id
-    join public.incident_categories c on c.category = ri.category
-   where ri.route_id = p_route_id
-     and ri.created_at > now() - interval '12 months';
-
-  v_score := public.calc_hazard_score(v_sev, v_count);
-  v_level := case when v_reporters >= 2 then public.calc_hazard_level(v_score) else 'low' end;
-
-  if v_level <> 'low' then
-    select c.label, count(distinct r.user_id)
-      into v_top_label, v_top_users
-      from public.review_incidents ri
-      join public.reviews r on r.id = ri.review_id
-      join public.incident_categories c on c.category = ri.category
-     where ri.route_id = p_route_id
-       and ri.created_at > now() - interval '12 months'
-     group by c.label
-     order by count(*) desc, c.label
-     limit 1;
-
-    if v_top_label is not null then
-      v_note := v_top_users
-                || case when v_top_users = 1 then ' hiker reported: ' else ' hikers reported: ' end
-                || lower(v_top_label);
-    end if;
-  end if;
-
-  update public.routes
-     set avg_rating               = v_avg_rating,
-         avg_perceived_difficulty = v_avg_pd,
-         review_count             = coalesce(v_count, 0),
-         completion_rate          = v_completion,
-         effective_difficulty     = v_eff,
-         community_hazard_level   = v_level,
-         community_hazard_note    = v_note,
-         stats_updated_at         = now()
-   where id = p_route_id;
-end;
-$$;
-
--- Apply the new rule to every route now rather than at its next review.
-select public.recalc_route_stats(id) from public.routes;
-
--- 6. Leftovers from the removed weather job -----------------------------------
+-- 5. Leftovers from the removed weather job -----------------------------------
 drop table if exists public.job_runs;

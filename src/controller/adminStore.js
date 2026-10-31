@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as adminModel from '@/model/adminModel'
+import { recalcRouteStats } from '@/model/reviewsModel'
 import { DIFFICULTY_REF, HAZARD_ROUTE_REF, pointWarningRef } from '@/lib/alertDrafts'
 
 // Community difficulty must differ from the official grade by at least this
@@ -228,7 +229,8 @@ export const useAdminStore = defineStore('admin', () => {
     return true
   }
 
-  // The database recalculates the community grade, so reload to show it.
+  // The community grade is blended from the official one, so recalculate it
+  // and reload to show it.
   async function regradeRoute(routeId, grade) {
     actionError.value = null
     const { error: err } = await adminModel.updateOfficialDifficulty(routeId, grade)
@@ -236,7 +238,12 @@ export const useAdminStore = defineStore('admin', () => {
       actionError.value = err.message
       return false
     }
+    const { error: recalcError } = await recalcRouteStats(routeId)
     await fetchAll()
+    if (recalcError) {
+      actionError.value = `Grade saved, but the community grade was not updated: ${recalcError.message}`
+      return false
+    }
     return true
   }
 
