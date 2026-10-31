@@ -45,6 +45,7 @@ const initials = computed(() =>
             {{ profile.experience_level || 'Experience not set' }}
           </span>
         </div>
+        <p v-if="profile.about" class="mb-0 mt-2">{{ profile.about }}</p>
       </div>
     </div>
   </div>
