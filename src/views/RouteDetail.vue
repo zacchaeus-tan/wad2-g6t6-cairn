@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById, fetchRouteAlerts } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
-import ReviewList from '../components/reviews/ReviewList.vue'
-import ReviewForm from '../components/reviews/ReviewForm.vue'
+import TrailRegister from '@/components/reviews/TrailRegister.vue'
 import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
@@ -14,6 +13,7 @@ import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from '../components/checklist/ChecklistForm.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 import TrailNotices from '@/components/routes/TrailNotices.vue'
@@ -23,6 +23,7 @@ const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
 const checklistStore = useChecklistStore()
+const userRoutesStore = useUserRoutesStore()
 const route = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -79,25 +80,6 @@ const statusBadges = {
   unknown: { text: 'Unknown', class: 'bg-secondary' },
 }
 
-function formatValue(value, unit = '') {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  return `${value}${unit}`
-}
-
-function formatCompletionRate(value) {
-  if (value == null || value === '') {
-    return 'Not listed'
-  }
-
-  const rate = Number(value)
-  return Number.isFinite(rate)
-    ? `${(rate * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}%`
-    : value
-}
-
 // weather forecast
 const weather = ref(null)
 const weatherError = ref('')
@@ -127,13 +109,25 @@ onMounted(async () => {
   if (route.value) {
     await Promise.all([
       reviewsStore.fetchForRoute(routeParams.params.id),
+      reviewsStore.fetchMyReview(routeParams.params.id, auth.user?.id),
       reviewsStore.fetchCategories(),
       loadAlerts(),
       checklistStore.loadForRoute(route.value.id),
+      userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
   }
 })
+
+// Signing in or out on this page changes whose review the form edits
+watch(
+  () => auth.user?.id,
+  (userId) => {
+    if (route.value) {
+      reviewsStore.fetchMyReview(route.value.id, userId)
+    }
+  },
+)
 
 // Alerts are extra information, so a failure here should not hide the route.
 async function loadAlerts() {
@@ -152,6 +146,28 @@ async function reloadRoute() {
   } catch (err) {
     console.warn('Could not reload the route after a review change:', err)
   }
+}
+
+// saved / completed route
+const routeStatus = computed(() => userRoutesStore.current?.status ?? null)
+
+// a completed route is locked: it can't be unsaved or un-completed
+const isRouteCompleted = computed(() => routeStatus.value === 'completed')
+
+async function onToggleRouteSaved() {
+  if (isRouteCompleted.value) return
+  if (!routeStatus.value) {
+    await userRoutesStore.setStatus(route.value.id, 'saved')
+    return
+  }
+  await userRoutesStore.remove(route.value.id)
+}
+
+// marking a route done also saves it, and can't be undone
+async function onToggleRouteCompleted() {
+  if (isRouteCompleted.value) return
+  if (!confirm('Have you completed the hike?')) return
+  await userRoutesStore.setStatus(route.value.id, 'completed')
 }
 
 // gear checklist
@@ -201,6 +217,37 @@ async function onToggleSaved() {
     </div>
 
     <template v-else>
+      <header class="route-detail-heading mb-5">
+        <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
+        <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
+        <p v-if="route.technical_rating" class="lead mb-0">
+          Official rating: {{ route.technical_rating }}
+        </p>
+
+        <div v-if="auth.isLoggedIn" class="d-flex flex-wrap gap-2 mt-3">
+          <button type="button" class="btn btn-sm" :class="routeStatus ? 'btn-warning' : 'btn-outline-warning'"
+            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="Boolean(routeStatus)"
+            @click="onToggleRouteSaved">
+            {{ routeStatus ? '★ Saved' : '☆ Save route' }}
+          </button>
+          <button type="button" class="btn btn-sm"
+            :class="routeStatus === 'completed' ? 'btn-success' : 'btn-outline-success'"
+            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="isRouteCompleted"
+            @click="onToggleRouteCompleted">
+            {{ routeStatus === 'completed' ? '✓ Completed' : 'Mark as completed' }}
+          </button>
+        </div>
+        <p v-else class="small mt-3 mb-0">
+          <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
+          to save this route.
+        </p>
+        <p v-if="userRoutesStore.error" class="alert alert-danger py-2 small mt-2 mb-0" role="alert">
+          {{ userRoutesStore.error }}
+        </p>
+        <p v-if="userRoutesStore.statsMessage" class="alert alert-success py-2 small mt-2 mb-0" role="status">
+          {{ userRoutesStore.statsMessage }}
+        </p>
+      </header>
       <RouteBanner :route="route" />
       <RouteNumbers :route="route" />
 
@@ -210,30 +257,6 @@ async function onToggleSaved() {
       <div class="row g-4">
         <section class="col-12">
           <GradeDial :route="route" />
-        </section>
-
-        <section class="col-12" aria-labelledby="route-feedback-title">
-          <div class="route-detail-section h-100">
-            <h2 id="route-feedback-title" class="h4 mb-4">Community feedback</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Average perceived difficulty</dt>
-                <dd>{{ formatValue(route.avg_perceived_difficulty, ' / 4') }}</dd>
-              </div>
-              <div>
-                <dt>Average rating</dt>
-                <dd>{{ formatValue(route.avg_rating, ' / 5') }}</dd>
-              </div>
-              <div>
-                <dt>Reviews</dt>
-                <dd>{{ formatValue(route.review_count) }}</dd>
-              </div>
-              <div>
-                <dt>Completion rate</dt>
-                <dd>{{ formatCompletionRate(route.completion_rate) }}</dd>
-              </div>
-            </dl>
-          </div>
         </section>
 
         <section class="col-12" aria-labelledby="route-match-title">
@@ -286,30 +309,6 @@ async function onToggleSaved() {
           </div>
         </section>
 
-        <section class="col-12" aria-labelledby="route-safety-title">
-          <div class="route-detail-section">
-            <h2 id="route-safety-title" class="h4 mb-4">Safety and hazards</h2>
-            <dl class="route-detail-facts">
-              <div>
-                <dt>Safety status</dt>
-                <dd>{{ formatValue(route.safety_status) }}</dd>
-              </div>
-              <div>
-                <dt>Safety note</dt>
-                <dd>{{ formatValue(route.safety_status_note) }}</dd>
-              </div>
-              <div>
-                <dt>Community hazard level</dt>
-                <dd>{{ formatValue(route.community_hazard_level) }}</dd>
-              </div>
-              <div>
-                <dt>Community hazard note</dt>
-                <dd>{{ formatValue(route.community_hazard_note) }}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-
         <section class="col-12">
           <WeatherForecast :weather="weather" :error="weatherError" />
         </section>
@@ -355,29 +354,6 @@ async function onToggleSaved() {
               <p class="cairn-fine">AI-generated. Check trail conditions, weather and permits before you hike.</p>
             </template>
           </article>
-        </section>
-
-        <section id="reviews" class="col-12" aria-labelledby="route-reviews-title">
-          <div class="route-detail-section">
-            <h2 id="route-reviews-title" class="h4 mb-4">Community reviews</h2>
-            <ReviewForm
-              v-if="auth.isLoggedIn"
-              :route="route"
-              :user-id="auth.user.id"
-              @saved="reloadRoute"
-              @deleted="reloadRoute"
-            />
-            <p v-else class="alert alert-secondary">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-                >Sign in</RouterLink
-              >
-              to leave a review.
-            </p>
-            <p v-if="reviewsStore.loadError" role="alert">
-              Unable to load reviews: {{ reviewsStore.loadError }}
-            </p>
-            <ReviewList v-else :reviews="reviewsStore.reviews" />
-          </div>
         </section>
       </div>
 
@@ -503,6 +479,16 @@ async function onToggleSaved() {
           </p>
         </div>
       </section>
+
+      <section id="reviews" class="mt-4">
+        <TrailRegister
+          :route="route"
+          :user-id="auth.user?.id ?? null"
+          :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+          @saved="reloadRoute"
+          @deleted="reloadRoute"
+        />
+      </section>
       </div>
     </template>
   </div>
@@ -534,21 +520,6 @@ async function onToggleSaved() {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
-}
-
-.route-detail-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  gap: 1.25rem;
-  margin-bottom: 0;
-}
-
-.route-detail-facts dt {
-  font-weight: 600;
-}
-
-.route-detail-facts dd {
-  margin-bottom: 0;
 }
 
 /* Plan your itinerary */

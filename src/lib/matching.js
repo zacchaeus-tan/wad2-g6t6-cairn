@@ -112,6 +112,18 @@ function checkTripType(route, longestTrekDays) {
   return { rule: 'trip_type', status: 'fail', message: `This is ${TRIP_TYPE_LABELS[needed]}, longer than any trip you've done.` }
 }
 
+// What finishing a route shows you can do, as profile columns. Distance and
+// climb are per day, the same way the checks above compare them.
+export function experienceFromRoute(route) {
+  const days = tripDays(route)
+  return {
+    longest_distance_km: isMissing(route.distance_km) ? null : round(Number(route.distance_km) / days),
+    max_elevation_gain_m: isMissing(route.elevation_gain_m) ? null : Math.round(Number(route.elevation_gain_m) / days),
+    highest_altitude_m: isMissing(route.altitude_m) ? null : Number(route.altitude_m),
+    longest_trek_days: TRIP_TYPE_DAYS[tripType(route)],
+  }
+}
+
 // Safety notes that are shown alongside the verdict but do not change it.
 function safetyWarnings(route, profile) {
   const warnings = []

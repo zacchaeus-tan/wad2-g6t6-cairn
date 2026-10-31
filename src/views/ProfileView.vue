@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/controller/authStore'
 import { useChecklistStore } from '@/controller/checklistStore'
+import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import ChecklistForm from '@/components/checklist/ChecklistForm.vue'
 import { genderLabels } from '@/lib/countries'
 import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
@@ -47,11 +48,36 @@ const experienceStats = computed(() =>
     })),
 )
 
-// placeholder: there's no hike log table yet, so these always show "—"
-const hikeStats = [
-  { label: 'Hikes completed', value: null, unit: '' },
-  { label: 'Total distance', value: null, unit: 'km' },
-]
+// ---------- saved and completed routes ----------
+const userRoutesStore = useUserRoutesStore()
+
+const completedRoutes = computed(() => userRoutesStore.savedRoutes.filter((r) => r.status === 'completed'))
+
+// totals from the routes marked as completed; routes without a distance count as 0 km
+const hikeStats = computed(() => {
+  const totalKm = completedRoutes.value.reduce((sum, r) => sum + (Number(r.distance_km) || 0), 0)
+  return [
+    { label: 'Hikes completed', value: completedRoutes.value.length, unit: '' },
+    { label: 'Total distance', value: Math.round(totalKm * 10) / 10, unit: 'km' },
+  ]
+})
+
+const routeStatusBadges = {
+  saved: { text: 'Saved', class: 'bg-warning text-dark' },
+  completed: { text: 'Completed', class: 'bg-success' },
+}
+
+// a completed route is locked: it can't be un-completed or removed
+async function onMarkCompleted(r) {
+  if (r.status === 'completed') return
+  if (!confirm('Have you completed the hike?')) return
+  await userRoutesStore.setStatus(r.route_id, 'completed')
+}
+
+async function onRemoveRoute(r) {
+  if (r.status === 'completed') return
+  await userRoutesStore.remove(r.route_id)
+}
 
 // ---------- saved gear checklists ----------
 const checklistStore = useChecklistStore()
@@ -68,7 +94,7 @@ const categoryLabels = {
 
 onMounted(async () => {
   checklistStore.reset()
-  await checklistStore.loadSaved()
+  await Promise.all([checklistStore.loadSaved(), userRoutesStore.loadSaved()])
 })
 
 function groupByCategory(items) {
@@ -188,7 +214,7 @@ function packedCount(items) {
         </div>
       </div>
 
-      <!-- hiking totals: placeholder until hikes are tracked in the database -->
+      <!-- hiking totals from the routes marked as completed -->
       <h2 class="h6 text-muted text-uppercase mb-2">Your hikes</h2>
       <div class="row g-3 mb-2">
         <div v-for="stat in hikeStats" :key="stat.label" class="col-6">
@@ -205,9 +231,71 @@ function packedCount(items) {
           </div>
         </div>
       </div>
-      <p class="small text-muted mb-4">Hike tracking is coming soon.</p>
+      <p class="small text-muted mb-4">Mark a route as completed on its page to count it here.</p>
     </template>
 
+    <section class="mb-4" aria-labelledby="saved-routes-title">
+      <h2 id="saved-routes-title" class="h6 text-muted text-uppercase mb-2">My routes</h2>
+
+      <p v-if="userRoutesStore.savedLoading && !userRoutesStore.savedRoutes.length" role="status">
+        Loading your routes...
+      </p>
+
+      <div v-if="userRoutesStore.error" class="alert alert-danger py-2 small" role="alert">
+        {{ userRoutesStore.error }}
+      </div>
+      <div v-if="userRoutesStore.statsMessage" class="alert alert-success py-2 small" role="status">
+        {{ userRoutesStore.statsMessage }}
+      </div>
+
+      <p
+        v-if="!userRoutesStore.savedLoading && !userRoutesStore.error && !userRoutesStore.savedRoutes.length"
+        class="alert alert-secondary"
+      >
+        You have no saved routes yet. Open a route and click "Save route" or "Mark as completed" to see it here.
+      </p>
+
+      <ul v-if="userRoutesStore.savedRoutes.length" class="list-group">
+        <li
+          v-for="r in userRoutesStore.savedRoutes"
+          :key="r.id"
+          class="list-group-item d-flex flex-wrap align-items-center gap-2"
+        >
+          <div class="flex-grow-1">
+            <div class="fw-medium">{{ r.route_name }}</div>
+            <div class="small text-muted">
+              <template v-if="r.country">{{ r.country }}</template>
+              <template v-if="r.country && r.completed_at"> · </template>
+              <template v-if="r.completed_at">Completed {{ new Date(r.completed_at).toLocaleDateString() }}</template>
+            </div>
+          </div>
+          <span class="badge" :class="routeStatusBadges[r.status].class">{{ routeStatusBadges[r.status].text }}</span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            :class="r.status === 'completed' ? 'btn-success' : 'btn-outline-success'"
+            :hidden="r.status === 'completed'"
+            :disabled="userRoutesStore.loading || r.status === 'completed'"
+            :aria-pressed="r.status === 'completed'"
+            @click="onMarkCompleted(r)"
+          >
+            ✓ Completed
+          </button>
+          <RouterLink class="btn btn-sm btn-outline-secondary" :to="'/routes/' + r.route_id">View route</RouterLink>
+          <button
+            v-if="r.status !== 'completed'"
+            type="button"
+            class="btn btn-sm btn-outline-danger"
+            :disabled="userRoutesStore.loading"
+            @click="onRemoveRoute(r)"
+          >
+            Remove
+          </button>
+        </li>
+      </ul>
+    </section>
+
+    <!-- saved gear checklists go here once the checklist store supports listing them -->
     <section class="checklists" aria-labelledby="saved-checklists-title">
       <h2 id="saved-checklists-title" class="h4 mb-3">My Saved Gear Checklists</h2>
 

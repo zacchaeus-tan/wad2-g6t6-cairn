@@ -378,6 +378,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
             v-model="searchTerm"
             type="search"
             placeholder="Search a route, like Kinabalu"
+            data-testid="routes-search"
             @keydown.enter="scrollToResults()"
           />
         </label>
@@ -566,7 +567,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
           </ul>
         </div>
 
-        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status">
+        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status" data-testid="routes-empty">
           <h2>No routes match these filters</h2>
           <p>Try a wider distance or climb range, or include more difficulty grades.</p>
           <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">Clear all filters</button>

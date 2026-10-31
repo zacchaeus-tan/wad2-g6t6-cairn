@@ -35,8 +35,17 @@ export function getRoute(id) {
   return supabase.from('routes').select('*').eq('id', id).maybeSingle()
 }
 
+// just the columns experienceFromRoute in src/lib/matching.js reads
+export function getRouteExperience(id) {
+  return supabase
+    .from('routes')
+    .select('distance_km, elevation_gain_m, altitude_m, duration_days, is_multiday')
+    .eq('id', id)
+    .maybeSingle()
+}
+
 export function listRoutesByIds(ids) {
-  return supabase.from('routes').select('id, name, country').in('id', ids)
+  return supabase.from('routes').select('id, name, country, distance_km').in('id', ids)
 }
 
 // Only published alerts inside their time window. Row Level Security already

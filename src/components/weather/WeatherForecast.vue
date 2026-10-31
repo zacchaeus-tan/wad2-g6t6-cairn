@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
 import { weatherLabel } from '@/lib/format'
+import WarningIcon from '@/components/common/WarningIcon.vue'
 
 // The week as two lines: the trailhead's and the summit's daily highs, one column per day.
 // Pick a day to see its summary; "More details" opens everything else the forecast has.
@@ -184,17 +185,7 @@ const chartDays = computed(() =>
           <span class="weather-day-head">
             <span class="weather-day-name">{{ day.weekday }}</span>
             <span class="weather-day-number cairn-data">{{ day.number }}</span>
-            <svg v-if="day.warnings.length" class="weather-day-warn" viewBox="0 0 40 36">
-              <path
-                d="M20 2 38.5 34h-37z"
-                fill="#ffc94d"
-                stroke="#17201c"
-                stroke-width="3"
-                stroke-linejoin="round"
-              />
-              <path d="M20 13v10" stroke="#17201c" stroke-width="4" stroke-linecap="round" />
-              <circle cx="20" cy="28.5" r="2.4" fill="#17201c" />
-            </svg>
+            <WarningIcon v-if="day.warnings.length" class="weather-day-warn" />
           </span>
           <span class="weather-day-plot">
             <span
@@ -257,10 +248,7 @@ const chartDays = computed(() =>
             class="weather-summary-warnings"
             :class="{ 'has-warnings': selectedDay.warnings.length }"
           >
-            <svg v-if="selectedDay.warnings.length" viewBox="0 0 24 24">
-              <path d="M12 4 2.8 19.5h18.4z" />
-              <path d="M12 10v4.5M12 17.2v.1" />
-            </svg>
+            <WarningIcon v-if="selectedDay.warnings.length" />
             {{ selectedDay.warnings.length ? selectedDay.warnings.join(' · ') : 'No warnings' }}
           </span>
         </span>
@@ -656,11 +644,6 @@ const chartDays = computed(() =>
   height: 18px;
   flex: none;
   margin-top: 1px;
-  fill: none;
-  stroke: var(--warning);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 /* Pulled up against the summary so the drawer opens out of it */

@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { GRADES, gradeOf, isCommunityAdjusted } from '@/lib/difficultyStyle'
+import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
+import StarIcon from '@/components/common/StarIcon.vue'
+import WarningIcon from '@/components/common/WarningIcon.vue'
 import RouteLine from './RouteLine.vue'
 import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 
@@ -12,7 +14,13 @@ const props = defineProps({
 
 const grade = computed(() => gradeOf(props.route))
 const lineColor = computed(() => GRADES[grade.value]?.line ?? '#f2efea')
-const adjusted = computed(() => isCommunityAdjusted(props.route))
+
+// The average rounded to the nearest half star, as how much of each star is filled:
+// 3.5 gives [1, 1, 1, 0.5, 0]
+const starFills = computed(() => {
+  const rounded = Math.round(props.route.avg_rating * 2) / 2
+  return [1, 2, 3, 4, 5].map((n) => Math.min(Math.max(rounded - (n - 1), 0), 1))
+})
 
 // The warning only shows when there is a risk: the route is closed or needs caution,
 // or hikers have reported a moderate or elevated hazard.
@@ -39,11 +47,7 @@ const warnings = computed(() => {
 
     <div v-if="warnings.length" class="cairn-wrap route-banner-warning" role="alert">
       <a href="#reviews">
-        <svg viewBox="0 0 40 36" aria-hidden="true">
-          <path d="M20 2 38.5 34h-37z" fill="#ffc94d" stroke="#17201c" stroke-width="2" stroke-linejoin="round" />
-          <path d="M20 13v10" stroke="#17201c" stroke-width="3.4" stroke-linecap="round" />
-          <circle cx="20" cy="28.5" r="2" fill="#17201c" />
-        </svg>
+        <WarningIcon />
         <span>
           <span v-for="warning in warnings" :key="warning.title" class="route-banner-warning-item">
             <strong>{{ warning.title }}</strong>
@@ -61,14 +65,8 @@ const warnings = computed(() => {
         <h1 id="route-title" class="route-banner-title">{{ route.name }}</h1>
         <p class="route-banner-labels">
           <DifficultyMark :grade="grade" :color="lineColor" />
-          <span v-if="adjusted" class="route-banner-community">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="9" cy="8" r="3" />
-              <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-              <circle cx="17" cy="9" r="2.4" />
-              <path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5" />
-            </svg>
-            Community <span class="cairn-data">{{ Number(route.effective_difficulty).toFixed(2) }}</span>
+          <span v-if="route.avg_rating != null" class="route-banner-stars">
+            <StarIcon v-for="(fill, index) in starFills" :key="index" :fill="fill" />
           </span>
         </p>
       </div>
@@ -203,18 +201,15 @@ const warnings = computed(() => {
   height: 11px;
 }
 
-.route-banner-community {
+.route-banner-stars {
+  --star-off: rgb(242 239 234 / 0.3);
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
-.route-banner-community svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
+.route-banner-stars svg {
+  width: 16px;
+  height: 16px;
 }
 
 .route-banner-art {
