@@ -11,7 +11,10 @@ const props = defineProps({
 })
 
 // route status
-const routeStatus = computed(() => userRoutesStore.current?.status ?? null)
+const routeStatus = computed(() => {
+  if (userRoutesStore.current?.route_id === props.routeId) return userRoutesStore.current.status
+  return userRoutesStore.savedRoutes.find((r) => r.route_id === props.routeId)?.status ?? null
+})
 const isSaved = computed(() => routeStatus.value === 'saved')
 const isCompleted = computed(() => routeStatus.value === 'completed')
 

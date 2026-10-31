@@ -9,8 +9,17 @@ import { genderLabels } from '@/lib/countries'
 import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
 import SaveRouteButton from '@/components/common/SaveRouteButton.vue'
 
-// the router guard only lets signed-in users reach this page
+// used stores
 const auth = useAuthStore()
+const userRoutesStore = useUserRoutesStore()
+const checklistStore = useChecklistStore()
+
+
+// 
+onMounted(async () => {
+  checklistStore.reset()
+  await Promise.all([checklistStore.loadSaved(), userRoutesStore.loadSaved()])
+})
 
 // "Singapore · 21 · Female", skipping anything not filled in
 const profileDetails = computed(() => {
@@ -50,7 +59,6 @@ const experienceStats = computed(() =>
 )
 
 // ---------- saved and completed routes ----------
-const userRoutesStore = useUserRoutesStore()
 
 const completedRoutes = computed(() => userRoutesStore.savedRoutes.filter((r) => r.status === 'completed'))
 
@@ -63,26 +71,20 @@ const hikeStats = computed(() => {
   ]
 })
 
-const routeStatusBadges = {
-  saved: { text: 'Saved', class: 'bg-warning text-dark' },
-  completed: { text: 'Completed', class: 'bg-success' },
-}
 
 // a completed route is locked: it can't be un-completed or removed
-async function onMarkCompleted(r) {
-  if (r.status === 'completed') return
-  if (!confirm('Have you completed the hike?')) return
-  await userRoutesStore.setStatus(r.route_id, 'completed')
-}
+// async function onMarkCompleted(r) {
+//   if (r.status === 'completed') return
+//   if (!confirm('Have you completed the hike?')) return
+//   await userRoutesStore.setStatus(r.route_id, 'completed')
+// }
 
-async function onRemoveRoute(r) {
-  if (r.status === 'completed') return
-  await userRoutesStore.remove(r.route_id)
-}
+// async function onRemoveRoute(r) {
+//   if (r.status === 'completed') return
+//   await userRoutesStore.remove(r.route_id)
+// }
 
 // ---------- saved gear checklists ----------
-const checklistStore = useChecklistStore()
-
 const categoryLabels = {
   clothing: 'Clothing',
   safety: 'Safety',
@@ -93,10 +95,10 @@ const categoryLabels = {
   other: 'Other',
 }
 
-onMounted(async () => {
-  checklistStore.reset()
-  await Promise.all([checklistStore.loadSaved(), userRoutesStore.loadSaved()])
-})
+// onMounted(async () => {
+//   checklistStore.reset()
+//   await Promise.all([checklistStore.loadSaved(), userRoutesStore.loadSaved()])
+// })
 
 function groupByCategory(items) {
   const groups = []
@@ -270,6 +272,7 @@ function packedCount(items) {
               <template v-if="r.completed_at">Completed {{ new Date(r.completed_at).toLocaleDateString() }}</template>
             </div>
           </div>
+          <SaveRouteButton :routeId="r.route_id"></SaveRouteButton>
           <RouterLink class="btn btn-sm btn-outline-secondary" :to="'/routes/' + r.route_id">View route</RouterLink>
         </li>
       </ul>
