@@ -136,27 +136,6 @@ async function reloadRoute() {
   }
 }
 
-// saved / completed route
-const routeStatus = computed(() => userRoutesStore.current?.status ?? null)
-
-// a completed route is locked: it can't be unsaved or un-completed
-const isRouteCompleted = computed(() => routeStatus.value === 'completed')
-
-async function onToggleRouteSaved() {
-  if (isRouteCompleted.value) return
-  if (!routeStatus.value) {
-    await userRoutesStore.setStatus(route.value.id, 'saved')
-    return
-  }
-  await userRoutesStore.remove(route.value.id)
-}
-
-// marking a route done also saves it, and can't be undone
-async function onToggleRouteCompleted() {
-  if (isRouteCompleted.value) return
-  if (!confirm('Have you completed the hike?')) return
-  await userRoutesStore.setStatus(route.value.id, 'completed')
-}
 
 // gear checklist
 async function generateChecklist() {
@@ -205,38 +184,7 @@ async function onToggleSaved() {
     </div>
 
     <template v-else>
-      <header class="route-detail-heading mb-5">
-        <p v-if="route.country" class="route-eyebrow mb-2">{{ route.country }}</p>
-        <h1 class="display-5 fw-semibold mb-3">{{ route.name }}</h1>
-        <p v-if="route.technical_rating" class="lead mb-0">
-          Official rating: {{ route.technical_rating }}
-        </p>
-
-        <div v-if="auth.isLoggedIn" class="d-flex flex-wrap gap-2 mt-3">
-          <button type="button" class="btn btn-sm" :class="routeStatus ? 'btn-warning' : 'btn-outline-warning'"
-            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="Boolean(routeStatus)"
-            @click="onToggleRouteSaved">
-            {{ routeStatus ? '★ Saved' : '☆ Save route' }}
-          </button>
-          <button type="button" class="btn btn-sm"
-            :class="routeStatus === 'completed' ? 'btn-success' : 'btn-outline-success'"
-            :disabled="userRoutesStore.loading || isRouteCompleted" :aria-pressed="isRouteCompleted"
-            @click="onToggleRouteCompleted">
-            {{ routeStatus === 'completed' ? '✓ Completed' : 'Mark as completed' }}
-          </button>
-        </div>
-        <p v-else class="small mt-3 mb-0">
-          <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
-          to save this route.
-        </p>
-        <p v-if="userRoutesStore.error" class="alert alert-danger py-2 small mt-2 mb-0" role="alert">
-          {{ userRoutesStore.error }}
-        </p>
-        <p v-if="userRoutesStore.statsMessage" class="alert alert-success py-2 small mt-2 mb-0" role="status">
-          {{ userRoutesStore.statsMessage }}
-        </p>
-      </header>
-      <RouteBanner :route="route" />
+      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn"/>
       <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">

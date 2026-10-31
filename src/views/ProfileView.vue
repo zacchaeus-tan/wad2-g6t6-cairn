@@ -7,6 +7,7 @@ import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import ChecklistForm from '@/components/checklist/ChecklistForm.vue'
 import { genderLabels } from '@/lib/countries'
 import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
+import SaveRouteButton from '@/components/common/SaveRouteButton.vue'
 
 // the router guard only lets signed-in users reach this page
 const auth = useAuthStore()
@@ -269,28 +270,7 @@ function packedCount(items) {
               <template v-if="r.completed_at">Completed {{ new Date(r.completed_at).toLocaleDateString() }}</template>
             </div>
           </div>
-          <span class="badge" :class="routeStatusBadges[r.status].class">{{ routeStatusBadges[r.status].text }}</span>
-          <button
-            type="button"
-            class="btn btn-sm"
-            :class="r.status === 'completed' ? 'btn-success' : 'btn-outline-success'"
-            :hidden="r.status === 'completed'"
-            :disabled="userRoutesStore.loading || r.status === 'completed'"
-            :aria-pressed="r.status === 'completed'"
-            @click="onMarkCompleted(r)"
-          >
-            ✓ Completed
-          </button>
           <RouterLink class="btn btn-sm btn-outline-secondary" :to="'/routes/' + r.route_id">View route</RouterLink>
-          <button
-            v-if="r.status !== 'completed'"
-            type="button"
-            class="btn btn-sm btn-outline-danger"
-            :disabled="userRoutesStore.loading"
-            @click="onRemoveRoute(r)"
-          >
-            Remove
-          </button>
         </li>
       </ul>
     </section>
