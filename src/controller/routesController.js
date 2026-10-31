@@ -1,6 +1,8 @@
 import {
   listRoutes,
   listRouteTiles,
+  listFeaturedRoutes,
+  countRoutes,
   listRouteSummaries,
   getRoute,
   getRouteGeometry,
@@ -23,6 +25,16 @@ export async function fetchRouteTiles() {
   }
 
   return data
+}
+
+// The homepage's featured routes, and how many routes there are altogether
+export async function fetchFeaturedRoutes(names) {
+  const [featured, all] = await Promise.all([listFeaturedRoutes(names), countRoutes()])
+  if (featured.error || all.error) {
+    throw featured.error || all.error
+  }
+
+  return { routes: featured.data, total: all.count }
 }
 
 export async function fetchRouteSummaries() {
