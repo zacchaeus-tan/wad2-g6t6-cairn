@@ -7,17 +7,17 @@ alter table public.profiles
   add column if not exists longest_distance_km   numeric,
   add column if not exists max_elevation_gain_m  numeric,
   add column if not exists highest_altitude_m    numeric,
-  add column if not exists goals_text            text,
-  add column if not exists fitness_score         numeric,
+  add column if not exists longest_trek_days     integer,
   add column if not exists quiz_completed_at     timestamptz;
 
 alter table public.profiles drop constraint if exists profiles_experience_level_check;
 alter table public.profiles add constraint profiles_experience_level_check
   check (experience_level is null or experience_level in ('beginner','occasional','regular','experienced'));
 
-alter table public.profiles drop constraint if exists profiles_fitness_score_check;
-alter table public.profiles add constraint profiles_fitness_score_check
-  check (fitness_score is null or (fitness_score >= 0 and fitness_score <= 100));
+-- 1 = day hikes only, 2 = overnight, 3 = 3 days or more (see src/lib/quizQuestions.js)
+alter table public.profiles drop constraint if exists profiles_longest_trek_days_check;
+alter table public.profiles add constraint profiles_longest_trek_days_check
+  check (longest_trek_days is null or longest_trek_days in (1, 2, 3));
 
 -- Without this, registration fails: the client inserts a profiles row after signUp.
 drop policy if exists "Users can insert their own profile" on public.profiles;
