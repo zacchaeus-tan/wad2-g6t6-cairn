@@ -33,22 +33,18 @@ export function insertAlert({
   source,
   externalRef,
 }) {
-  return supabase
-    .from('route_alerts')
-    .insert({
-      route_id: routeId,
-      source: source || 'manual',
-      external_ref: externalRef || null,
-      severity,
-      title,
-      message: message || null,
-      status: 'active',
-      starts_at: startsAt || new Date().toISOString(),
-      ends_at: endsAt || null,
-      created_by: createdBy,
-    })
-    .select()
-    .single()
+  return supabase.from('route_alerts').insert({
+    route_id: routeId,
+    source: source || 'manual',
+    external_ref: externalRef || null,
+    severity,
+    title,
+    message: message || null,
+    status: 'active',
+    starts_at: startsAt || new Date().toISOString(),
+    ends_at: endsAt || null,
+    created_by: createdBy,
+  })
 }
 
 export function updateAlertStatus(alertId, status) {
@@ -93,9 +89,7 @@ export function updateOfficialDifficulty(routeId, grade) {
 export function listHazardRoutes() {
   return supabase
     .from('routes')
-    .select(
-      `${ROUTE_SUMMARY}, community_hazard_level, community_hazard_note, review_count, stats_updated_at`,
-    )
+    .select(`${ROUTE_SUMMARY}, community_hazard_level, community_hazard_note, stats_updated_at`)
     .neq('community_hazard_level', 'low')
     .order('community_hazard_level', { ascending: true })
 }

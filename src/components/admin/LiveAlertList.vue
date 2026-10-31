@@ -1,7 +1,10 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { AnimatePresence, motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
-import { formatDate } from '@/lib/format'
+import { formatDate, modifierClass } from '@/lib/format'
+import { rowMotion } from '@/lib/motion'
+import AdminNote from '@/components/admin/AdminNote.vue'
 
 const emit = defineEmits(['edit-alert'])
 
@@ -24,16 +27,22 @@ function byline(alert) {
 
 <template>
   <div>
-    <p v-if="adminStore.lastTakenDown" class="admin-note mt-0 mb-3" role="status">
+    <AdminNote v-if="adminStore.lastTakenDown" class="mt-0 mb-3">
       Taken down: {{ adminStore.lastTakenDown.title }}.
       <button type="button" class="cairn-link ms-1" @click="adminStore.undoTakeDown()">Undo</button>
-    </p>
+    </AdminNote>
 
     <p v-if="!adminStore.liveAlerts.length" class="admin-empty">No alerts are published.</p>
 
-    <ul v-else class="admin-list">
-      <li v-for="alert in adminStore.liveAlerts" :key="alert.id" class="admin-item">
-        <div class="admin-item-body admin-alert" :class="`is-${alert.severity}`">
+    <AnimatePresence v-else as="ul" class="admin-list">
+      <motion.li
+        v-for="alert in adminStore.liveAlerts"
+        :key="alert.id"
+        v-bind="rowMotion"
+        layout="position"
+        class="admin-item"
+      >
+        <div class="admin-item-body admin-alert" :class="modifierClass(alert.severity)">
           <p>
             <strong>{{ alert.title }}</strong>
           </p>
@@ -61,7 +70,7 @@ function byline(alert) {
             Take down
           </button>
         </div>
-      </li>
-    </ul>
+      </motion.li>
+    </AnimatePresence>
   </div>
 </template>

@@ -49,6 +49,10 @@
   font: 700 13px/1 var(--font-data);
 }
 
+.admin-group {
+  overflow: hidden;
+}
+
 .admin-group + .admin-group {
   margin-top: 28px;
 }
@@ -164,6 +168,21 @@
   background: #e3eef6;
 }
 
+/* Rows the admin is acting on */
+.admin-item.is-confirming {
+  background: var(--warning-mist);
+}
+
+.admin-table tr.is-editing td {
+  border-bottom-color: transparent;
+  font-weight: 700;
+}
+
+/* Clips the form while it opens */
+.admin-expand {
+  overflow: hidden;
+}
+
 .admin-empty {
   color: var(--granite-500);
 }
@@ -214,7 +233,7 @@
   cursor: pointer;
 }
 
-.admin-choice input:checked + label {
+.admin-choice label.is-active {
   position: relative;
   border-color: var(--ink);
   background: var(--ink);

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useAdminStore } from '@/controller/adminStore'
+import AdminNote from '@/components/admin/AdminNote.vue'
 
 const props = defineProps({
   route: { type: Object, required: true },
@@ -54,9 +55,9 @@ const NUMBER_FIELDS = [
       </div>
     </div>
 
-    <p v-if="adminStore.infoError" class="admin-note is-error" role="alert">
+    <AdminNote v-if="adminStore.infoError" type="error">
       {{ adminStore.infoError }}
-    </p>
+    </AdminNote>
 
     <div class="admin-actions mt-3">
       <button type="submit" class="cairn-btn is-small" :disabled="saving">

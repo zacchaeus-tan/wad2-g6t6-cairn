@@ -1,7 +1,10 @@
 <script setup>
 import { nextTick, onMounted, ref } from 'vue'
+import { MotionConfig } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
 import { useAuthStore } from '@/controller/authStore'
+import AdminNote from '@/components/admin/AdminNote.vue'
+import AdminPanel from '@/components/admin/AdminPanel.vue'
 import AttentionList from '@/components/admin/AttentionList.vue'
 import AlertForm from '@/components/admin/AlertForm.vue'
 import LiveAlertList from '@/components/admin/LiveAlertList.vue'
@@ -13,7 +16,7 @@ import '@/assets/admin.css'
 const adminStore = useAdminStore()
 const auth = useAuthStore()
 const alertForm = ref(null)
-const alertSection = ref(null)
+const alertAnchor = ref(null)
 
 onMounted(() => {
   adminStore.fetchAll()
@@ -21,7 +24,7 @@ onMounted(() => {
 
 async function showForm() {
   await nextTick()
-  alertSection.value?.scrollIntoView({ behavior: 'smooth' })
+  alertAnchor.value?.scrollIntoView({ behavior: 'smooth' })
 }
 
 // "Raise alert" on a hazard report fills in the form and jumps to it.
@@ -38,80 +41,61 @@ function editAlert(alert) {
 </script>
 
 <template>
-  <div class="cairn admin-page">
-    <div class="cairn-wrap">
-      <header class="admin-header">
-        <div>
-          <p class="cairn-label">Admin</p>
-          <h1 class="cairn-headline">Route alerts and safety</h1>
-        </div>
-        <button
-          type="button"
-          class="cairn-btn is-ghost is-small"
-          :disabled="adminStore.loading"
-          @click="adminStore.fetchAll()"
-        >
-          {{ adminStore.loading ? 'Refreshing…' : 'Refresh' }}
-        </button>
-      </header>
+  <!-- Follows the viewer's reduced motion setting for everything on the page -->
+  <MotionConfig reduced-motion="user">
+    <div class="cairn admin-page">
+      <div class="cairn-wrap">
+        <header class="admin-header">
+          <div>
+            <p class="cairn-label">Admin</p>
+            <h1 class="cairn-headline">Route alerts and safety</h1>
+          </div>
+          <button
+            type="button"
+            class="cairn-btn is-ghost is-small"
+            :disabled="adminStore.loading"
+            @click="adminStore.fetchAll()"
+          >
+            {{ adminStore.loading ? 'Refreshing…' : 'Refresh' }}
+          </button>
+        </header>
 
-      <p v-if="adminStore.loadError" class="admin-note is-error" role="alert">
-        Unable to load admin data: {{ adminStore.loadError }}
-      </p>
-      <p v-if="adminStore.actionError" class="admin-note is-error" role="alert">
-        That did not save: {{ adminStore.actionError }}
-      </p>
+        <AdminNote v-if="adminStore.loadError" type="error">
+          Unable to load admin data: {{ adminStore.loadError }}
+        </AdminNote>
+        <AdminNote v-if="adminStore.actionError" type="error">
+          That did not save: {{ adminStore.actionError }}
+        </AdminNote>
 
-      <p v-if="adminStore.loading && !adminStore.routes.length" role="status">Loading…</p>
+        <p v-if="adminStore.loading && !adminStore.routes.length" role="status">Loading…</p>
 
-      <div v-else class="row g-4 mt-1">
-        <section class="col-12" aria-labelledby="attention-title">
-          <div class="admin-panel">
-            <h2 id="attention-title" class="admin-panel-title">
-              Needs attention
-              <span v-if="adminStore.attentionCount" class="admin-count">{{
-                adminStore.attentionCount
-              }}</span>
-            </h2>
+        <div v-else class="row g-4 mt-1">
+          <AdminPanel class="col-12" title="Needs attention" :count="adminStore.attentionCount">
             <AttentionList @raise-alert="raiseAlert" />
-          </div>
-        </section>
+          </AdminPanel>
 
-        <section ref="alertSection" class="col-12 col-lg-7" aria-labelledby="new-alert-title">
-          <div class="admin-panel">
-            <h2 id="new-alert-title" class="admin-panel-title">Publish an alert</h2>
+          <AdminPanel class="col-12 col-lg-7" title="Publish an alert">
+            <div ref="alertAnchor"></div>
             <AlertForm ref="alertForm" :user-id="auth.user.id" />
-          </div>
-        </section>
+          </AdminPanel>
 
-        <section class="col-12 col-lg-5" aria-labelledby="live-alerts-title">
-          <div class="admin-panel">
-            <h2 id="live-alerts-title" class="admin-panel-title">Published alerts</h2>
+          <AdminPanel class="col-12 col-lg-5" title="Published alerts">
             <LiveAlertList @edit-alert="editAlert" />
-          </div>
-        </section>
+          </AdminPanel>
 
-        <section class="col-12 col-lg-6" aria-labelledby="route-status-title">
-          <div class="admin-panel">
-            <h2 id="route-status-title" class="admin-panel-title">Route status</h2>
+          <AdminPanel class="col-12 col-lg-6" title="Route status">
             <RouteStatusEditor />
-          </div>
-        </section>
+          </AdminPanel>
 
-        <section class="col-12 col-lg-6" aria-labelledby="data-quality-title">
-          <div class="admin-panel">
-            <h2 id="data-quality-title" class="admin-panel-title">Missing route information</h2>
+          <AdminPanel class="col-12 col-lg-6" title="Missing route information">
             <DataQualityList />
-          </div>
-        </section>
+          </AdminPanel>
 
-        <section class="col-12" aria-labelledby="reviews-title">
-          <div class="admin-panel">
-            <h2 id="reviews-title" class="admin-panel-title">Recent reviews</h2>
+          <AdminPanel class="col-12" title="Recent reviews">
             <ReviewModeration />
-          </div>
-        </section>
+          </AdminPanel>
+        </div>
       </div>
     </div>
-  </div>
+  </MotionConfig>
 </template>

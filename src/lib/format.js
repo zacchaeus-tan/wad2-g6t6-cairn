@@ -6,38 +6,6 @@ export function difficultyLabel(value) {
   return DIFFICULTY_LABELS[index]
 }
 
-export function difficultyClass(value) {
-  const rounded = Math.round(Number(value))
-  if (rounded >= 4) return 'bg-danger'
-  if (rounded === 3) return 'bg-warning text-dark'
-  if (rounded === 2) return 'bg-info text-dark'
-  return 'bg-success'
-}
-
-export function verdictLabel(verdict) {
-  return {
-    comfortable: 'Comfortable — well within your range',
-    good_match: 'Good match',
-    stretch: 'A stretch — train before you commit',
-    not_ready: 'Not ready yet',
-    unknown: 'Take the quiz to see your match',
-  }[verdict] || verdict
-}
-
-export function verdictClass(verdict) {
-  return {
-    comfortable: 'alert-success',
-    good_match: 'alert-success',
-    stretch: 'alert-warning',
-    not_ready: 'alert-danger',
-    unknown: 'alert-secondary',
-  }[verdict] || 'alert-secondary'
-}
-
-export function hazardClass(level) {
-  return { elevated: 'bg-danger', moderate: 'bg-warning text-dark', low: 'bg-secondary' }[level] || 'bg-secondary'
-}
-
 // Open-Meteo weather codes from API Doc
 const WEATHER_LABELS = {
   0: 'Clear sky',
@@ -80,4 +48,8 @@ export function formatDate(value) {
   return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-
+// The modifier class for a value, e.g. 'danger' -> 'is-danger'. Gives nothing when
+// there is no value, so :class never ends up with 'is-null'.
+export function modifierClass(value) {
+  return value ? `is-${value}` : null
+}

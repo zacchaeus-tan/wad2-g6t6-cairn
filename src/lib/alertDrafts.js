@@ -47,22 +47,20 @@ function linkTo(reportRef) {
   return { source: 'community', externalRef: `${reportRef}:${Date.now()}` }
 }
 
-function hikers(count) {
-  return count === 1 ? '1 hiker' : `${count} hikers`
+// "Camp 2 (day 2)", or just the name when the checkpoint has no day.
+function placeName(name, day) {
+  return day ? `${name} (day ${day})` : name
 }
 
 // One row of the route_point_warnings view.
 export function draftFromPointWarning(warning) {
-  const place = warning.day_number
-    ? `${warning.point_name} (day ${warning.day_number})`
-    : warning.point_name
-  const reported = `Reported by ${hikers(warning.reporter_count)}, most recently on ${formatDate(warning.last_reported_at)}.`
+  const reported = `Reported by ${warning.reporter_count} hikers, most recently on ${formatDate(warning.last_reported_at)}.`
   const note = warning.latest_note ? ` Latest report: "${sentence(warning.latest_note)}"` : ''
 
   return {
     routeId: warning.route_id,
     severity: CATEGORY_SEVERITY[warning.severity] || 'warning',
-    title: `${warning.label} at ${place}`,
+    title: `${warning.label} at ${placeName(warning.point_name, warning.day_number)}`,
     message: `${reported}${note} Take extra care on this section.`,
     endsAt: defaultAlertEnd(),
     ...linkTo(pointWarningRef(warning)),
@@ -72,7 +70,7 @@ export function draftFromPointWarning(warning) {
 // One hiker's serious report. Only "warning" because nobody has confirmed it yet.
 export function draftFromUnconfirmedReport(report) {
   const place = report.point_name
-    ? `at ${report.day_number ? `${report.point_name} (day ${report.day_number})` : report.point_name}`
+    ? `at ${placeName(report.point_name, report.day_number)}`
     : 'on this route'
   const note = report.note ? ` Their report: "${sentence(report.note)}"` : ''
 

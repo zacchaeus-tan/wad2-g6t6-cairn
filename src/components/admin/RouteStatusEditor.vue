@@ -1,6 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
+import { modifierClass } from '@/lib/format'
+import { fadeMotion } from '@/lib/motion'
+import AdminNote from '@/components/admin/AdminNote.vue'
 
 const adminStore = useAdminStore()
 const search = ref('')
@@ -64,14 +68,21 @@ async function save() {
           <span
             >{{ route.name }} <span class="admin-hint">{{ route.country }}</span></span
           >
-          <span class="admin-tag" :class="`is-${route.safety_status}`">{{
+          <span class="admin-tag" :class="modifierClass(route.safety_status)">{{
             route.safety_status || 'not set'
           }}</span>
         </button>
       </li>
     </ul>
 
-    <form v-if="selected" class="mt-4" novalidate @submit.prevent="save">
+    <motion.form
+      v-if="selected"
+      :key="selected.id"
+      v-bind="fadeMotion"
+      class="mt-4"
+      novalidate
+      @submit.prevent="save"
+    >
       <h3 class="h5 fw-bold mb-3">{{ selected.name }}</h3>
       <div class="admin-choice mb-3" role="radiogroup" aria-label="Safety status">
         <template v-for="status in ['open', 'caution', 'closed']" :key="status">
@@ -82,7 +93,9 @@ async function save() {
             name="safety-status"
             :value="status"
           />
-          <label :for="`status-${status}`">{{ status }}</label>
+          <label :for="`status-${status}`" :class="{ 'is-active': form.safetyStatus === status }">{{
+            status
+          }}</label>
         </template>
       </div>
 
@@ -99,15 +112,15 @@ async function save() {
         ></textarea>
       </div>
 
-      <p v-if="adminStore.statusError" class="admin-note is-error" role="alert">
+      <AdminNote v-if="adminStore.statusError" type="error">
         {{ adminStore.statusError }}
-      </p>
-      <p v-else-if="saved" class="admin-note" role="status">Status saved.</p>
+      </AdminNote>
+      <AdminNote v-else-if="saved">Status saved.</AdminNote>
 
       <button type="submit" class="cairn-btn is-small mt-3" :disabled="saving">
         {{ saving ? 'Saving…' : 'Save status' }}
       </button>
-    </form>
+    </motion.form>
 
     <div v-if="flaggedRoutes.length" class="admin-group mt-4">
       <h3 class="cairn-label">Not open</h3>
@@ -115,7 +128,7 @@ async function save() {
         <li v-for="route in flaggedRoutes" :key="route.id" class="admin-item">
           <div class="admin-item-body">
             <p>
-              <span class="admin-tag" :class="`is-${route.safety_status}`">{{
+              <span class="admin-tag" :class="modifierClass(route.safety_status)">{{
                 route.safety_status
               }}</span>
               <button type="button" class="cairn-link" @click="choose(route)">

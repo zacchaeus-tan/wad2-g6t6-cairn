@@ -1,12 +1,15 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { AnimatePresence, motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
 import { difficultyLabel, formatDate } from '@/lib/format'
+import { rowMotion } from '@/lib/motion'
+import AdminNote from '@/components/admin/AdminNote.vue'
 
 const adminStore = useAdminStore()
 const confirmingId = ref(null) // removing can't be undone, so it takes a second click
-const removingId = ref(null)
+const removing = ref(false)
 const removed = ref(false)
 
 function askToRemove(review) {
@@ -15,18 +18,18 @@ function askToRemove(review) {
 }
 
 async function remove(review) {
-  removingId.value = review.id
+  removing.value = true
   removed.value = await adminStore.removeReview(review)
-  removingId.value = null
+  removing.value = false
   confirmingId.value = null
 }
 </script>
 
 <template>
   <div>
-    <p v-if="removed" class="admin-note mt-0 mb-3" role="status">
+    <AdminNote v-if="removed" class="mt-0 mb-3">
       Review removed, and the route's stats were updated.
-    </p>
+    </AdminNote>
 
     <p v-if="!adminStore.recentReviews.length" class="admin-empty">No reviews yet.</p>
 
@@ -35,8 +38,15 @@ async function remove(review) {
         Newest first. Remove fake or abusive reviews so they stop affecting a route's grade and
         hazard level.
       </p>
-      <ul class="admin-list">
-        <li v-for="review in adminStore.recentReviews" :key="review.id" class="admin-item">
+      <AnimatePresence as="ul" class="admin-list">
+        <motion.li
+          v-for="review in adminStore.recentReviews"
+          :key="review.id"
+          v-bind="rowMotion"
+          layout="position"
+          class="admin-item"
+          :class="{ 'is-confirming': confirmingId === review.id }"
+        >
           <div class="admin-item-body">
             <p>
               <strong>{{ review.profiles?.display_name || 'Unknown hiker' }}</strong>
@@ -65,10 +75,10 @@ async function remove(review) {
               <button
                 type="button"
                 class="cairn-btn is-blaze is-small"
-                :disabled="removingId === review.id"
+                :disabled="removing"
                 @click="remove(review)"
               >
-                {{ removingId === review.id ? 'Removing…' : 'Confirm remove' }}
+                {{ removing ? 'Removing…' : 'Confirm remove' }}
               </button>
               <button type="button" class="cairn-link" @click="confirmingId = null">Cancel</button>
             </template>
@@ -76,8 +86,8 @@ async function remove(review) {
               Remove
             </button>
           </div>
-        </li>
-      </ul>
+        </motion.li>
+      </AnimatePresence>
     </template>
   </div>
 </template>

@@ -40,13 +40,6 @@ export const useAdminStore = defineStore('admin', () => {
   const actionError = ref(null) // taking down an alert, reviewing, regrading or removing: shown by the page
   const lastTakenDown = ref(null) // the alert the admin can still undo
 
-  function clearError() {
-    error.value = null
-    statusError.value = null
-    infoError.value = null
-    actionError.value = null
-  }
-
   // Published alerts that are live now or scheduled to start later.
   const liveAlerts = computed(() => {
     const now = Date.now()
@@ -215,28 +208,15 @@ export const useAdminStore = defineStore('admin', () => {
     return true
   }
 
-  function cleanAlert(form) {
-    return { ...form, title: form.title.trim(), message: form.message?.trim() }
-  }
-
-  async function createAlert(form) {
+  // Publishes a new alert, or changes the published one when given its id.
+  async function saveAlert(form, alertId = null) {
     error.value = null
     if (!validateAlert(form)) return false
 
-    const { error: err } = await adminModel.insertAlert(cleanAlert(form))
-    if (err) {
-      error.value = err.message
-      return false
-    }
-    await fetchAll()
-    return true
-  }
-
-  async function updateAlert(alertId, form) {
-    error.value = null
-    if (!validateAlert(form)) return false
-
-    const { error: err } = await adminModel.updateAlert(alertId, cleanAlert(form))
+    const fields = { ...form, title: form.title.trim(), message: form.message?.trim() }
+    const { error: err } = alertId
+      ? await adminModel.updateAlert(alertId, fields)
+      : await adminModel.insertAlert(fields)
     if (err) {
       error.value = err.message
       return false
@@ -259,17 +239,11 @@ export const useAdminStore = defineStore('admin', () => {
 
   // Taking an alert down happens at once, with an undo rather than a confirm.
   async function takeDownAlert(alert) {
-    const ok = await setAlertStatus(alert.id, 'dismissed')
-    if (ok) lastTakenDown.value = alert
-    return ok
+    if (await setAlertStatus(alert.id, 'dismissed')) lastTakenDown.value = alert
   }
 
   async function undoTakeDown() {
-    const alert = lastTakenDown.value
-    if (!alert) return false
-    const ok = await setAlertStatus(alert.id, 'active')
-    if (ok) lastTakenDown.value = null
-    return ok
+    if (await setAlertStatus(lastTakenDown.value.id, 'active')) lastTakenDown.value = null
   }
 
   // "Reviewed, no action": hides the report until something newer comes in.
@@ -413,11 +387,8 @@ export const useAdminStore = defineStore('admin', () => {
     difficultyMismatches,
     incompleteRoutes,
     attentionCount,
-    clearError,
     fetchAll,
-    createAlert,
-    updateAlert,
-    setAlertStatus,
+    saveAlert,
     takeDownAlert,
     undoTakeDown,
     markReviewed,

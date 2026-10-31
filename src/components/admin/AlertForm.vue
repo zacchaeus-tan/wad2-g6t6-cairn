@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useAdminStore } from '@/controller/adminStore'
 import { defaultAlertEnd } from '@/lib/alertDrafts'
+import AdminNote from '@/components/admin/AdminNote.vue'
 
 const props = defineProps({
   userId: { type: String, required: true },
@@ -82,9 +83,7 @@ async function submit() {
     startsAt: toIso(form.value.startsAt),
     endsAt: toIso(form.value.endsAt),
   }
-  const ok = editing.value
-    ? await adminStore.updateAlert(editingId.value, fields)
-    : await adminStore.createAlert({ ...fields, createdBy: props.userId })
+  const ok = await adminStore.saveAlert({ ...fields, createdBy: props.userId }, editingId.value)
   saving.value = false
   if (ok) {
     saved.value = editing.value ? 'Alert updated.' : 'Alert published.'
@@ -95,12 +94,12 @@ async function submit() {
 
 <template>
   <form novalidate @submit.prevent="submit">
-    <p v-if="editing" class="admin-note is-info mt-0 mb-3" role="status">
+    <AdminNote v-if="editing" type="info" class="mt-0 mb-3">
       Editing a published alert. Changes show on the route page as soon as you save.
-    </p>
-    <p v-else-if="drafted" class="admin-note is-info mt-0 mb-3" role="status">
+    </AdminNote>
+    <AdminNote v-else-if="drafted" type="info" class="mt-0 mb-3">
       Filled in from hiker reports. Check the wording and dates, then publish.
-    </p>
+    </AdminNote>
 
     <div class="row g-3">
       <div class="col-12 col-md-8 admin-field">
@@ -157,10 +156,10 @@ async function submit() {
       </div>
     </div>
 
-    <p v-if="adminStore.error" class="admin-note is-error" role="alert">
+    <AdminNote v-if="adminStore.error" type="error">
       {{ adminStore.error }}
-    </p>
-    <p v-else-if="saved" class="admin-note" role="status">{{ saved }}</p>
+    </AdminNote>
+    <AdminNote v-else-if="saved">{{ saved }}</AdminNote>
 
     <div class="admin-actions mt-3">
       <button type="submit" class="cairn-btn is-small" :disabled="saving">

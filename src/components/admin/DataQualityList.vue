@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
+import { expandMotion } from '@/lib/motion'
+import AdminNote from '@/components/admin/AdminNote.vue'
 import RouteInfoForm from '@/components/admin/RouteInfoForm.vue'
 
 const adminStore = useAdminStore()
@@ -17,18 +20,17 @@ function edit(route) {
 
 async function save(route, form) {
   saving.value = true
-  const name = route.name
   const saved = await adminStore.saveRouteInfo(route.id, form)
   saving.value = false
   if (saved) {
-    savedName.value = name
+    savedName.value = route.name
     editingId.value = null
   }
 }
 </script>
 
 <template>
-  <p v-if="savedName" class="admin-note mt-0 mb-3" role="status">Saved {{ savedName }}.</p>
+  <AdminNote v-if="savedName" class="mt-0 mb-3">Saved {{ savedName }}.</AdminNote>
 
   <p v-if="!adminStore.incompleteRoutes.length" class="admin-empty">
     Every route has its map location, country, distance, elevation gain and altitude.
@@ -55,7 +57,7 @@ async function save(route, form) {
       </thead>
       <tbody>
         <template v-for="route in adminStore.incompleteRoutes" :key="route.id">
-          <tr>
+          <tr :class="{ 'is-editing': editingId === route.id }">
             <td>
               <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
                 route.name
@@ -70,12 +72,14 @@ async function save(route, form) {
           </tr>
           <tr v-if="editingId === route.id">
             <td colspan="3">
-              <RouteInfoForm
-                :route="route"
-                :saving="saving"
-                @save="save(route, $event)"
-                @cancel="editingId = null"
-              />
+              <motion.div v-bind="expandMotion" class="admin-expand">
+                <RouteInfoForm
+                  :route="route"
+                  :saving="saving"
+                  @save="save(route, $event)"
+                  @cancel="editingId = null"
+                />
+              </motion.div>
             </td>
           </tr>
         </template>
