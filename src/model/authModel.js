@@ -29,6 +29,11 @@ export function getProfile(userId) {
   return supabase.from('profiles').select('*').eq('id', userId).single()
 }
 
+// fields is a subset of the quiz experience columns
+export function updateExperience(userId, fields) {
+  return supabase.from('profiles').update(fields).eq('id', userId)
+}
+
 export function updateQuizAnswers(userId, answers) {
   return supabase
     .from('profiles')
