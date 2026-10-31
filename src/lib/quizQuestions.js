@@ -5,6 +5,7 @@ export const quizQuestions = [
   {
     key: 'experienceLevel',
     column: 'experience_level',
+    short: 'Experience',
     label: 'How experienced are you at hiking?',
     options: [
       { val: 'beginner', desc: 'New to hiking — short walks or my first real hike' },
@@ -16,6 +17,7 @@ export const quizQuestions = [
   {
     key: 'longestDistanceKm',
     column: 'longest_distance_km',
+    short: 'Distance',
     label: "What's the longest distance you've hiked in a single day?",
     options: [
       { val: 3, desc: 'Under 5 km' },
@@ -28,6 +30,7 @@ export const quizQuestions = [
   {
     key: 'maxElevationGainM',
     column: 'max_elevation_gain_m',
+    short: 'Elevation',
     label: "What's the most elevation you've climbed in a single day?",
     hint: 'Walking up to the Bukit Timah summit is about 160 m of climbing.',
     options: [
@@ -41,6 +44,7 @@ export const quizQuestions = [
   {
     key: 'highestAltitudeM',
     column: 'highest_altitude_m',
+    short: 'Altitude',
     label: "What's the highest altitude you've hiked to?",
     options: [
       { val: 500, desc: 'Under 1,000 m' },
@@ -53,6 +57,7 @@ export const quizQuestions = [
   {
     key: 'longestTrekDays',
     column: 'longest_trek_days',
+    short: 'Trip length',
     label: "What's the longest duration you have trekked?",
     options: [
       { val: 1, desc: 'Day hikes only' },
@@ -78,4 +83,10 @@ export function quizAnswer(profile, question) {
   if (!profile) return null
   const value = profile[question.column]
   return question.options.find((option) => String(option.val) === String(value)) || null
+}
+
+// "Occasional — a few day hikes a year" -> { title: 'Occasional', detail: 'a few day hikes a year' }
+export function splitOption(desc) {
+  const [title, ...rest] = desc.split(' — ')
+  return { title, detail: rest.join(' — ') }
 }
