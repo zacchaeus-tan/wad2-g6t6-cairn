@@ -6,10 +6,10 @@ import SiteFooter from '@/components/common/SiteFooter.vue'
 
 const currentRoute = useRoute()
 
-// The home, browse, route detail, sign-in and quiz pages open on a photo, and the globe on the
+// The home, browse, route detail, sign-in, profile and quiz pages open on a photo, and the globe on the
 // night sky, so the navbar sits on top of them.
 const navOverlay = computed(() =>
-  ['home', 'routes-list', 'route-detail', 'auth', 'quiz', 'routes-globe'].includes(
+  ['home', 'routes-list', 'route-detail', 'auth', 'profile', 'quiz', 'routes-globe'].includes(
     currentRoute.name,
   ),
 )

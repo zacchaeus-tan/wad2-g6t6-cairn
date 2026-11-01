@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById, fetchRouteAlerts, takePreloadedRoute } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
@@ -87,6 +87,12 @@ onMounted(async () => {
       userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
+
+    // A link to a section (#reviews): the section only has its final position now
+    if (routeParams.hash) {
+      await nextTick()
+      document.getElementById(routeParams.hash.slice(1))?.scrollIntoView()
+    }
   }
 })
 
@@ -154,9 +160,9 @@ async function reloadRoute() {
           />
         </section>
 
-        <!-- <section class="col-12">
+        <section class="col-12">
           <WeatherForecast :weather="weather" :error="weatherError" />
-        </section> -->
+        </section>
 
           <section id="plan" class="col-12" aria-labelledby="plan-title">
             <article class="route-plan">
@@ -241,6 +247,10 @@ async function reloadRoute() {
 </template>
 
 <style scoped>
+#reviews {
+  scroll-margin-top: 24px;
+}
+
 .route-detail {
   min-height: 100vh;
 }

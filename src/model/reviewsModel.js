@@ -17,6 +17,18 @@ export function listReviewsForRoute(routeId, from, to) {
     .range(from, to)
 }
 
+// One page of a user's own reviews, newest first, with the route each one is about.
+export function listMyReviews(userId, from, to) {
+  return supabase
+    .from('reviews')
+    .select('*, routes(id, name, country), review_incidents(*, incident_categories(label))', {
+      count: 'exact',
+    })
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(from, to)
+}
+
 // The signed-in user's own review on a route, or null. Loaded on its own because
 // it may not be on the page of reviews that is showing.
 export function getMyReview(routeId, userId) {

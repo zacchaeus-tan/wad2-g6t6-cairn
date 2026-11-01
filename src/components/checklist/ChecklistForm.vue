@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { motion } from 'motion-v'
 import { useChecklistStore } from '@/controller/checklistStore'
 import { maxNameLength, maxReasonLength } from '@/lib/checklistRules'
+import TickIcon from '@/components/common/TickIcon.vue'
 
 const props = defineProps({
   item: { type: Object, default: null }, // null = add mode
@@ -87,11 +88,13 @@ async function submit() {
 
     <div class="checklist-form-fields">
       <label class="checklist-form-field" for="cl-label">
-        <span>Item name</span>
+        <span class="cairn-label">Item name</span>
         <input
           id="cl-label"
           v-model="form.label"
-          class="checklist-form-input"
+          :maxlength="maxNameLength"
+          :disabled="saving || saved"
+          class="cairn-input checklist-form-input"
           data-testid="item-label-input"
           :aria-invalid="Boolean(labelError)"
           @input="validateLabel"
@@ -102,12 +105,12 @@ async function submit() {
         </p>
       </label>
       <label class="checklist-form-field" for="cl-category">
-        <span>Category</span>
+        <span class="cairn-label">Category</span>
         <select
           id="cl-category"
           v-model="form.category"
           :disabled="saving || saved"
-          class="checklist-form-input"
+          class="cairn-input checklist-form-input"
           data-testid="item-category-select"
         >
           <option value="clothing">Clothing</option>
@@ -121,13 +124,12 @@ async function submit() {
         <p class="checklist-form-field-error"></p>
       </label>
       <label class="checklist-form-field" for="cl-qty">
-        <span>Quantity</span>
+        <span class="cairn-label">Quantity</span>
         <input
           id="cl-qty"
           v-model="form.quantity"
           :disabled="saving || saved"
-          :aria-invalid="Boolean(quantityError)"
-          class="checklist-form-input"
+          class="cairn-input checklist-form-input"
           placeholder="e.g. 2, 3L, 1 pair"
           data-testid="item-quantity-input"
           @input="validateQuantity"
@@ -137,13 +139,13 @@ async function submit() {
         </p>
       </label>
       <label class="checklist-form-field" for="cl-reason">
-        <span>Reason (optional)</span>
+        <span class="cairn-label">Reason (optional)</span>
         <input
           id="cl-reason"
           v-model="form.reason"
           :maxlength="maxReasonLength"
           :disabled="saving || saved"
-          class="checklist-form-input"
+          class="cairn-input checklist-form-input"
           data-testid="item-reason-input"
         />
         <p class="checklist-form-field-error"></p>
@@ -162,7 +164,7 @@ async function submit() {
     <div class="checklist-form-actions">
       <motion.button
         type="submit"
-        class="checklist-form-button is-primary"
+        class="cairn-btn is-small checklist-form-primary"
         :disabled="saving || saved"
         :animate="{
           scale: saved ? 1.03 : 1,
@@ -172,13 +174,16 @@ async function submit() {
         :transition="{ type: 'spring', stiffness: 350, damping: 22 }"
         data-testid="item-submit-btn"
       >
-        <span v-if="saved">✓ {{ item ? 'Saved' : 'Added' }}</span>
+        <template v-if="saved">
+          <TickIcon />
+          {{ item ? 'Saved' : 'Added' }}
+        </template>
         <span v-else-if="saving">Saving...</span>
         <span v-else>{{ item ? 'Save changes' : 'Add item' }}</span>
       </motion.button>
 
       <button
-        class="checklist-form-button"
+        class="cairn-btn is-ghost is-small"
         type="button"
         :disabled="saving || saved"
         data-testid="item-cancel-btn"
@@ -196,9 +201,10 @@ async function submit() {
   gap: 14px;
   margin-top: 16px;
   padding: 18px;
-  border: 2px solid #17201c;
-  background: #ffffff;
-  font-family: 'Lato', 'Noto Sans Thai', system-ui, sans-serif;
+  border: 2px solid var(--ink);
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font);
 }
 
 .checklist-form-title {
@@ -218,32 +224,10 @@ async function submit() {
   gap: 6px;
 }
 
-.checklist-form-field span {
-  color: #3a4540;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.checklist-form-input {
-  width: 100%;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1.5px solid #c9d0cb;
-  border-radius: 0;
-  background: #ffffff;
-  color: #17201c;
-  font:
-    400 15px 'Lato',
-    system-ui,
-    sans-serif;
-}
-
-.checklist-form-input:focus {
-  outline: none;
-  border-color: #17201c;
-  box-shadow: 0 0 0 3px rgb(30 95 140 / 0.25);
+.checklist-form-input:focus-visible {
+  outline: 3px solid var(--lake);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .checklist-form-input:disabled {
@@ -252,8 +236,8 @@ async function submit() {
 
 .checklist-form-error {
   padding: 8px 10px;
-  background: #fdecea;
-  color: #b42318;
+  background: color-mix(in srgb, var(--blaze) 12%, var(--white));
+  color: var(--blaze-deep);
   font-size: 14px;
 }
 
@@ -262,46 +246,9 @@ async function submit() {
   gap: 8px;
 }
 
-.checklist-form-button {
-  min-height: 40px;
-  padding: 0 16px;
-  border: 2px solid #17201c;
-  border-radius: 0;
-  background: transparent;
-  color: #17201c;
-  font:
-    700 13px 'Lato',
-    system-ui,
-    sans-serif;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-/* The primary button's background and border colour are animated by motion */
-.checklist-form-button.is-primary {
-  color: #ffffff;
-}
-
-.checklist-form-button:not(.is-primary):hover {
-  background: #1f5b43;
-  border-color: #1f5b43;
-  color: #ffffff;
-}
-
-.checklist-form-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Keep the green "Saved" button fully visible even though it is disabled */
-.checklist-form-button.is-primary:disabled {
+.checklist-form-primary:disabled {
   opacity: 1;
-}
-
-.checklist-form-button:focus-visible {
-  outline: 3px solid #1e5f8c;
-  outline-offset: 2px;
 }
 
 @media (max-width: 560px) {

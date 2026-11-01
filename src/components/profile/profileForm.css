@@ -1,0 +1,58 @@
+/* Shared by the edit-profile and change-password forms */
+.profile-form {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.profile-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-form-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.profile-form-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.profile-form-field .cairn-input {
+  width: 100%;
+}
+
+.profile-form-field textarea {
+  height: auto;
+  padding-block: 10px;
+  resize: vertical;
+}
+
+.profile-form-count {
+  justify-self: end;
+  color: var(--granite-700);
+  font-size: 13px;
+}
+
+.profile-form-error {
+  color: var(--blaze-deep);
+  font-size: 14px;
+}
+
+.profile-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@container profile-panel (max-width: 480px) {
+  .profile-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
