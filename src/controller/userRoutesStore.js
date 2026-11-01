@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import * as userRoutesModel from '@/model/userRoutesModel'
 import * as routesModel from '@/model/routesModel'
 import { useAuthStore } from '@/controller/authStore'
@@ -31,6 +31,17 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
   const savedLoading = ref(false)
   const error = ref(null)
   const statsMessage = ref(null) // which profile stats the last completed hike raised
+  const routeAlerts = ref([]) // live alerts on the routes in savedRoutes
+
+  // Notices for routes the user still plans to hike, not ones they have finished.
+  const savedRouteNotices = computed(() =>
+    routeAlerts.value.flatMap((alert) => {
+      const route = savedRoutes.value.find(
+        (r) => r.route_id === alert.route_id && r.status === 'saved',
+      )
+      return route ? [{ ...alert, route_name: route.route_name }] : []
+    }),
+  )
 
   // the router waits for the session, so the auth store is ready by now
   function userId() {
@@ -144,6 +155,17 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
     }
   }
 
+  // Notices are extra information, so a failure here should not hide the routes.
+  async function loadRouteAlerts(routeIds) {
+    const { data, error: err } = await routesModel.listAlertsForRoutes(routeIds)
+    if (err) {
+      console.warn('Could not load notices for your saved routes:', err.message)
+      routeAlerts.value = []
+      return
+    }
+    routeAlerts.value = data
+  }
+
   // all of the user's saved routes, with the route details the profile shows
   async function loadSaved() {
     savedLoading.value = true
@@ -158,6 +180,7 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
       const rows = unwrap(await userRoutesModel.listUserRoutes(userId()))
       if (rows.length === 0) {
         savedRoutes.value = []
+        routeAlerts.value = []
         return true
       }
 
@@ -171,6 +194,7 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
           distance_km: route ? route.distance_km : null,
         }
       })
+      await loadRouteAlerts(rows.map((r) => r.route_id))
       return true
     } catch (e) {
       error.value = e.message
@@ -183,6 +207,8 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
   return {
     current,
     savedRoutes,
+    routeAlerts,
+    savedRouteNotices,
     loading,
     savedLoading,
     error,

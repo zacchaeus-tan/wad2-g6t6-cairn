@@ -12,6 +12,7 @@ import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 const props = defineProps({
   route: { type: Object, required: true },
   isLoggedIn : {type:Boolean, required:true},
+  alerts: { type: Array, default: () => [] }, // live alerts published by admins
 })
 
 const grade = computed(() => gradeOf(props.route))
@@ -24,20 +25,25 @@ const starFills = computed(() => {
   return [1, 2, 3, 4, 5].map((n) => Math.min(Math.max(rounded - (n - 1), 0), 1))
 })
 
-// The warning only shows when there is a risk: the route is closed or needs caution,
-// or hikers have reported a moderate or elevated hazard.
+// The warning only shows when there is a risk: an admin has published a danger alert,
+// the route is closed or needs caution, or hikers have reported a moderate or elevated hazard.
 const SAFETY_TITLES = { caution: 'Caution', closed: 'Route closed' }
 const HAZARD_TITLES = { moderate: 'Hazard: moderate', elevated: 'Hazard: elevated' }
 
+const dangerAlerts = computed(() => props.alerts.filter((a) => a.severity === 'danger'))
+
+// Lower severity alerts stay in the trail notices further down the page.
+const warningLink = computed(() => (dangerAlerts.value.length ? '#trail-notices' : '#reviews'))
+
 const warnings = computed(() => {
-  const list = []
+  const list = dangerAlerts.value.map((a) => ({ key: a.id, title: a.title, note: a.message }))
   const safety = SAFETY_TITLES[props.route.safety_status]
   if (safety) {
-    list.push({ title: safety, note: props.route.safety_status_note })
+    list.push({ key: 'safety', title: safety, note: props.route.safety_status_note })
   }
   const hazard = HAZARD_TITLES[props.route.community_hazard_level]
   if (hazard) {
-    list.push({ title: hazard, note: props.route.community_hazard_note })
+    list.push({ key: 'hazard', title: hazard, note: props.route.community_hazard_note })
   }
   return list
 })
@@ -48,10 +54,10 @@ const warnings = computed(() => {
     <img class="route-banner-photo" :src="bannerPhoto" alt="" />
 
     <div v-if="warnings.length" class="cairn-wrap route-banner-warning" role="alert">
-      <a href="#reviews">
+      <a :href="warningLink">
         <WarningIcon />
         <span>
-          <span v-for="warning in warnings" :key="warning.title" class="route-banner-warning-item">
+          <span v-for="warning in warnings" :key="warning.key" class="route-banner-warning-item">
             <strong>{{ warning.title }}</strong>
             <span v-if="warning.note">{{ warning.note }}</span>
           </span>
@@ -104,6 +110,11 @@ const warnings = computed(() => {
   filter: saturate(0.5) brightness(0.75);
 }
 
+/* Focus rings on a dark photo are Glacier */
+.route-banner-labels :deep(.cairn-btn:focus-visible) {
+  outline-color: var(--glacier);
+}
+
 .route-banner-warning {
   position: absolute;
   top: 96px;
@@ -140,7 +151,10 @@ const warnings = computed(() => {
 }
 
 .route-banner-warning-item span {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* published alerts can be long, and the route title sits below */
   color: #d4e3db;
   font-size: 14px;
 }

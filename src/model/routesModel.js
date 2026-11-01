@@ -55,3 +55,24 @@ export function getRouteExperience(id) {
 export function listRoutesByIds(ids) {
   return supabase.from('routes').select('id, name, country, distance_km').in('id', ids)
 }
+
+// Only published alerts inside their time window. Row Level Security already
+// limits hikers to these, but admins can read every alert, so filter here too.
+function liveAlerts() {
+  const now = new Date().toISOString()
+  return supabase
+    .from('route_alerts')
+    .select('id, route_id, severity, title, message, starts_at, ends_at')
+    .eq('status', 'active')
+    .lte('starts_at', now)
+    .or(`ends_at.is.null,ends_at.gt.${now}`)
+    .order('starts_at', { ascending: false })
+}
+
+export function listAlertsForRoute(routeId) {
+  return liveAlerts().eq('route_id', routeId)
+}
+
+export function listAlertsForRoutes(routeIds) {
+  return liveAlerts().in('route_id', routeIds)
+}

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { genderLabels } from '@/lib/countries'
+import ProfileAccount from './ProfileAccount.vue'
 
 const props = defineProps({
   profile: { type: Object, required: true },
@@ -28,24 +29,70 @@ const initials = computed(() =>
 </script>
 
 <template>
-  <div class="card mb-4">
-    <div class="card-body d-flex align-items-center gap-3">
-      <div
-        class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
-        style="width: 64px; height: 64px; font-size: 1.5rem"
-      >
-        {{ initials }}
-      </div>
-
-      <div class="flex-grow-1">
-        <h2 class="h5 mb-0">{{ displayName }}</h2>
-        <p v-if="profileDetails" class="small text-muted mb-1">{{ profileDetails }}</p>
-        <div class="d-flex flex-wrap gap-2 mb-1">
-          <span class="badge bg-secondary text-capitalize">
-            {{ profile.experience_level || 'Experience not set' }}
-          </span>
-        </div>
-      </div>
+  <div class="profile-summary">
+    <div class="profile-summary-avatar" aria-hidden="true">{{ initials }}</div>
+    <div class="profile-summary-text">
+      <h2 class="cairn-headline profile-summary-name">{{ displayName }}</h2>
+      <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
+      <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
+      <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
     </div>
+    <ProfileAccount />
   </div>
 </template>
+
+<style scoped>
+.profile-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 24px;
+}
+
+.profile-summary-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  background: var(--pine);
+  color: var(--paper);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.profile-summary-text {
+  display: grid;
+  flex: 1 1 16rem;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.profile-summary-name {
+  overflow-wrap: anywhere;
+}
+
+.profile-summary-details {
+  color: var(--granite-700);
+}
+
+.profile-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.profile-summary-about {
+  max-width: 60ch;
+  color: var(--granite-700);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+</style>

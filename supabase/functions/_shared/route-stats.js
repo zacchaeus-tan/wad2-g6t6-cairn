@@ -51,7 +51,12 @@ export function calcHazardScore(incidents, reviewCount) {
   return round(total / (reviewCount + SMOOTHING), 3)
 }
 
-export function calcHazardLevel(score) {
+// The level stays low until at least this many different hikers have reported
+// incidents, so one person cannot mark a route as hazardous on their own.
+const MIN_HAZARD_REPORTERS = 2
+
+export function calcHazardLevel(score, reporterCount = MIN_HAZARD_REPORTERS) {
+  if (reporterCount < MIN_HAZARD_REPORTERS) return 'low'
   if (score > 0.4) return 'elevated'
   if (score >= 0.15) return 'moderate'
   return 'low'
@@ -92,7 +97,8 @@ export function computeRouteStats(official, reviews, incidents) {
   )
   const completionRate = average(reviews.map((r) => (r.completed ? 1 : 0)))
 
-  const hazardLevel = calcHazardLevel(calcHazardScore(incidents, reviews.length))
+  const reporters = new Set(incidents.map((i) => i.userId)).size
+  const hazardLevel = calcHazardLevel(calcHazardScore(incidents, reviews.length), reporters)
 
   return {
     avg_rating: avgRating == null ? null : round(avgRating, 2),

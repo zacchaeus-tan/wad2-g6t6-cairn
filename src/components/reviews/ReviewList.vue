@@ -1,15 +1,31 @@
 <script setup>
+import { ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
-import { difficultyLabel, formatDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
-import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
-import WarningIcon from '@/components/common/WarningIcon.vue'
+import ReviewEntryMeta from './ReviewEntryMeta.vue'
 
 // no need to declare a variable as it is only used in the template
-defineProps({
+const props = defineProps({
   reviews: { type: Array, required: true },
+  userId: { type: String, default: null },
+  isAdmin: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['edit', 'delete'])
+
+// Deleting can't be undone, so it takes a second click
+const confirmingId = ref(null)
+
+function isOwn(review) {
+  return Boolean(props.userId) && review.user_id === props.userId
+}
+
+function confirmDelete(review) {
+  confirmingId.value = null
+  emit('delete', review)
+}
 
 // display_name can be empty, so fall back to a generic name
 function nameOf(review) {
@@ -50,26 +66,24 @@ function nameOf(review) {
 
         <p v-if="review.review_text" class="review-entry-text">{{ review.review_text }}</p>
 
-        <div class="review-entry-meta">
-          <span class="review-entry-felt">
-            Felt {{ difficultyLabel(review.perceived_difficulty) }}
-            <DifficultyMark :grade="review.perceived_difficulty" :show-label="false" />
+        <ReviewEntryMeta :review="review">
+          <span v-if="isOwn(review) || isAdmin" class="review-entry-actions">
+            <template v-if="confirmingId === review.id">
+              <button type="button" class="cairn-link is-danger" @click="confirmDelete(review)">
+                Confirm delete
+              </button>
+              <button type="button" class="cairn-link" @click="confirmingId = null">Cancel</button>
+            </template>
+            <template v-else>
+              <button v-if="isOwn(review)" type="button" class="cairn-link" @click="emit('edit')">
+                Edit
+              </button>
+              <button type="button" class="cairn-link" @click="confirmingId = review.id">
+                Delete
+              </button>
+            </template>
           </span>
-          <span :class="review.completed ? 'is-done' : 'is-turned'">
-            {{ review.completed ? 'Completed' : 'Did not complete' }}
-          </span>
-          <div
-            v-for="incident in review.review_incidents"
-            :key="incident.id"
-            class="review-entry-incident"
-          >
-            <WarningIcon />
-            <div>
-              <strong>{{ incident.incident_categories.label }}</strong>
-              <p>{{ incident.note }}</p>
-            </div>
-          </div>
-        </div>
+        </ReviewEntryMeta>
       </div>
     </motion.article>
   </AnimatePresence>
@@ -104,6 +118,16 @@ function nameOf(review) {
   color: var(--paper);
   font-size: 17px;
   font-weight: 900;
+}
+
+.review-entry-actions {
+  display: inline-flex;
+  gap: 14px;
+  font-size: 14px;
+}
+
+.review-entry-actions .is-danger {
+  color: var(--blaze-deep);
 }
 
 .review-entry-top {
@@ -141,52 +165,5 @@ function nameOf(review) {
   margin: 8px 0 10px !important;
   font-size: 17px;
   line-height: 26px;
-}
-
-.review-entry-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-top: 8px;
-  color: var(--granite-700);
-  font-size: 13px;
-}
-
-.review-entry-felt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.is-done {
-  color: var(--pine);
-  font-weight: 700;
-}
-
-.is-turned {
-  color: var(--warning);
-  font-weight: 700;
-}
-
-.review-entry-incident {
-  flex-basis: 100%;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 6px 10px;
-  background: var(--warning-mist);
-  color: #5c3d00;
-}
-
-.review-entry-incident svg {
-  width: 20px;
-  height: 18px;
-  flex: none;
-  margin-top: 1px;
-}
-
-.review-entry-incident p {
-  margin: 0;
 }
 </style>

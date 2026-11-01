@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { fetchRouteById, takePreloadedRoute } from '../controller/routesController'
+import { fetchRouteById, fetchRouteAlerts, takePreloadedRoute } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import TrailRegister from '@/components/reviews/TrailRegister.vue'
@@ -15,6 +15,7 @@ import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
+import TrailNotices from '@/components/routes/TrailNotices.vue'
 import RouteSuitability from '@/components/routes/RouteSuitability.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
 
@@ -26,6 +27,9 @@ const userRoutesStore = useUserRoutesStore()
 const route = ref(takePreloadedRoute(routeParams.params.id))
 const loading = ref(!route.value)
 const error = ref('')
+const alerts = ref([])
+
+const signInTo = computed(() => ({ name: 'auth', query: { redirect: routeParams.fullPath } }))
 
 const itinerary = ref(null)
 const itineraryLoading = ref(false)
@@ -78,10 +82,17 @@ onMounted(async () => {
       reviewsStore.fetchForRoute(routeParams.params.id),
       reviewsStore.fetchMyReview(routeParams.params.id, auth.user?.id),
       reviewsStore.fetchCategories(),
+      loadAlerts(),
       checklistStore.loadForRoute(route.value.id),
       userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
+
+    // A link to a section (#reviews): the section only has its final position now
+    if (routeParams.hash) {
+      await nextTick()
+      document.getElementById(routeParams.hash.slice(1))?.scrollIntoView()
+    }
   }
 })
 
@@ -94,6 +105,15 @@ watch(
     }
   },
 )
+
+// Alerts are extra information, so a failure here should not hide the route.
+async function loadAlerts() {
+  try {
+    alerts.value = await fetchRouteAlerts(routeParams.params.id)
+  } catch (err) {
+    console.warn('Could not load alerts for this route:', err)
+  }
+}
 
 // After a review is saved or deleted, reload the route so its community
 // stats (average rating, effective difficulty, hazard) show the new values.
@@ -120,10 +140,12 @@ async function reloadRoute() {
     </div>
 
     <template v-else>
-      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn"/>
+      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn" :alerts="alerts" />
       <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">
+        <TrailNotices :alerts="alerts" />
+
       <div class="row g-4">
         <section class="col-12">
           <GradeDial :route="route" />
@@ -138,30 +160,9 @@ async function reloadRoute() {
           />
         </section>
 
-        <!-- <section class="col-12">
+        <section class="col-12">
           <WeatherForecast :weather="weather" :error="weatherError" />
-        </section> -->
-
-                <!-- <p
-                  v-for="warning in suitability.warnings"
-                  :key="warning"
-                  class="alert alert-danger mt-4 mb-0"
-                  role="note"
-                >
-                  {{ warning }}
-                </p>
-
-                <p class="small text-body-secondary mt-3 mb-0">
-                  Based on your quiz answers. Only you know your real fitness, so treat this as a
-                  guide.
-                </p>
-              </template>
-            </div>
-          </section> -->
-
-          <section class="col-12">
-            <WeatherForecast :weather="weather" :error="weatherError" />
-          </section>
+        </section>
 
           <section id="plan" class="col-12" aria-labelledby="plan-title">
             <article class="route-plan">
@@ -234,7 +235,8 @@ async function reloadRoute() {
           <TrailRegister
             :route="route"
             :user-id="auth.user?.id ?? null"
-            :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+            :is-admin="auth.isAdmin"
+            :sign-in-to="signInTo"
             @saved="reloadRoute"
             @deleted="reloadRoute"
           />
@@ -245,6 +247,10 @@ async function reloadRoute() {
 </template>
 
 <style scoped>
+#reviews {
+  scroll-margin-top: 24px;
+}
+
 .route-detail {
   min-height: 100vh;
 }
