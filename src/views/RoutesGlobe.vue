@@ -49,6 +49,9 @@ const introMinimumMs = 2200
 const routeDiveMs = 2400
 const routeTileWaitMs = 8000
 const spinDegreesPerMs = 360 / 150000
+// How many map tiles can fail in one view before the user is told about it
+const tileFailuresBeforeWarning = 20
+const mapErrorMessage = "The globe's map couldn't load properly. Refresh the page to try again."
 
 // Where the user was last looking, so coming back from a route's page skips the intro and lands
 // in the same spot. sessionStorage works like localStorage but is cleared when the tab closes,
@@ -72,6 +75,8 @@ const routes = ref([])
 const loading = ref(true)
 const error = ref('')
 const mapError = ref('')
+// Shown when lots of map tiles fail in one view; cleared when the map next moves
+const tileWarning = ref('')
 // 'intro' while loading, 'hero' shows the dim spinning globe, 'explore' lets the user interact
 const phase = ref('intro')
 const styleReady = ref(false)
@@ -105,6 +110,7 @@ const pills = ref([])
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 let introTimer
 let routeDiveTimer
+let failedTiles = 0
 let spinFrame
 let lastSpinTime
 let touchStartY
@@ -721,6 +727,24 @@ watch([loading, mapReady, mapError, introTimeDone], () => {
   }
 })
 
+// One tile failing to download only leaves a small patch the map fills with a blurrier version,
+// so it isn't worth interrupting the user. Lots failing in one view means the imagery is down,
+// and a blank map with no explanation would be worse. Details go to the console rather than
+// showing a raw server error.
+function onMapError(event) {
+  console.warn('Globe map error:', event.error)
+  if (!event.tile) {
+    mapError.value = mapErrorMessage
+    return
+  }
+
+  failedTiles++
+  if (failedTiles >= tileFailuresBeforeWarning) {
+    tileWarning.value =
+      "Some map imagery couldn't load, so parts of the map may be blurry or blank."
+  }
+}
+
 onMounted(async () => {
   if (!introTimeDone.value) {
     introTimer = setTimeout(() => {
@@ -746,10 +770,10 @@ onMounted(async () => {
     // The scale bar goes in the readout rather than in one of the map's own corners
     const scaleControl = new ScaleControl({ maxWidth: 90, unit: 'metric' })
     scaleHost.value.append(scaleControl.onAdd(globeView))
-    globeView.on('error', (event) => {
-      if (event.error) {
-        mapError.value = `Globe rendering error: ${event.error.message}`
-      }
+    globeView.on('error', onMapError)
+    globeView.on('movestart', () => {
+      failedTiles = 0
+      tileWarning.value = ''
     })
     globeView.once('load', () => {
       mapReady.value = true
@@ -765,8 +789,8 @@ onMounted(async () => {
       styleReady.value = true
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    mapError.value = `Unable to initialize the globe: ${message}`
+    console.error(err)
+    mapError.value = mapErrorMessage
   }
 
   try {
@@ -833,7 +857,7 @@ onBeforeUnmount(() => {
       :countries="countries"
       :selected-country="selectedCountry"
       :error="error"
-      :map-error="mapError"
+      :map-error="mapError || tileWarning"
       @fly-to="flyToCountry"
       @show-all="showAllRoutes"
     />
