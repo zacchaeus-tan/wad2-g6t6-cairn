@@ -1,0 +1,574 @@
+/* Styles for GearChecklist.vue, loaded with <style scoped src="./GearChecklist.css"> */
+
+.gear {
+  /* Values used in several places below */
+  --gear-ink: var(--ink, #17201c);
+  --gear-granite: var(--granite-700, #3a4540);
+  --gear-pine: #1f5b43;
+  --gear-danger: #b42318;
+
+  position: relative; /* anchors the confetti overlay */
+  display: grid;
+  gap: 24px;
+}
+
+.gear-message {
+  font-size: 17px;
+}
+
+.gear-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 32px;
+}
+
+/* A ring-bound sheet with a red margin and blue ruling, tilted slightly */
+.gear-pad {
+  position: relative;
+  min-width: 0;
+  filter: drop-shadow(0 16px 24px rgb(23 32 28 / 0.18));
+  transform: rotate(-0.6deg);
+}
+
+.gear-binding {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 34px;
+  padding: 0 24px;
+  background: #2b3832;
+}
+
+.gear-binding i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ground, #f4f1e9);
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.45);
+}
+
+.gear-sheet {
+  --gear-margin: 70px; /* where the red margin line sits */
+
+  position: relative;
+  min-height: 320px;
+  padding: 18px 28px 26px 92px;
+  background-color: var(--notepad, #fbf8ee);
+}
+
+/* Keep the notebook ruling separate from animated content */
+.gear-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent var(--gear-margin),
+      #e5a3a3 var(--gear-margin) calc(var(--gear-margin) + 2px),
+      transparent calc(var(--gear-margin) + 2px)
+    ),
+    repeating-linear-gradient(to bottom, transparent 0 47px, #b8d2e6 47px 48px);
+  background-position:
+    0 0,
+    0 52px;
+}
+
+/* Keep the actual checklist content above the paper decoration */
+.gear-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gear-sheet-head {
+  display: flex;
+  align-items: baseline;
+  height: 34px;
+  margin-bottom: 18px;
+}
+
+.gear-sheet-head strong {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.gear-empty {
+  color: var(--gear-granite);
+  line-height: 48px;
+}
+
+.gear-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gear-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  min-height: 48px;
+}
+
+.gear-item-form {
+  margin: 4px 0 12px;
+}
+
+.gear-item-form-wrapper {
+  grid-column: 1 / -1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gear-item-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  row-gap: 6px;
+  cursor: pointer;
+}
+
+.gear-item-label input {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--gear-granite);
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+/* A hand-drawn tick */
+.gear-item-label input:checked::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: -8px;
+  width: 24px;
+  height: 24px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c2481a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13l5 5L21 4'/%3E%3C/svg%3E")
+    no-repeat center / contain;
+}
+
+.gear-item-label input:focus-visible {
+  outline: 3px solid var(--lake, #1e5f8c);
+  outline-offset: 2px;
+}
+
+.gear-item-text {
+  position: relative;
+  font-size: 17px;
+}
+
+/* A strike that draws across once the item is ticked */
+.gear-item-text::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 55%;
+  height: 2px;
+  background: var(--gear-granite);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.35s var(--ease, ease);
+}
+
+.gear-item-text.is-checked {
+  color: var(--granite-500, #7a867d);
+}
+
+.gear-item-text.is-checked::after {
+  transform: scaleX(1);
+}
+
+.gear-item-quantity {
+  color: var(--gear-granite);
+}
+
+.gear-item-reason {
+  grid-column: 1;
+  padding: 0 0 10px 32px;
+  color: var(--gear-granite);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.gear-item-tools {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.gear-item-tools button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--gear-ink);
+  font: 700 13px var(--font, 'Lato', system-ui, sans-serif);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.gear-item-tools button.is-remove {
+  color: var(--gear-danger);
+}
+
+.gear-item-tools button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gear-form-area {
+  margin-top: 12px;
+}
+
+.gear-side {
+  display: grid;
+  gap: 16px;
+}
+
+.gear-side .cairn-btn {
+  width: 100%;
+}
+
+/* Yellow sticky note */
+.gear-note {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  background: #ffe68a;
+  box-shadow: 0 10px 18px rgb(23 32 28 / 0.15);
+  font-size: 15px;
+  line-height: 22px;
+  transform: rotate(1.5deg);
+}
+
+.gear-note strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gear-note svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.gear-error {
+  padding: 10px 12px;
+  background: #fdecea;
+  color: var(--gear-danger);
+  font-size: 14px;
+}
+
+.gear-category-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid #d5ddd2;
+  border-radius: 20px;
+  background: rgb(232 238 230 / 55%);
+  color: #657667;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  white-space: nowrap;
+}
+
+/* Yellow star confetti */
+.gear-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gear-confetti-star {
+  position: absolute;
+  left: var(--star-x);
+  top: -8%;
+  color: #f5c518;
+  font-size: var(--star-size);
+  opacity: 0;
+  text-shadow: 0 2px 5px rgb(180 130 0 / 0.3);
+  animation: gear-star-fall 3s ease-in var(--star-delay) both;
+}
+
+@keyframes gear-star-fall {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    top: 108%;
+    transform: translateX(var(--star-drift)) rotate(var(--star-rotation)) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Generate button while the checklist is being written */
+.gear-generate {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.gear-generate-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.gear-generate-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  background: rgb(255 255 255 / 0.28);
+}
+
+/* Keep the button at full strength while it works, even though it is disabled */
+.gear-side .gear-generate.is-loading:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
+.gear-generate-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: gear-spin 0.7s linear infinite;
+}
+
+@keyframes gear-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Progress card */
+.gear-progress {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 2px solid var(--gear-ink);
+  background: #fff;
+  font-size: 14px;
+}
+
+.gear-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.gear-progress-top strong {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.gear-progress-percent {
+  color: var(--gear-pine);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.gear-progress-track {
+  height: 8px;
+  overflow: hidden;
+  background: #cbd8ce;
+}
+
+.gear-progress-fill {
+  height: 100%;
+  background: var(--gear-pine);
+}
+
+.gear-complete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #b8d0bd;
+  background: #e3eee5;
+  color: #244a35;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.gear-complete-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gear-pine);
+  color: #fff;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .gear-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* The ruling above reads --gear-margin, so only the values change here */
+  .gear-sheet {
+    --gear-margin: 44px;
+
+    padding-left: 62px;
+  }
+}
+
+/* Custom confirmation dialog */
+.gear-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(23 32 28 / 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.gear-confirm-dialog {
+  width: min(100%, 560px);
+  padding: 40px;
+  border: 2px solid #17201c;
+  background: #fbf8ee;
+  color: #17201c;
+  box-shadow: 0 18px 45px rgb(0 0 0 / 0.2);
+}
+
+.gear-confirm-eyebrow {
+  display: block;
+  margin-bottom: 16px;
+  color: #1f5b43;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.gear-confirm-dialog h3 {
+  margin: 0 0 18px;
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.gear-confirm-dialog p {
+  margin: 0;
+  color: #65736a;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.gear-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.gear-confirm-actions button {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 2px solid #17201c;
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.gear-confirm-cancel {
+  background: transparent;
+  color: #17201c;
+}
+
+.gear-confirm-cancel:hover {
+  background: #e8e9df;
+}
+
+.gear-confirm-accept {
+  background: #1f5b43;
+  border-color: #1f5b43 !important;
+  color: #ffffff;
+}
+
+.gear-confirm-accept:hover {
+  background: #174832;
+}
+
+.gear-confirm-accept.is-danger {
+  background: #a33b32;
+  border-color: #a33b32 !important;
+}
+
+.gear-confirm-accept.is-danger:hover {
+  background: #842e27;
+}
+
+.gear-confirm-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .gear-confirm-dialog {
+    padding: 26px;
+  }
+
+  .gear-confirm-dialog h3 {
+    font-size: 25px;
+  }
+
+  .gear-confirm-dialog p {
+    font-size: 16px;
+  }
+
+  .gear-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .gear-confirm-actions button {
+    width: 100%;
+  }
+}

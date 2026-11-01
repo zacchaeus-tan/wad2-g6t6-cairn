@@ -30,10 +30,36 @@ const form = ref(
 
 const saving = ref(false)
 const saved = ref(false)
+const labelError = ref('')
+const quantityError = ref('')
 checklistStore.clearError()
+
+function validateLabel() {
+  if (!String(form.value.label ?? '').trim()) {
+    labelError.value = 'Item name is required.'
+  } else {
+    labelError.value = ''
+  }
+}
+
+function validateQuantity() {
+  const quantity = String(form.value.quantity ?? '').trim()
+
+  if (!quantity) {
+    quantityError.value = 'Quantity is required.'
+  } else if (!/\d/.test(quantity)) {
+    quantityError.value = 'Please include at least one number.'
+  } else {
+    quantityError.value = ''
+  }
+}
 
 async function submit() {
   if (saving.value || saved.value) return
+  validateLabel()
+  validateQuantity()
+  if (labelError.value || quantityError.value) return
+
   saving.value = true
   checklistStore.clearError()
 
@@ -57,7 +83,7 @@ async function submit() {
 </script>
 
 <template>
-  <form class="checklist-form" data-testid="item-form" @submit.prevent="submit">
+  <form class="checklist-form" data-testid="item-form" novalidate @submit.prevent="submit">
     <h3 class="checklist-form-title">{{ item ? 'Edit item' : 'Add an item' }}</h3>
 
     <div class="checklist-form-fields">
@@ -70,7 +96,13 @@ async function submit() {
           :disabled="saving || saved"
           class="cairn-input checklist-form-input"
           data-testid="item-label-input"
+          :aria-invalid="Boolean(labelError)"
+          @input="validateLabel"
         />
+
+        <p class="checklist-form-field-error" role="alert">
+          {{ labelError }}
+        </p>
       </label>
       <label class="checklist-form-field" for="cl-category">
         <span class="cairn-label">Category</span>
@@ -89,6 +121,7 @@ async function submit() {
           <option value="documents">Documents</option>
           <option value="other">Other</option>
         </select>
+        <p class="checklist-form-field-error"></p>
       </label>
       <label class="checklist-form-field" for="cl-qty">
         <span class="cairn-label">Quantity</span>
@@ -99,7 +132,11 @@ async function submit() {
           class="cairn-input checklist-form-input"
           placeholder="e.g. 2, 3L, 1 pair"
           data-testid="item-quantity-input"
+          @input="validateQuantity"
         />
+        <p class="checklist-form-field-error" role="alert">
+          {{ quantityError }}
+        </p>
       </label>
       <label class="checklist-form-field" for="cl-reason">
         <span class="cairn-label">Reason (optional)</span>
@@ -111,6 +148,7 @@ async function submit() {
           class="cairn-input checklist-form-input"
           data-testid="item-reason-input"
         />
+        <p class="checklist-form-field-error"></p>
       </label>
     </div>
 
@@ -217,5 +255,23 @@ async function submit() {
   .checklist-form-fields {
     grid-template-columns: 1fr;
   }
+}
+
+.checklist-form-field-error {
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.checklist-form-input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.checklist-form-field-error {
+  min-height: 17px;
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 17px;
 }
 </style>
