@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
 import { defaultAlertEnd } from '@/lib/alertDrafts'
+import { fadeMotion } from '@/lib/motion'
 import AdminNote from '@/components/admin/AdminNote.vue'
 
 const props = defineProps({
@@ -13,8 +15,11 @@ const saving = ref(false)
 const saved = ref('') // message after a save
 const drafted = ref(false) // filled in from a hiker report, so worth a check
 const editingId = ref(null) // set while editing a published alert
+const routeSearch = ref('')
 
 const editing = computed(() => editingId.value !== null)
+
+const routeMatches = computed(() => adminStore.searchRoutes(routeSearch.value))
 
 function emptyForm() {
   return {
@@ -29,8 +34,16 @@ function emptyForm() {
 
 const form = ref(emptyForm())
 
+const selectedRoute = computed(() => adminStore.routes.find((r) => r.id === form.value.routeId))
+
+function chooseRoute(route) {
+  form.value.routeId = route.id
+  routeSearch.value = ''
+}
+
 function reset() {
   form.value = emptyForm()
+  routeSearch.value = ''
   drafted.value = false
   editingId.value = null
   adminStore.error = null
@@ -104,12 +117,35 @@ async function submit() {
     <div class="row g-3">
       <div class="col-12 col-md-8 admin-field">
         <label for="alert-route" class="cairn-label">Route</label>
-        <select id="alert-route" v-model="form.routeId" class="cairn-input">
-          <option value="" disabled>Choose a route</option>
-          <option v-for="route in adminStore.routes" :key="route.id" :value="route.id">
-            {{ route.name }}<template v-if="route.country"> ({{ route.country }})</template>
-          </option>
-        </select>
+        <!-- Enter would otherwise submit the whole form while searching -->
+        <input
+          id="alert-route"
+          v-model="routeSearch"
+          type="search"
+          class="cairn-input"
+          placeholder="Route name or country"
+          autocomplete="off"
+          @keydown.enter.prevent
+        />
+        <motion.ul v-if="routeMatches.length" v-bind="fadeMotion" class="admin-results">
+          <li v-for="route in routeMatches" :key="route.id">
+            <button type="button" @click="chooseRoute(route)">
+              <span
+                >{{ route.name }} <span class="admin-hint">{{ route.country }}</span></span
+              >
+            </button>
+          </li>
+        </motion.ul>
+        <!-- The key replays the fade each time the route changes -->
+        <motion.p
+          v-if="selectedRoute"
+          :key="selectedRoute.id"
+          v-bind="fadeMotion"
+          class="mt-2 mb-0"
+        >
+          Selected: <strong>{{ selectedRoute.name }}</strong>
+          <span class="admin-hint"> {{ selectedRoute.country }}</span>
+        </motion.p>
       </div>
 
       <div class="col-12 col-md-4 admin-field">

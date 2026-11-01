@@ -73,10 +73,11 @@ Distance: ${route.distance_km ?? 'unknown'} km
 Elevation gain: ${route.elevation_gain_m ?? 'unknown'} m
 Maximum altitude: ${route.altitude_m ?? 'unknown'} m
 Usual duration: ${route.duration_days ?? 'unknown'} days
-Difficulty: ${route.technical_rating ?? 'unknown'}
+Difficulty (1 easy to 4 strenuous): ${route.effective_difficulty ?? route.official_difficulty ?? 'unknown'}
 Safety status: ${route.safety_status ?? 'unknown'}
-Permit required: ${route.permit_required ? 'yes' : 'no'}
-Guide required: ${route.guide_required ? 'yes' : 'no'}
+Permit required: ${route.permit_required == null ? 'unknown' : route.permit_required ? 'yes' : 'no'}
+Permit hint: ${route.permit_hint ?? 'none'}
+Guide required: ${route.guide_required ? 'yes' : 'unknown'}
 
 Checkpoints in order:
 ${stops}
@@ -110,7 +111,8 @@ Reply with JSON only, in exactly this shape:
   ],
   "tips": ["general tips for this route"]
 }
-The "days" array must have exactly one entry per day, with consecutive dates from the start date.`
+The "days" array must have exactly one entry per day, with consecutive dates from the start date.
+If a permit or guide is required or unknown, include this in "tips": "Check permit and guide requirements before you go".`
 
 Deno.serve(async (req) => {
   // Browser preflight request
