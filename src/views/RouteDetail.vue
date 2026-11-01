@@ -30,12 +30,15 @@ const error = ref('')
 const itinerary = ref(null)
 const itineraryLoading = ref(false)
 const itineraryError = ref('')
+// itinerary input for checklist generation
+const itineraryInputs = ref(null)
 
 async function onGenerate(form) {
   itineraryLoading.value = true
   itineraryError.value = ''
   try {
     itinerary.value = await generateItinerary(route.value, form)
+    itineraryInputs.value = form
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     itineraryError.value = `Unable to generate an itinerary: ${message}`
@@ -216,7 +219,15 @@ async function reloadRoute() {
         </div>
 
         <section id="gear" class="mt-4" aria-labelledby="gear-title">
-          <GearChecklist :route="route" :is-logged-in="auth.isLoggedIn" :sign-in-to="signInTo" />
+          <GearChecklist
+            :route="route"
+            :weather="weather"
+            :weather-ready="Boolean(weather) || Boolean(weatherError)"
+            :itinerary="itinerary"
+            :trip="itineraryInputs"
+            :is-logged-in="auth.isLoggedIn"
+            :sign-in-to="signInTo"
+          />
         </section>
 
         <section id="reviews" class="mt-4">
