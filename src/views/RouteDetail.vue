@@ -19,7 +19,7 @@ import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 import TrailNotices from '@/components/routes/TrailNotices.vue'
 import RouteSuitability from '@/components/routes/RouteSuitability.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
-import WalkedTrail from '@/components/routes/WalkedTrail.vue'
+import TrailAnimation from '@/components/routes/TrailAnimation.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -154,7 +154,7 @@ const { scrollYProgress: trailProgress } = useScroll({
       <RouteNumbers :route="route" />
 
       <div ref="journey" class="route-journey">
-      <WalkedTrail :progress="trailProgress" />
+      <TrailAnimation :progress="trailProgress" />
 
       <div class="container route-detail-sections py-5">
         <TrailNotices :alerts="alerts" />
