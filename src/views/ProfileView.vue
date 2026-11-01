@@ -9,7 +9,7 @@ import ProfileExperience from '@/components/profile/ProfileExperience.vue'
 import ProfileHikeTotals from '@/components/profile/ProfileHikeTotals.vue'
 import ProfileSavedRoutes from '@/components/profile/ProfileSavedRoutes.vue'
 import ProfileChecklists from '@/components/profile/ProfileChecklists.vue'
-import ridgePhoto from '@/assets/img/card-ridge-hikers.jpg'
+import mountainPhoto from '@/assets/img/card-mountain.jpg'
 
 const EASE = [0.16, 1, 0.3, 1]
 const PLANK_SPRING = { type: 'spring', stiffness: 320, damping: 24 }
@@ -65,7 +65,7 @@ onMounted(async () => {
 
 <template>
   <div class="cairn profile-page">
-    <img class="profile-photo" :src="ridgePhoto" alt="" />
+    <img class="profile-photo" :src="mountainPhoto" alt="" />
 
     <div class="cairn-wrap profile-trail">
       <p v-if="!auth.profile" class="profile-note">
