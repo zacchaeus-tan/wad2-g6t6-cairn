@@ -5,7 +5,7 @@ import { fadeMotion } from '@/lib/motion'
 
 // A square tinted message box.
 defineProps({
-  type: { type: String, required: true }, // error or success
+  type: { type: String, required: true }, // error, success or empty
 })
 
 const ROLES = { error: 'alert', success: 'status' }
@@ -33,5 +33,10 @@ const ROLES = { error: 'alert', success: 'status' }
 .notice-box.is-success {
   background: var(--pine-mist);
   color: var(--pine);
+}
+
+.notice-box.is-empty {
+  background: var(--paper);
+  color: var(--granite-700);
 }
 </style>

@@ -8,7 +8,14 @@ import {
   getProfile,
   updateQuizAnswers,
   updateExperience,
+  updateProfile,
+  updatePassword,
 } from '@/model/authModel'
+import {
+  profileColumnsFrom,
+  validatePasswordForm,
+  validateProfileForm,
+} from '@/lib/profileTools'
 
 let sessionReady = null
 
@@ -111,6 +118,37 @@ export const useAuthStore = defineStore('auth', {
 
       this.profile = { ...this.profile, ...fields }
       return { success: true, raised }
+    },
+
+    async saveProfile({ name, age, gender, country, about }) {
+      const form = { name, age, gender, country, about }
+      const [problem] = Object.values(validateProfileForm(form))
+      if (problem || !this.user) return this.failAccountChange(problem ?? 'Not signed in')
+
+      this.error = null
+      const { data, error } = await updateProfile(this.user.id, profileColumnsFrom(form))
+
+      if (error) return this.failAccountChange(error.message)
+      if (!data?.length) return this.failAccountChange('You do not have permission to edit this profile.')
+
+      await this.fetchProfile()
+      return { success: true }
+    },
+
+    async changePassword(password) {
+      const { password: problem } = validatePasswordForm({ password, confirm: password })
+      if (problem || !this.user) return this.failAccountChange(problem ?? 'Not signed in')
+
+      this.error = null
+      const { error } = await updatePassword(password)
+
+      if (error) return this.failAccountChange(error.message)
+      return { success: true }
+    },
+
+    failAccountChange(message) {
+      this.error = message
+      return { success: false, error: message }
     },
 
     async fetchProfile() {
