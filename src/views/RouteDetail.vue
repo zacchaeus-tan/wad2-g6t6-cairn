@@ -138,11 +138,11 @@ async function reloadRoute() {
           />
         </section>
 
-        <section class="col-12">
+        <!-- <section class="col-12">
           <WeatherForecast :weather="weather" :error="weatherError" />
-        </section>
+        </section> -->
 
-                <p
+                <!-- <p
                   v-for="warning in suitability.warnings"
                   :key="warning"
                   class="alert alert-danger mt-4 mb-0"
@@ -157,7 +157,7 @@ async function reloadRoute() {
                 </p>
               </template>
             </div>
-          </section>
+          </section> -->
 
           <section class="col-12">
             <WeatherForecast :weather="weather" :error="weatherError" />
