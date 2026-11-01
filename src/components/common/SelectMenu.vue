@@ -229,10 +229,4 @@ function onFocusOut(event) {
   height: 14px;
   color: var(--pine);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .select-menu-chevron {
-    transition: none;
-  }
-}
 </style>

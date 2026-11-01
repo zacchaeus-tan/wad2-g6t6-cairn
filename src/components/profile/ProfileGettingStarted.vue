@@ -146,10 +146,4 @@ watch(
   align-items: center;
   min-height: 44px;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .getting-started-box.is-drawing :deep(path) {
-    animation: none;
-  }
-}
 </style>

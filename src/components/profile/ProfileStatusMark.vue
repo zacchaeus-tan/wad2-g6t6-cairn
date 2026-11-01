@@ -65,10 +65,4 @@ watch(
     stroke-dashoffset: 0;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .status-mark.is-drawing :deep(path) {
-    animation: none;
-  }
-}
 </style>

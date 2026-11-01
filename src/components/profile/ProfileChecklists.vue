@@ -517,11 +517,6 @@ function packedCount(items) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .checklist-item-name {
-    transition: none;
-  }
-}
 .checklist-print {
   display: none;
 }

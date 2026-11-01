@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { AnimatePresence, motion, useReducedMotion } from 'motion-v'
+import { AnimatePresence, motion } from 'motion-v'
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import {
   ROUTE_FILTERS,
@@ -21,7 +21,6 @@ import ProfileStatusMark from './ProfileStatusMark.vue'
 // Uses the store directly: SaveRouteButton changes this same list from inside each row.
 const userRoutesStore = useUserRoutesStore()
 const rowMotion = useRowArrivals()
-const reduceMotion = useReducedMotion()
 
 const filter = ref('all')
 const sort = ref('name')
@@ -108,7 +107,7 @@ function statusText(route) {
         v-for="(route, index) in visibleRoutes"
         :key="route.id"
         v-bind="rowMotion('route-' + route.id, index)"
-        :layout="!reduceMotion"
+        layout
         class="profile-route"
       >
         <div class="profile-route-info">
@@ -194,17 +193,66 @@ function statusText(route) {
   border-bottom: 2px solid var(--ink);
 }
 
+/* Each route is a post-it. The shadow is on the row, so the cut corner on the sheet can't clip it */
 .profile-route {
+  --curl: 16px; /* inside the 20px padding, so it never covers content */
+  --curl-reach: calc(var(--curl) * 1.414); /* corner to the fold's inner point */
+  --curl-from: 45deg;
+  --cut: polygon(0 0, 100% 0, 100% 100%, var(--curl) 100%, 0 calc(100% - var(--curl)));
+  --fold: polygon(0 0, 100% 0, 100% 100%);
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 16px 32px;
-  padding: 20px 0;
+  padding: 20px 24px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 10px 18px rgb(23 32 28 / 0.15));
 }
 
-.profile-route + .profile-route {
-  border-top: 1px solid var(--granite-200);
+.profile-route:nth-child(even) {
+  --curl-from: -45deg;
+  --cut: polygon(0 0, 100% 0, 100% calc(100% - var(--curl)), calc(100% - var(--curl)) 100%, 0 100%);
+  --fold: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* The sheet, its adhesive strip and the short shadow under the fold */
+.profile-route::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -1px;
+  z-index: -1;
+  background:
+    linear-gradient(
+      var(--curl-from),
+      rgb(23 32 28 / 0.16) var(--curl-reach),
+      transparent calc(var(--curl-reach) + 6px)
+    ),
+    linear-gradient(rgb(255 201 77 / 0.35), rgb(255 201 77 / 0.35)) top / 100% 10px no-repeat,
+    linear-gradient(to top right, #fff6c4, #ffeea0);
+  clip-path: var(--cut);
+}
+
+/* The corner folded over, showing the paper's underside */
+.profile-route::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  z-index: -1;
+  width: var(--curl);
+  height: var(--curl);
+  background: var(--hazard);
+  clip-path: var(--fold);
+}
+
+.profile-route:nth-child(odd)::after {
+  left: 0;
+}
+
+.profile-route:nth-child(even)::after {
+  right: 0;
 }
 
 .profile-route-info {
