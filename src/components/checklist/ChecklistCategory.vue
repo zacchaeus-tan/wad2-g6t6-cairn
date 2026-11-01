@@ -1,165 +1,139 @@
 <script setup>
-import ChecklistItem from './ChecklistItem.vue'
+import { computed, ref, watch } from 'vue'
+import { motion } from 'motion-v'
 
-defineProps({
-  group: {
-    type: Object,
-    required: true,
-  },
-  collapsed: {
-    type: Boolean,
-    default: false,
-  },
-  isSaved: {
-    type: Boolean,
-    default: false,
-  },
-  editingItem: {
-    type: Object,
-    default: null,
-  },
-  showForm: {
-    type: Boolean,
-    default: false,
-  },
-  checklistId: {
-    type: [String, Number],
-    default: null,
-  },
-  deletingItemId: {
-    type: [String, Number],
-    default: null,
+const props = defineProps({
+  items: {
+    type: Array,
+    default: () => [],
   },
 })
 
-const emit = defineEmits([
-  'toggle-category',
-  'toggle-item',
-  'edit-item',
-  'remove-item',
-  'form-done',
+const selectedCategory = ref('all')
+
+const categoryLabels = {
+  clothing: 'Clothing',
+  safety: 'Safety',
+  navigation: 'Navigation',
+  water_food: 'Water & Food',
+  shelter: 'Shelter',
+  documents: 'Documents',
+  other: 'Other',
+}
+
+const categoryFilters = computed(() => [
+  {
+    value: 'all',
+    label: 'All',
+    count: props.items.length,
+  },
+  ...Object.entries(categoryLabels)
+    .map(([value, label]) => ({
+      value,
+      label,
+      count: props.items.filter((item) => (item.category || 'other') === value).length,
+    }))
+    .filter((category) => category.count > 0),
 ])
+
+const filteredItems = computed(() => {
+  if (selectedCategory.value === 'all') {
+    return props.items
+  }
+
+  return props.items.filter((item) => (item.category || 'other') === selectedCategory.value)
+})
+
+function resetCategory() {
+  selectedCategory.value = 'all'
+}
+
+watch(categoryFilters, (filters) => {
+  if (
+    selectedCategory.value !== 'all' &&
+    !filters.some((category) => category.value === selectedCategory.value)
+  ) {
+    selectedCategory.value = 'all'
+  }
+})
+
+defineExpose({
+  resetCategory,
+})
 </script>
 
 <template>
-  <div class="gear-category-group">
-    <button
-      type="button"
-      class="gear-category-heading"
-      :aria-expanded="!collapsed"
-      @click="emit('toggle-category', group.key)"
+  <div>
+    <nav v-if="items.length" class="gear-category-tabs" aria-label="Filter checklist by category">
+      <motion.button
+        v-for="category in categoryFilters"
+        :key="category.value"
+        type="button"
+        class="gear-category-tab"
+        :class="{ 'is-active': selectedCategory === category.value }"
+        :aria-pressed="selectedCategory === category.value"
+        @click="selectedCategory = category.value"
+        :whileHover="{ y: -1 }"
+        :whilePress="{ scale: 0.97 }"
+      >
+        <span class="gear-category-tab-label">
+          {{ category.label }}
+        </span>
+
+        <span class="gear-category-tab-count">
+          {{ category.count }}
+        </span>
+      </motion.button>
+    </nav>
+
+    <motion.div
+      :key="selectedCategory"
+      :initial="{ opacity: 0, y: 5 }"
+      :animate="{ opacity: 1, y: 0 }"
+      :transition="{ duration: 0.2, ease: 'easeOut' }"
     >
-      <span class="gear-category-icon">
-        <img
-          v-if="typeof group.icon === 'string' && group.icon.includes('/')"
-          :src="group.icon"
-          :alt="group.label"
-          class="gear-category-icon"
-        />
-
-        <span v-else>{{ group.icon }}</span>
-      </span>
-
-      <span class="gear-category-title">
-        {{ group.label }}
-      </span>
-
-      <span class="gear-category-rule"></span>
-
-      <small>
-        {{ group.items.filter((item) => item.is_checked).length }}
-        / {{ group.items.length }}
-      </small>
-
-      <span class="gear-category-chevron" :class="{ 'is-collapsed': collapsed }" aria-hidden="true">
-        ⌄
-      </span>
-    </button>
-
-    <div v-if="!collapsed" class="gear-item-list">
-      <ChecklistItem
-        v-for="item in group.items"
-        :key="item.id"
-        :item="item"
-        :is-saved="isSaved"
-        :checklist-id="checklistId"
-        :is-deleting="deletingItemId === item.id"
-        :is-editing="showForm && editingItem?.id === item.id"
-        @toggle-item="emit('toggle-item', $event)"
-        @edit-item="emit('edit-item', $event)"
-        @remove-item="emit('remove-item', $event)"
-        @form-done="emit('form-done', $event)"
-      />
-    </div>
+      <slot :items="filteredItems" :category-labels="categoryLabels" />
+    </motion.div>
   </div>
 </template>
 
 <style scoped>
-.gear-category-group {
-  margin-top: 14px;
-}
-
-.gear-category-heading {
+.gear-category-tabs {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.gear-category-tab {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 0 10px;
-  border: 0;
-  border-bottom: 1px solid #cfd7cf;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid #aeb9ae;
   background: transparent;
-  text-align: left;
+  color: var(--ink, #17201c);
+  font: inherit;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.gear-category-heading:focus-visible {
-  outline: 2px solid var(--gear-pine, #1f5b43);
-  outline-offset: 4px;
+.gear-category-tab.is-active {
+  border-color: #2b3832;
+  background: #2b3832;
+  color: #fff;
 }
 
-.gear-category-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 25px;
-  width: 25px;
-  height: 25px;
-  background: #e2eae2;
-  color: var(--gear-pine, #1f5b43);
-  font-size: 15px;
+.gear-category-tab-label,
+.gear-category-tab-count {
+  position: relative;
 }
 
-.gear-category-title {
-  color: var(--gear-ink, #17201c);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.gear-category-rule {
-  flex: 1;
-  height: 1px;
-  background: #d7ddd6;
-}
-
-.gear-category-heading small {
-  color: #7a867d;
+.gear-category-tab-count {
   font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.gear-category-chevron {
-  color: #68776d;
-  font-size: 19px;
-  line-height: 1;
-  transition: transform 0.2s;
-}
-
-.gear-category-chevron.is-collapsed {
-  transform: rotate(-90deg);
-}
-
-.gear-item-list {
-  border-bottom: 1px solid #dce1da;
+  opacity: 0.75;
 }
 </style>

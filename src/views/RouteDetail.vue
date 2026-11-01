@@ -10,7 +10,7 @@ import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 import { checkRouteSuitability } from '@/lib/matching'
 import { useChecklistStore } from '@/controller/checklistStore'
-import GearChecklistPanel from '../components/checklist/GearChecklistPanel.vue'
+import GearChecklist from '@/components/checklist/GearChecklist.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
@@ -22,6 +22,8 @@ const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
 const checklistStore = useChecklistStore()
 const route = ref(null)
+// "Sign in" links come back to this page afterwards
+const signInTo = computed(() => ({ name: 'auth', query: { redirect: routeParams.fullPath } }))
 const loading = ref(true)
 const error = ref('')
 
@@ -132,40 +134,6 @@ async function reloadRoute() {
     console.warn('Could not reload the route after a review change:', err)
   }
 }
-
-// // gear checklist
-// async function generateChecklist() {
-//   if (
-//     checklistStore.items.length &&
-//     !confirm('Generating a new checklist will delete the current one and replace it. Continue?')
-//   ) {
-//     return
-//   }
-//   await checklistStore.generate(route.value)
-// }
-
-// const showForm = ref(false)
-// const editingItem = ref(null)
-
-// function openForm(item = null) {
-//   editingItem.value = item
-//   showForm.value = true
-// }
-
-// function closeForm() {
-//   showForm.value = false
-//   editingItem.value = null
-//   checklistStore.clearError()
-// }
-
-// const isSaved = computed(() => Boolean(checklistStore.checklist?.is_saved))
-
-// async function onToggleSaved() {
-//   await checklistStore.toggleSaved()
-//   if (!isSaved.value) {
-//     closeForm() // don't leave a half-open form behind after unsaving
-//   }
-// }
 </script>
 
 <template>
@@ -300,8 +268,8 @@ async function reloadRoute() {
           </section>
         </div>
 
-        <section class="mt-4 route-checklist">
-          <GearChecklistPanel :route="route" />
+        <section id="gear" class="mt-4" aria-labelledby="gear-title">
+          <GearChecklist :route="route" :is-logged-in="auth.isLoggedIn" :sign-in-to="signInTo" />
         </section>
 
         <section id="reviews" class="mt-4">
@@ -419,67 +387,5 @@ async function reloadRoute() {
 
 .route-match-checks li + li {
   margin-top: 0.75rem;
-}
-
-.route-checklist .route-detail-section {
-  border-color: #dee2e6;
-}
-
-.route-checklist-toolbar {
-  align-items: center;
-}
-
-/* Checklist items container */
-.route-checklist-list {
-  margin-top: 0.75rem;
-  padding: 0;
-  list-style: none;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-/* Individual checklist item */
-.route-checklist .route-checklist-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.route-checklist .route-checklist-row + .route-checklist-row {
-  border-top: 1px solid #dee2e6;
-}
-
-/* Checkbox */
-.route-checklist-row .form-check-input {
-  flex-shrink: 0;
-  margin-top: 0.25rem;
-}
-
-/* Item name, quantity and reason */
-.route-checklist-item-content {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.5;
-}
-
-/* Edit and remove actions */
-.route-checklist-item-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
-}
-
-/* Spacing around the add/edit form */
-.route-checklist .checklist-form-area {
-  margin-top: 1rem;
 }
 </style>

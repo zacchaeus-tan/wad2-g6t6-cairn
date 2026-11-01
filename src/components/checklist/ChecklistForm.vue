@@ -10,24 +10,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['done'])
 
+const SAVED_DELAY_MS = 1500 // how long the green "Saved" state shows before the form closes
+
 const checklistStore = useChecklistStore()
 
-const categories = [
-  { key: 'clothing', label: 'Clothing' },
-  { key: 'safety', label: 'Safety' },
-  { key: 'navigation', label: 'Navigation' },
-  { key: 'water_food', label: 'Water & food' },
-  { key: 'shelter', label: 'Shelter' },
-  { key: 'documents', label: 'Documents' },
-  { key: 'other', label: 'Other' },
-]
-
-const blank = () => ({
-  label: '',
-  category: 'other',
-  quantity: '',
-  reason: '',
-})
+const blank = () => ({ label: '', category: 'other', quantity: '', reason: '' })
 
 const form = ref(
   props.item
@@ -39,35 +26,27 @@ const form = ref(
       }
     : blank(),
 )
+
 const saving = ref(false)
 const saved = ref(false)
+checklistStore.clearError()
 
 async function submit() {
-  if (saving.value || saved.value) {
-    return
-  }
+  if (saving.value || saved.value) return
   saving.value = true
   checklistStore.clearError()
 
-  let ok = false
   try {
-    if (props.item) {
-      ok = await checklistStore.updateItem(props.item.id, form.value)
-    } else {
-      ok = await checklistStore.addCustom(form.value, props.checklistId)
-    }
-    if (!ok || checklistStore.error) {
-      return
-    }
+    const ok = props.item
+      ? await checklistStore.updateItem(props.item.id, form.value)
+      : await checklistStore.addCustom(form.value, props.checklistId)
 
+    if (!ok || checklistStore.error) return
+
+    saving.value = false
     saved.value = true
-
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-
-    emit('done', {
-      saved: true,
-      action: props.item ? 'updated' : 'added',
-    })
+    await new Promise((resolve) => setTimeout(resolve, SAVED_DELAY_MS))
+    emit('done', { saved: true, action: props.item ? 'updated' : 'added' })
   } catch (error) {
     console.error('Could not save checklist item:', error)
   } finally {
@@ -77,98 +56,95 @@ async function submit() {
 </script>
 
 <template>
-  <form class="border rounded p-3 mt-3" data-testid="item-form" @submit.prevent="submit">
-    <h3 class="h3">{{ item ? 'Edit item' : 'Add a custom item' }}</h3>
+  <form class="checklist-form" data-testid="item-form" @submit.prevent="submit">
+    <h3 class="checklist-form-title">{{ item ? 'Edit item' : 'Add an item' }}</h3>
 
-    <div class="row g-3">
-      <div class="col-12">
-        <label for="checklist-item-name">Item name</label>
+    <div class="checklist-form-fields">
+      <label class="checklist-form-field" for="cl-label">
+        <span>Item name</span>
         <input
-          id="checklist-item-name"
+          id="cl-label"
           v-model="form.label"
-          type="text"
           :maxlength="maxNameLength"
-          class="form-control"
-          required
+          :disabled="saving || saved"
+          class="checklist-form-input"
+          data-testid="item-label-input"
         />
-      </div>
-
-      <div class="col-md-6">
-        <label for="checklist-item-category">Category</label>
+      </label>
+      <label class="checklist-form-field" for="cl-category">
+        <span>Category</span>
         <select
-          id="checklist-item-category"
+          id="cl-category"
           v-model="form.category"
-          class="form-select"
           :disabled="saving || saved"
+          class="checklist-form-input"
+          data-testid="item-category-select"
         >
-          <option v-for="category in categories" :key="category.key" :value="category.key">
-            {{ category.label }}
-          </option>
+          <option value="clothing">Clothing</option>
+          <option value="safety">Safety</option>
+          <option value="navigation">Navigation</option>
+          <option value="water_food">Water &amp; Food</option>
+          <option value="shelter">Shelter</option>
+          <option value="documents">Documents</option>
+          <option value="other">Other</option>
         </select>
-      </div>
-
-      <div class="col-md-6">
-        <label for="checklist-item-quantity">Quantity</label>
+      </label>
+      <label class="checklist-form-field" for="cl-qty">
+        <span>Quantity</span>
         <input
-          id="checklist-item-quantity"
+          id="cl-qty"
           v-model="form.quantity"
-          class="form-control"
-          type="text"
+          :disabled="saving || saved"
+          class="checklist-form-input"
           placeholder="e.g. 2, 3L, 1 pair"
-          required
-          :disabled="saving || saved"
+          data-testid="item-quantity-input"
         />
-      </div>
-
-      <div class="col-12">
-        <label for="checklist-item-reason">Reason (optional)</label>
+      </label>
+      <label class="checklist-form-field" for="cl-reason">
+        <span>Reason (optional)</span>
         <input
-          id="checklist-item-reason"
+          id="cl-reason"
           v-model="form.reason"
-          type="text"
           :maxlength="maxReasonLength"
-          class="form-control"
-          placeholder="Why do you need this item?"
           :disabled="saving || saved"
+          class="checklist-form-input"
+          data-testid="item-reason-input"
         />
-      </div>
+      </label>
     </div>
 
-    <p v-if="checklistStore.error" class="gear-error" role="alert">
+    <div
+      v-if="checklistStore.error"
+      class="checklist-form-error"
+      role="alert"
+      data-testid="item-form-error"
+    >
       {{ checklistStore.error }}
-    </p>
-    <br />
+    </div>
 
     <div class="checklist-form-actions">
       <motion.button
         type="submit"
-        class="gear-button checklist-save-button"
-        :class="{
-          'is-saving': saving,
-          'is-saved': saved,
-          'is-disabled': saving || saved,
-        }"
+        class="checklist-form-button is-primary"
         :disabled="saving || saved"
         :animate="{
-          scale: saved ? 1.02 : 1,
-          backgroundColor: saved ? '#e3eee6' : '#17201c',
-          color: saved ? '#1f5b43' : '#ffffff',
+          scale: saved ? 1.03 : 1,
+          backgroundColor: saved ? '#1f5b43' : '#17201c',
+          borderColor: saved ? '#1f5b43' : '#17201c',
         }"
-        :transition="{
-          type: 'spring',
-          stiffness: 350,
-          damping: 22,
-        }"
+        :transition="{ type: 'spring', stiffness: 350, damping: 22 }"
+        data-testid="item-submit-btn"
       >
-        <span v-if="saved">✓ Saved</span>
+        <span v-if="saved">✓ {{ item ? 'Saved' : 'Added' }}</span>
         <span v-else-if="saving">Saving...</span>
         <span v-else>{{ item ? 'Save changes' : 'Add item' }}</span>
       </motion.button>
 
       <button
+        class="checklist-form-button"
         type="button"
-        class="gear-button"
         :disabled="saving || saved"
+        data-testid="item-cancel-btn"
         @click="emit('done', { saved: false })"
       >
         Cancel
@@ -178,65 +154,122 @@ async function submit() {
 </template>
 
 <style scoped>
-.gear-inline-form {
-  display: block;
-  flex: 0 0 100%;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  margin: 8px 0 4px;
-  padding: 20px !important;
-  border: 1px solid #b9cdbd !important;
-  border-left: 4px solid var(--gear-pine, #1f5b43) !important;
-  border-radius: 0 !important;
-  background: #f8faf6 !important;
-  box-shadow: 0 8px 22px rgb(23 32 28 / 0.07);
+.checklist-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 2px solid #17201c;
+  background: #ffffff;
+  font-family: 'Lato', 'Noto Sans Thai', system-ui, sans-serif;
 }
 
-.gear-inline-form h3 {
-  margin: 0 0 15px !important;
-  color: var(--gear-ink, #17201c);
-  font-size: 17px;
-  font-weight: 800;
+.checklist-form-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
 }
 
-.gear-inline-form label {
-  display: block;
-  margin-bottom: 6px;
-  color: #48564d;
-  font-size: 13px;
+.checklist-form-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checklist-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.checklist-form-field span {
+  color: #3a4540;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.gear-inline-form input,
-.gear-inline-form select {
-  min-height: 42px;
-  border: 1px solid #c8d2c9;
+.checklist-form-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1.5px solid #c9d0cb;
   border-radius: 0;
-  background: #fff;
-  color: var(--gear-ink, #17201c);
-  font: 400 14px/1.4 var(--font, 'Lato', system-ui, sans-serif);
-  box-shadow: none;
+  background: #ffffff;
+  color: #17201c;
+  font:
+    400 15px 'Lato',
+    system-ui,
+    sans-serif;
 }
 
-.gear-inline-form input:focus,
-.gear-inline-form select:focus {
-  border-color: var(--gear-pine, #1f5b43);
-  box-shadow: 0 0 0 3px #1f5b431c;
+.checklist-form-input:focus {
+  outline: none;
+  border-color: #17201c;
+  box-shadow: 0 0 0 3px rgb(30 95 140 / 0.25);
 }
 
-.gear-inline-form button {
+.checklist-form-input:disabled {
+  opacity: 0.6;
+}
+
+.checklist-form-error {
+  padding: 8px 10px;
+  background: #fdecea;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.checklist-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.checklist-form-button {
   min-height: 40px;
   padding: 0 16px;
+  border: 2px solid #17201c;
   border-radius: 0;
-  font: 700 13px/1 var(--font, 'Lato', system-ui, sans-serif);
+  background: transparent;
+  color: #17201c;
+  font:
+    700 13px 'Lato',
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
-@media (max-width: 650px) {
-  .gear-inline-form {
-    flex-basis: 100%;
-    width: 100%;
+/* The primary button's background and border colour are animated by motion */
+.checklist-form-button.is-primary {
+  color: #ffffff;
+}
+
+.checklist-form-button:not(.is-primary):hover {
+  background: #1f5b43;
+  border-color: #1f5b43;
+  color: #ffffff;
+}
+
+.checklist-form-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Keep the green "Saved" button fully visible even though it is disabled */
+.checklist-form-button.is-primary:disabled {
+  opacity: 1;
+}
+
+.checklist-form-button:focus-visible {
+  outline: 3px solid #1e5f8c;
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .checklist-form-fields {
+    grid-template-columns: 1fr;
   }
 }
 </style>
