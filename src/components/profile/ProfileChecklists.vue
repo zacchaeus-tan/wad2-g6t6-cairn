@@ -11,11 +11,15 @@ import NoticeBox from '@/components/common/NoticeBox.vue'
 import TickIcon from '@/components/common/TickIcon.vue'
 import ProfileLoadError from './ProfileLoadError.vue'
 import ProfileSkeleton from './ProfileSkeleton.vue'
+import ConfirmDialog from '@/components/common/confirmDialog.vue'
 
 // Uses the store directly: ChecklistForm writes through it and shows its errors.
 const checklistStore = useChecklistStore()
 
 const arrivalMotion = useRowArrivals()
+const confirmation = ref(null)
+// Tracks which item is currently being removed
+const deletingItemId = ref(null)
 
 // which checklists are expanded
 const openIds = ref([])
@@ -52,10 +56,38 @@ async function onFormDone() {
   await checklistStore.loadSaved()
 }
 
-async function onRemove(item) {
-  if (await checklistStore.deleteItem(item.id)) {
-    if (formState.value?.item?.id === item.id) closeForm()
-    await checklistStore.loadSaved()
+function requestRemove(item) {
+  // Prevent another deletion while one is in progress
+  if (deletingItemId.value !== null) return
+
+  confirmation.value = {
+    type: 'delete',
+    item,
+  }
+}
+
+function cancelConfirmation() {
+  confirmation.value = null
+}
+
+async function confirmRemove() {
+  const action = confirmation.value
+
+  if (!action || action.type !== 'delete') return
+
+  confirmation.value = null
+  deletingItemId.value = action.item.id
+
+  try {
+    if (await checklistStore.deleteItem(action.item.id)) {
+      if (formState.value?.item?.id === action.item.id) {
+        closeForm()
+      }
+
+      await checklistStore.loadSaved()
+    }
+  } finally {
+    deletingItemId.value = null
   }
 }
 
@@ -182,7 +214,7 @@ function packedCount(items) {
           >
             <div class="checklist-sheet">
               <div class="checklist-sheet-head">
-                <h3 class="checklist-sheet-title">{{ c.route_name }} · pack list</h3>
+                <h3 class="checklist-sheet-title">{{ c.route_name }} · packing list</h3>
                 <div class="checklist-sheet-tools">
                   <button
                     type="button"
@@ -239,37 +271,65 @@ function packedCount(items) {
                       <button type="button" class="cairn-link" @click="openForm(c.id, item)">
                         Edit
                       </button>
-                      <button type="button" class="cairn-link" @click="onRemove(item)">
-                        Remove
+
+                      <button
+                        type="button"
+                        class="is-remove"
+                        :disabled="deletingItemId === item.id"
+                        @click="requestRemove(item)"
+                      >
+                        {{ deletingItemId === item.id ? 'Removing…' : 'Remove' }}
                       </button>
                     </div>
-                    <ChecklistForm
-                      v-if="formState?.checklistId === c.id && formState.item?.id === item.id"
-                      :key="item.id"
-                      class="checklist-item-form"
-                      :item="formState.item"
-                      :checklist-id="c.id"
-                      @done="onFormDone"
-                    />
+                    <AnimatePresence>
+                      <motion.div
+                        v-if="formState?.checklistId === c.id && formState.item?.id === item.id"
+                        :key="'edit-' + item.id"
+                        class="checklist-item-form-wrapper"
+                        :initial="{ opacity: 0, height: 0, y: -8 }"
+                        :animate="{ opacity: 1, height: 'auto', y: 0 }"
+                        :exit="{ opacity: 0, height: 0, y: -8 }"
+                        :transition="{ duration: 0.3, ease: EASE_OUT }"
+                      >
+                        <ChecklistForm
+                          :item="formState.item"
+                          :checklist-id="c.id"
+                          @done="onFormDone"
+                        />
+                      </motion.div>
+                    </AnimatePresence>
                   </motion.li>
                 </AnimatePresence>
               </div>
 
               <div class="checklist-add">
-                <ChecklistForm
-                  v-if="formState?.checklistId === c.id && !formState.item"
-                  key="new"
-                  :checklist-id="c.id"
-                  @done="onFormDone"
-                />
-                <button
-                  v-else
-                  type="button"
-                  class="cairn-btn is-ghost is-small"
-                  @click="openForm(c.id)"
-                >
-                  + Add item
-                </button>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    v-if="formState?.checklistId === c.id && !formState.item"
+                    :key="'add-form-' + c.id"
+                    class="checklist-form-wrapper"
+                    :initial="{ opacity: 0, height: 0, y: -8 }"
+                    :animate="{ opacity: 1, height: 'auto', y: 0 }"
+                    :exit="{ opacity: 0, height: 0, y: -8 }"
+                    :transition="{ duration: 0.3, ease: EASE_OUT }"
+                  >
+                    <ChecklistForm :checklist-id="c.id" @done="onFormDone" />
+                  </motion.div>
+
+                  <motion.button
+                    v-else
+                    :key="'add-button-' + c.id"
+                    type="button"
+                    class="cairn-btn is-ghost is-small checklist-add-button"
+                    @click="openForm(c.id)"
+                    :initial="{ opacity: 0 }"
+                    :animate="{ opacity: 1 }"
+                    :exit="{ opacity: 0 }"
+                    :transition="{ duration: 0.2, ease: EASE_OUT }"
+                  >
+                    + Add item
+                  </motion.button>
+                </AnimatePresence>
               </div>
             </div>
           </motion.div>
@@ -280,7 +340,7 @@ function packedCount(items) {
     <!-- Only appears on paper: see the print styles -->
     <Teleport to="body">
       <div v-if="printing" class="checklist-print">
-        <h1>{{ printing.route_name }} · pack list</h1>
+        <h1>{{ printing.route_name }} · packing list</h1>
         <p v-if="!printing.items.length">This checklist is empty.</p>
         <section v-for="group in groupChecklistItems(printing.items)" :key="group.key">
           <h2>{{ group.label }}</h2>
@@ -296,6 +356,18 @@ function packedCount(items) {
         </section>
       </div>
     </Teleport>
+    <ConfirmDialog
+      :model-value="Boolean(confirmation)"
+      title="Remove this item?"
+      message-before="Are you sure you want to remove"
+      :highlight="confirmation?.item?.label || ''"
+      message-after="from this checklist?"
+      confirm-text="Remove item"
+      :danger="true"
+      :disabled="deletingItemId !== null"
+      @confirm="confirmRemove"
+      @cancel="cancelConfirmation"
+    />
   </section>
 </template>
 
@@ -489,16 +561,6 @@ function packedCount(items) {
   line-height: 20px;
 }
 
-.checklist-item-actions {
-  display: flex;
-  gap: 12px;
-  font-size: 14px;
-}
-
-.checklist-item-form {
-  grid-column: 1 / -1;
-}
-
 .checklist-add {
   margin-top: 24px;
 }
@@ -517,13 +579,67 @@ function packedCount(items) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .checklist-item-name {
-    transition: none;
-  }
+/*item action */
+.checklist-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.checklist-print {
-  display: none;
+
+.checklist-item-actions button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 700 13px var(--font);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.checklist-item-actions button:hover {
+  color: var(--pine);
+}
+
+.checklist-item-actions button.is-remove {
+  color: #b42318;
+}
+
+.checklist-item-actions button.is-remove:hover {
+  color: #842d27;
+  background: #fdecea;
+}
+
+.checklist-item-actions button:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 2px;
+}
+
+.checklist-item-form-wrapper,
+.checklist-form-wrapper {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.checklist-item-form-wrapper {
+  grid-column: 1 / -1;
+  margin: 4px 0 12px;
+}
+
+.checklist-form-wrapper {
+  width: 100%;
+}
+
+/* add button */
+.checklist-add-button {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 @media print {
@@ -582,5 +698,10 @@ function packedCount(items) {
     display: block;
     font-size: 10pt;
   }
+}
+
+.checklist-item-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
