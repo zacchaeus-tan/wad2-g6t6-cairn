@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'motion-v'
 import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from './ChecklistForm.vue'
 import ChecklistCategory from './ChecklistCategory.vue'
-import ConfirmDialog from '@/components/common/confirmDialog.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const props = defineProps({
   route: { type: Object, required: true },

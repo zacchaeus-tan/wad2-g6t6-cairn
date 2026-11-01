@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { AnimatePresence, motion } from 'motion-v'
 import { useChecklistStore } from '@/controller/checklistStore'
@@ -11,10 +11,14 @@ import NoticeBox from '@/components/common/NoticeBox.vue'
 import TickIcon from '@/components/common/TickIcon.vue'
 import ProfileLoadError from './ProfileLoadError.vue'
 import ProfileSkeleton from './ProfileSkeleton.vue'
-import ConfirmDialog from '@/components/common/confirmDialog.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 // Uses the store directly: ChecklistForm writes through it and shows its errors.
 const checklistStore = useChecklistStore()
+
+onMounted(async () => {
+  await checklistStore.loadSaved()
+})
 
 const arrivalMotion = useRowArrivals()
 const confirmation = ref(null)
