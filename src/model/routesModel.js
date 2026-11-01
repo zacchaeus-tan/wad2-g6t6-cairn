@@ -9,12 +9,20 @@ export function listRoutes() {
 
 // Just what the browse filters and tiles need. line_svg is a small ready-made path for the
 // tile, so browse doesn't download every full line (geometry).
+const TILE_COLUMNS =
+  'id, name, country, distance_km, elevation_gain_m, duration_days, is_multiday, effective_difficulty, official_difficulty, technical_rating, line_svg'
+
 export function listRouteTiles() {
-  return supabase
-    .from('routes')
-    .select(
-      'id, name, country, distance_km, elevation_gain_m, duration_days, is_multiday, effective_difficulty, official_difficulty, technical_rating, line_svg',
-    )
+  return supabase.from('routes').select(TILE_COLUMNS)
+}
+
+// The named routes, with what a tile needs
+export function listFeaturedRoutes(names) {
+  return supabase.from('routes').select(TILE_COLUMNS).in('name', names)
+}
+
+export function countRoutes() {
+  return supabase.from('routes').select('id', { count: 'exact', head: true })
 }
 
 // Just what the globe's pills and cards need. Leaves out each route's full line (geometry),
@@ -23,7 +31,7 @@ export function listRouteSummaries() {
   return supabase
     .from('routes')
     .select(
-      'id, name, country, latitude, longitude, distance_km, duration_days, avg_rating, effective_difficulty, official_difficulty, technical_rating',
+      'id, name, country, latitude, longitude, distance_km, elevation_gain_m, altitude_m, duration_days, avg_rating, effective_difficulty, official_difficulty, technical_rating',
     )
 }
 

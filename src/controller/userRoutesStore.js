@@ -207,6 +207,7 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
   return {
     current,
     savedRoutes,
+    routeAlerts,
     savedRouteNotices,
     loading,
     savedLoading,
