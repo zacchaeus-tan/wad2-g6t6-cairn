@@ -45,22 +45,38 @@ pnpm test:unit
 
 ### Run End-to-End Tests with [Playwright](https://playwright.dev)
 
+The tests in `e2e/` drive the real app in a browser, against the Supabase project in your `.env`. They run on Chromium, Firefox and WebKit by default, and browser windows open while they run.
+
+Before the first run:
+
+1. Run `pnpm install`.
+2. Copy `.env.example` to `.env` and fill in the values.
+3. Install the browsers:
+
 ```sh
-# Install browsers for the first run
-npx playwright install
-
-# When testing on CI, must build the project first
-pnpm build
-
-# Runs the end-to-end tests
-pnpm test:e2e
-# Runs the tests only on Chromium
-pnpm test:e2e --project=chromium
-# Runs the tests of a specific file
-pnpm test:e2e tests/example.spec.ts
-# Runs the tests in debug mode
-pnpm test:e2e --debug
+pnpm exec playwright install
 ```
+
+You don't need to start the app yourself. Playwright starts its own dev server on port 5199 and stops it afterwards, so make sure nothing else is using that port.
+
+```sh
+# Run all the end-to-end tests
+pnpm playwright test
+# Run the tests only on Chromium
+pnpm playwright test --project=chromium
+# Run the tests in one file
+pnpm playwright test e2e/routes-browse.spec.js
+# Run the tests in debug mode
+pnpm playwright test --debug
+# Open the HTML report from the last run
+pnpm exec playwright show-report
+```
+
+You can also run them from the Testing panel in VS Code with the [Playwright Test for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright) extension.
+
+| Spec | User journey |
+| --- | --- |
+| `e2e/routes-browse.spec.js` | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable |
 
 ### Lint with [ESLint](https://eslint.org/)
 

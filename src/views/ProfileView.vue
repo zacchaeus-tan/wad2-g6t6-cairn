@@ -1,444 +1,469 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, provide, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
 import { useChecklistStore } from '@/controller/checklistStore'
-import ChecklistForm from '@/components/checklist/ChecklistForm.vue'
-import { genderLabels } from '@/lib/countries'
-import { quizQuestions, quizAnswer } from '@/lib/quizQuestions'
+import { useMyReviewsStore } from '@/controller/myReviewsStore'
+import { useUserRoutesStore } from '@/controller/userRoutesStore'
+import NoticeBox from '@/components/common/NoticeBox.vue'
+import TrailNotices from '@/components/routes/TrailNotices.vue'
+import ProfileSummary from '@/components/profile/ProfileSummary.vue'
+import ProfileGettingStarted from '@/components/profile/ProfileGettingStarted.vue'
+import ProfileExperience from '@/components/profile/ProfileExperience.vue'
+import ProfileHikeTotals from '@/components/profile/ProfileHikeTotals.vue'
+import ProfileSavedRoutes from '@/components/profile/ProfileSavedRoutes.vue'
+import ProfileChecklists from '@/components/profile/ProfileChecklists.vue'
+import ProfileReviews from '@/components/profile/ProfileReviews.vue'
+import { gettingStartedSteps } from '@/lib/profileTools'
+import { SEEN_ROWS } from '@/lib/useRowArrivals'
+import mountainPhoto from '@/assets/img/card-mountain.jpg'
 
-// the router guard only lets signed-in users reach this page
-const auth = useAuthStore()
+const EASE = [0.16, 1, 0.3, 1]
+const PLANK_SPRING = { type: 'spring', stiffness: 320, damping: 24 }
 
-// "Singapore · 21 · Female", skipping anything not filled in
-const profileDetails = computed(() => {
-  const p = auth.profile
-  if (!p) return ''
-  const gender = p.gender === 'prefer_not_to_say' ? null : genderLabels[p.gender]
-  return [p.country, p.age, gender].filter(Boolean).join(' · ')
-})
-
-const displayName = computed(() => auth.profile?.display_name || auth.user?.email || '')
-
-// "Jane Tan" -> "JT", "jane@x.com" -> "J"
-const initials = computed(() =>
-  displayName.value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join(''),
-)
-
-// what the user told us in the quiz, shown as the option they picked; null means not answered
-const statLabels = {
-  longest_distance_km: 'Longest distance',
-  max_elevation_gain_m: 'Max elevation gain',
-  highest_altitude_m: 'Highest altitude',
-  longest_trek_days: 'Longest trek',
-}
-
-const experienceStats = computed(() =>
-  quizQuestions
-    .filter((question) => statLabels[question.column])
-    .map((question) => ({
-      label: statLabels[question.column],
-      value: quizAnswer(auth.profile, question)?.desc ?? null,
-    })),
-)
-
-// placeholder: there's no hike log table yet, so these always show "—"
-const hikeStats = [
-  { label: 'Hikes completed', value: null, unit: '' },
-  { label: 'Total distance', value: null, unit: 'km' },
+// One plank per tab, in tab order: the rough outline drawn in a 380x92 box and its tilt on the post.
+const PLANKS = [
+  {
+    outline:
+      'M14 10 L300 4 L318 6 L376 44 L322 86 L140 88 L40 84 L18 88 L26 76 L6 74 L20 62 L8 52 L24 44 L4 32 L22 26 L10 16 Z',
+    tilt: -1,
+  },
+  {
+    outline:
+      'M4 46 L60 8 L210 12 L352 8 L372 14 L362 24 L378 34 L360 42 L374 56 L356 62 L370 78 L350 84 L240 80 L64 86 Z',
+    tilt: 1.2,
+  },
+  {
+    outline:
+      'M20 8 L170 12 L316 4 L376 46 L318 88 L120 84 L30 88 L12 80 L24 68 L2 58 L20 48 L8 36 L26 28 L6 18 Z',
+    tilt: -0.6,
+  },
+  {
+    outline:
+      'M3 44 L58 6 L196 10 L348 6 L374 12 L360 22 L376 36 L358 44 L372 58 L352 66 L368 80 L344 86 L216 82 L60 88 Z',
+    tilt: 0.8,
+  },
 ]
 
-// ---------- saved gear checklists ----------
+const currentRoute = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const reduceMotion = useReducedMotion()
+// Kept here because the tabs unmount their lists when you switch away
+provide(SEEN_ROWS, new Set())
+const userRoutesStore = useUserRoutesStore()
 const checklistStore = useChecklistStore()
+const myReviewsStore = useMyReviewsStore()
 
-const categoryLabels = {
-  clothing: 'Clothing',
-  safety: 'Safety',
-  navigation: 'Navigation',
-  water_food: 'Water & Food',
-  shelter: 'Shelter',
-  documents: 'Documents',
-  other: 'Other',
+// The trail waits for what it counts, so it doesn't show steps as unfinished while they load
+const dataLoaded = ref(false)
+const stepsReady = computed(
+  () => dataLoaded.value && !userRoutesStore.error && !myReviewsStore.error,
+)
+
+const tabs = computed(() => [
+  {
+    name: 'Profile',
+    value: 'profile',
+    views: [
+      {
+        component: ProfileSummary,
+        props: { profile: auth.profile, email: auth.user?.email },
+      },
+      {
+        component: ProfileGettingStarted,
+        props: {
+          ready: stepsReady.value,
+          userId: auth.user?.id,
+          steps: gettingStartedSteps({
+            profile: auth.profile,
+            savedRoutes: userRoutesStore.savedRoutes,
+            reviewCount: myReviewsStore.total,
+          }),
+        },
+      },
+      { component: ProfileExperience, props: { profile: auth.profile } },
+      { component: ProfileHikeTotals, props: { routes: userRoutesStore.savedRoutes } },
+    ],
+  },
+  { name: 'Saved routes', value: 'routes', views: [{ component: ProfileSavedRoutes, props: {} }] },
+  { name: 'Checklists', value: 'checklists', views: [{ component: ProfileChecklists, props: {} }] },
+  { name: 'Reviews', value: 'reviews', views: [{ component: ProfileReviews, props: {} }] },
+])
+
+// The active tab is in the URL (?tab=routes), so a refresh or a link lands on it. An unknown
+// value falls back to the first tab, whose value is left out of the URL.
+const activeTab = computed(
+  () => tabs.value.find((tab) => tab.value === currentRoute.query.tab) ?? tabs.value[0],
+)
+const activeName = computed(() => activeTab.value.name)
+
+function selectTab(tab) {
+  const query = { ...currentRoute.query, tab: tab.value }
+  if (tab === tabs.value[0]) delete query.tab
+  router.replace({ query })
+}
+
+const activeIndex = computed(() => tabs.value.indexOf(activeTab.value))
+
+const isActive = (tab) => tab.name === activeName.value
+// Planks alternate: 1 points right, -1 points left.
+const direction = (index) => (index % 2 ? -1 : 1)
+
+// Arrow keys move between the tabs, and choosing one opens it
+function onTabKeydown(event, index) {
+  const count = tabs.value.length
+  const next = {
+    ArrowDown: index + 1,
+    ArrowRight: index + 1,
+    ArrowUp: index - 1,
+    ArrowLeft: index - 1,
+    Home: 0,
+    End: count - 1,
+  }[event.key]
+  if (next === undefined) return
+
+  event.preventDefault()
+  const target = (next + count) % count
+  selectTab(tabs.value[target])
+  document.getElementById(`profile-tab-${target}`)?.focus()
 }
 
 onMounted(async () => {
   checklistStore.reset()
-  await checklistStore.loadSaved()
+  await Promise.all([
+    checklistStore.loadSaved(),
+    userRoutesStore.loadSaved(),
+    myReviewsStore.loadFirst(),
+  ])
+  dataLoaded.value = true
 })
-
-function groupByCategory(items) {
-  const groups = []
-  for (const key of Object.keys(categoryLabels)) {
-    const inCategory = items.filter((i) => i.category === key)
-    if (inCategory.length > 0) {
-      groups.push({ key, label: categoryLabels[key], items: inCategory })
-    }
-  }
-  return groups
-}
-
-// which checklists are expanded
-const openIds = ref([])
-
-function isOpen(id) {
-  return openIds.value.includes(id)
-}
-
-function toggleOpen(id) {
-  if (isOpen(id)) {
-    openIds.value = openIds.value.filter((x) => x !== id)
-    if (formState.value?.checklistId === id) closeForm()
-  } else {
-    openIds.value.push(id)
-  }
-}
-
-// the one open add/edit form: { checklistId, item } (item = null means add)
-const formState = ref(null)
-
-function openForm(checklistId, item = null) {
-  checklistStore.clearError()
-  formState.value = { checklistId, item }
-}
-
-function closeForm() {
-  formState.value = null
-  checklistStore.clearError()
-}
-
-// the store writes to the database; the profile page then refreshes its list
-async function onFormDone() {
-  closeForm()
-  await checklistStore.loadSaved()
-}
-
-async function onRemove(item) {
-  if (await checklistStore.deleteItem(item.id)) {
-    if (formState.value?.item?.id === item.id) closeForm()
-    await checklistStore.loadSaved()
-  }
-}
-
-async function onToggle(item) {
-  const checked = !item.is_checked
-  if (await checklistStore.toggleChecked(item.id, checked)) {
-    item.is_checked = checked // update locally, no reload needed
-  }
-}
-
-function packedCount(items) {
-  return items.filter((i) => i.is_checked).length
-}
 </script>
 
 <template>
-  <div class="container" style="max-width: 720px">
-    <h1 class="h3 mb-3">My profile</h1>
+  <MotionConfig reduced-motion="user">
+    <div class="cairn profile-page">
+      <img class="profile-photo" :src="mountainPhoto" alt="" />
+      <h1 class="cairn-visually-hidden">My profile</h1>
 
-    <div v-if="!auth.profile" class="alert alert-warning">
-      We couldn't load your profile. Try refreshing the page.
-    </div>
+      <div class="cairn-wrap profile-trail">
+        <NoticeBox v-if="!auth.profile" type="error" class="profile-note">
+          We couldn't load your profile. Try refreshing the page.
+        </NoticeBox>
 
-    <!-- quick profile -->
-    <div v-else class="card mb-4">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div
-          class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
-          style="width: 64px; height: 64px; font-size: 1.5rem"
-        >
-          {{ initials }}
-        </div>
-
-        <div class="flex-grow-1">
-          <h2 class="h5 mb-0">{{ displayName }}</h2>
-          <p v-if="profileDetails" class="small text-muted mb-1">{{ profileDetails }}</p>
-          <div class="d-flex flex-wrap gap-2 mb-1">
-            <span class="badge bg-secondary text-capitalize">
-              {{ auth.profile.experience_level || 'Experience not set' }}
-            </span>
-          </div>
-          <p v-if="auth.profile.about" class="small mb-0" style="white-space: pre-line">
-            {{ auth.profile.about }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <template v-if="auth.profile">
-      <!-- experience from the quiz -->
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h2 class="h6 text-muted text-uppercase mb-0">Your experience</h2>
-        <RouterLink class="btn btn-sm btn-outline-primary" :to="{ name: 'quiz' }">
-          {{ auth.profile.quiz_completed_at ? 'Retake quiz' : 'Take the quiz' }}
-        </RouterLink>
-      </div>
-      <div class="row g-3 mb-4">
-        <div v-for="stat in experienceStats" :key="stat.label" class="col-6 col-md-3">
-          <div class="card h-100 text-center">
-            <div class="card-body">
-              <div class="small text-muted">{{ stat.label }}</div>
-              <div class="h6 mb-0">{{ stat.value ?? '—' }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- hiking totals: placeholder until hikes are tracked in the database -->
-      <h2 class="h6 text-muted text-uppercase mb-2">Your hikes</h2>
-      <div class="row g-3 mb-2">
-        <div v-for="stat in hikeStats" :key="stat.label" class="col-6">
-          <div class="card h-100 text-center">
-            <div class="card-body">
-              <div class="small text-muted">{{ stat.label }}</div>
-              <div class="h4 mb-0">
-                <template v-if="stat.value != null"
-                  >{{ stat.value }} <span class="fs-6">{{ stat.unit }}</span></template
-                >
-                <template v-else>—</template>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="small text-muted mb-4">Hike tracking is coming soon.</p>
-    </template>
-
-    <section class="checklists" aria-labelledby="saved-checklists-title">
-      <h2 id="saved-checklists-title" class="h4 mb-3">My Saved Gear Checklists</h2>
-
-      <p v-if="checklistStore.savedLoading && !checklistStore.savedChecklists.length" role="status">
-        Loading your checklists...
-      </p>
-
-      <div
-        v-if="checklistStore.error && !formState"
-        class="alert alert-danger py-2 small"
-        role="alert"
-      >
-        {{ checklistStore.error }}
-      </div>
-
-      <p
-        v-if="
-          !checklistStore.savedLoading &&
-          !checklistStore.error &&
-          !checklistStore.savedChecklists.length
-        "
-        class="alert alert-secondary"
-      >
-        You have no saved checklists yet. Open a route, generate a gear checklist and click "Save
-        checklist" to see it here.
-      </p>
-
-      <div v-for="c in checklistStore.savedChecklists" :key="c.id" class="card mb-3">
-        <div class="card-body">
-          <div class="checklist-header">
-            <button
-              type="button"
-              class="checklist-toggle"
-              :aria-expanded="isOpen(c.id)"
-              :aria-controls="'checklist-' + c.id"
-              @click="toggleOpen(c.id)"
+        <template v-else>
+          <div class="signpost" role="tablist" aria-label="Profile" aria-orientation="vertical">
+            <svg
+              class="signpost-post"
+              viewBox="0 0 36 600"
+              preserveAspectRatio="none"
+              aria-hidden="true"
             >
-              <span class="checklist-title">
-                <span aria-hidden="true">{{ isOpen(c.id) ? '▾' : '▸' }}</span>
-                {{ c.route_name }}
-              </span>
-              <span class="checklist-meta">
-                <template v-if="c.country">{{ c.country }} · </template>
-                {{ packedCount(c.items) }} / {{ c.items.length }} packed
-              </span>
-            </button>
-            <RouterLink class="btn btn-sm btn-outline-secondary" :to="'/routes/' + c.route_id">
-              View route
-            </RouterLink>
-          </div>
+              <filter id="post-grain" x="0" y="0" width="100%" height="100%">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.22 0.008"
+                  numOctaves="4"
+                  seed="2"
+                />
+                <feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.16  0 0 0 0 0.09  0 0 0 3 -1.2" />
+                <feComposite in2="SourceGraphic" operator="in" />
+                <feMerge>
+                  <feMergeNode in="SourceGraphic" />
+                  <feMergeNode />
+                </feMerge>
+              </filter>
+              <path d="M3 4 L14 0 L33 3 L36 600 L0 600 Z" filter="url(#post-grain)" />
+            </svg>
 
-          <!-- body: only when expanded -->
-          <div v-if="isOpen(c.id)" :id="'checklist-' + c.id" class="checklist-body">
-            <p v-if="!c.items.length" class="checklist-meta">
-              This checklist is empty. Add an item below.
-            </p>
-
-            <div v-for="group in groupByCategory(c.items)" :key="group.key" class="checklist-group">
-              <h4 class="checklist-group-title">{{ group.label }}</h4>
-              <ul class="checklist-list">
-                <li v-for="item in group.items" :key="item.id" class="checklist-item">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    :checked="item.is_checked"
-                    :aria-label="'Mark ' + item.label + ' as packed'"
-                    @change="onToggle(item)"
-                  />
-                  <div class="checklist-item-text">
-                    <span :class="{ 'checklist-item-done': item.is_checked }">
-                      {{ item.label }}
-                      <span v-if="item.quantity" class="checklist-meta-inline"
-                        >— {{ item.quantity }}</span
-                      >
-                    </span>
-                    <div v-if="item.reason" class="checklist-meta">{{ item.reason }}</div>
-                  </div>
-                  <div class="checklist-actions">
-                    <button
-                      type="button"
-                      class="checklist-action-edit"
-                      @click="openForm(c.id, item)"
-                    >
-                      edit
-                    </button>
-                    <span aria-hidden="true"> | </span>
-                    <button type="button" class="checklist-action-remove" @click="onRemove(item)">
-                      remove
-                    </button>
-                  </div>
-                  <ChecklistForm
-                    v-if="formState?.checklistId === c.id && formState.item?.id === item.id"
-                    :key="item.id"
-                    class="w-100"
-                    :item="formState.item"
-                    :checklist-id="c.id"
-                    @done="onFormDone"
-                  />
-                </li>
-              </ul>
-            </div>
-
-            <div class="checklist-form-area">
-              <ChecklistForm
-                v-if="formState?.checklistId === c.id && !formState.item"
-                key="new"
-                :checklist-id="c.id"
-                @done="onFormDone"
-              />
-              <button
-                v-else
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                @click="openForm(c.id)"
+            <motion.button
+              v-for="(tab, index) in tabs"
+              :key="tab.name"
+              :id="`profile-tab-${index}`"
+              type="button"
+              role="tab"
+              aria-controls="profile-tab-panel"
+              :aria-selected="isActive(tab)"
+              :tabindex="isActive(tab) ? 0 : -1"
+              class="plank"
+              :class="{ active: isActive(tab), 'points-left': direction(index) < 0 }"
+              :initial="false"
+              :animate="{
+                x: isActive(tab) ? direction(index) * 10 : 0,
+                rotate: PLANKS[index].tilt,
+              }"
+              :whileHover="{ x: direction(index) * 14 }"
+              :whilePress="{ scale: 0.98 }"
+              :transition="PLANK_SPRING"
+              @click="selectTab(tab)"
+              @keydown="onTabKeydown($event, index)"
+            >
+              <svg
+                class="plank-wood"
+                viewBox="0 0 380 92"
+                preserveAspectRatio="none"
+                aria-hidden="true"
               >
-                + Add item
-              </button>
-            </div>
+                <filter :id="`plank-grain-${index}`" x="0" y="0" width="100%" height="100%">
+                  <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.008 0.22"
+                    numOctaves="4"
+                    :seed="index + 3"
+                  />
+                  <feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.16  0 0 0 0 0.09  0 0 0 3 -1.2" />
+                  <feComposite in2="SourceGraphic" operator="in" />
+                  <feMerge>
+                    <feMergeNode in="SourceGraphic" />
+                    <feMergeNode />
+                  </feMerge>
+                </filter>
+                <path :d="PLANKS[index].outline" :filter="`url(#plank-grain-${index})`" />
+              </svg>
+
+              <span class="plank-word">
+                <AnimatePresence :initial="false">
+                  <motion.span
+                    v-if="isActive(tab)"
+                    class="plank-mark"
+                    :initial="{ clipPath: 'inset(0 100% 0 0%)' }"
+                    :animate="{ clipPath: 'inset(0 0% 0 0%)' }"
+                    :exit="{ clipPath: 'inset(0 0% 0 100%)' }"
+                    :transition="{ duration: 0.55, ease: EASE }"
+                  />
+                </AnimatePresence>
+                {{ tab.name }}
+              </span>
+            </motion.button>
           </div>
-        </div>
+
+          <section
+            id="profile-tab-panel"
+            class="profile-panel"
+            role="tabpanel"
+            :aria-labelledby="`profile-tab-${activeIndex}`"
+          >
+            <!-- Above the tabs, so a safety notice shows whichever tab is open -->
+            <TrailNotices
+              :alerts="userRoutesStore.savedRouteNotices"
+              title="Notices on your saved routes"
+            />
+
+            <AnimatePresence mode="wait" :initial="false">
+              <motion.div
+                :key="activeName"
+                class="profile-panel-views"
+                :initial="reduceMotion ? false : { opacity: 0 }"
+                :animate="{ opacity: 1 }"
+                :exit="reduceMotion ? undefined : { opacity: 0 }"
+                :transition="{ duration: 0.35, ease: EASE }"
+              >
+                <component
+                  :is="view.component"
+                  v-for="(view, index) in activeTab.views"
+                  :key="index"
+                  v-bind="view.props"
+                />
+              </motion.div>
+            </AnimatePresence>
+          </section>
+        </template>
       </div>
-    </section>
-  </div>
+    </div>
+  </MotionConfig>
 </template>
 
 <style scoped>
-.checklist-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.5rem;
+.profile-page {
+  --wood: var(--trail);
+  --wood-light: #664c33;
+  --stage-pad: clamp(24px, 5vh, 56px);
+  position: relative;
+  overflow: clip;
+  background: var(--night);
 }
 
-.checklist-toggle {
-  flex: 1;
-  padding: 0;
+/* Stays on screen behind the panel when a long view scrolls */
+.profile-photo {
+  position: sticky;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100svh;
+  margin-bottom: -100svh;
+  object-fit: cover;
+  object-position: center 78%;
+  opacity: 0.42;
+  filter: saturate(0.8);
+}
+
+.profile-trail {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: clamp(32px, 6vw, 88px);
+  min-height: 100svh;
+  padding-block: calc(var(--nav-height) + var(--stage-pad)) var(--stage-pad);
+}
+
+.profile-note {
+  grid-column: 1 / -1;
+  place-self: center;
+  max-width: 460px;
+}
+
+.signpost {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  display: grid;
+  gap: 24px;
+  padding-block: 48px;
+}
+
+/* Taller than the screen, so it always runs off the bottom of the page */
+.signpost-post {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 18px);
+  width: 36px;
+  height: 100svh;
+  fill: var(--wood);
+}
+
+.plank {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  width: 94%;
+  height: 92px;
+  padding: 0 52px 0 28px;
   border: 0;
   background: none;
-  color: inherit;
-  text-align: left;
+  color: var(--paper);
+  font: 900 clamp(22px, 2.2vw, 28px) / 1 var(--font);
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgb(16 24 20 / 0.55);
+  cursor: pointer;
 }
 
-.checklist-title {
-  display: block;
-  font-size: 1.25rem;
-  font-weight: 500;
+.plank.points-left {
+  justify-self: start;
+  padding: 0 28px 0 52px;
 }
 
-/* shared muted small text (country, reason, empty message) */
-.checklist-meta {
-  display: block;
-  font-size: 0.875rem;
-  color: #6c757d;
+/* The plank's shape isn't a rectangle, so keyboard focus lightens the wood and underlines the
+   word instead of drawing a box around it */
+.plank:focus,
+.plank:focus-visible {
+  outline: 0;
 }
 
-.checklist-meta-inline {
-  color: #6c757d;
+.plank:focus-visible .plank-wood {
+  fill: var(--wood-light);
 }
 
-.checklist-body {
-  margin-top: 1rem;
+.plank:focus-visible .plank-word {
+  text-decoration: underline 3px var(--glacier);
+  text-underline-offset: 6px;
 }
 
-.checklist-group {
-  margin-bottom: 1rem;
+.plank-wood {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  fill: var(--wood);
+  filter: drop-shadow(0 8px 8px rgb(16 24 20 / 0.45));
 }
 
-.checklist-group-title {
-  margin-bottom: 0.25rem;
-  font-size: 1rem;
-  text-transform: uppercase;
-  color: #6c757d;
+.plank:hover .plank-wood,
+.plank.active .plank-wood {
+  fill: var(--wood-light);
 }
 
-.checklist-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  border-radius: 0.375rem;
-}
-
-.checklist-item {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-}
-
-.checklist-item + .checklist-item {
-  border-top: 1px solid #dee2e6;
-}
-
-.checklist-item .form-check-input {
-  margin-top: 0.25rem;
-}
-
-.checklist-item-text {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.checklist-item-done {
-  text-decoration: line-through;
-  color: #6c757d;
-}
-
-/* edit | remove */
-.checklist-actions {
-  flex-shrink: 0;
+.plank-word {
+  position: relative;
+  isolation: isolate;
+  padding: 14px 60px;
   white-space: nowrap;
 }
 
-.checklist-actions button {
-  padding: 0;
-  border: 0;
-  background: none;
-  font-size: 0.875rem;
+.plank-mark {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
 }
 
-.checklist-action-edit {
-  color: rgb(44, 118, 255);
+/* Rough, hand-drawn edges like the marker on sign-in */
+.plank-mark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--pine);
+  clip-path: polygon(
+    1% 8%,
+    22% 2%,
+    48% 7%,
+    74% 1%,
+    99% 6%,
+    97% 34%,
+    100% 62%,
+    98% 95%,
+    72% 99%,
+    46% 93%,
+    20% 98%,
+    0 92%,
+    2% 58%,
+    0 30%
+  );
 }
 
-.checklist-action-remove {
-  color: rgb(255, 49, 49);
+/* A plain sheet so the views stay readable over the photo. It hugs its content, with a floor so
+   short tabs don't make it jump */
+.profile-panel {
+  --panel-pad: clamp(20px, 3vw, 44px);
+  position: relative;
+  align-self: start;
+  container: profile-panel / inline-size;
+  min-width: 0;
+  min-height: 420px;
+  padding: var(--panel-pad);
+  background: var(--ground);
+  box-shadow: var(--shadow-panel);
 }
 
-.checklist-form-area {
-  margin-top: 1rem;
+.profile-panel-views {
+  display: grid;
+  gap: 40px;
+}
+
+@media (max-width: 900px) {
+  .profile-trail {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .signpost {
+    position: relative;
+    top: 0;
+    justify-self: center;
+    width: min(100%, 380px);
+    gap: 12px;
+    padding-block: 24px 32px;
+  }
+
+  .plank {
+    height: 68px;
+  }
+
+  .profile-panel {
+    min-height: 0;
+  }
 }
 </style>

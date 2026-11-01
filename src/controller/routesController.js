@@ -1,10 +1,13 @@
 import {
   listRoutes,
   listRouteTiles,
+  listFeaturedRoutes,
+  countRoutes,
   listRouteSummaries,
   getRoute,
   getRouteGeometry,
   listRoutesByIds,
+  listAlertsForRoute,
 } from '@/model/routesModel'
 
 export async function fetchRoutes() {
@@ -23,6 +26,16 @@ export async function fetchRouteTiles() {
   }
 
   return data
+}
+
+// The homepage's featured routes, and how many routes there are altogether
+export async function fetchFeaturedRoutes(names) {
+  const [featured, all] = await Promise.all([listFeaturedRoutes(names), countRoutes()])
+  if (featured.error || all.error) {
+    throw featured.error || all.error
+  }
+
+  return { routes: featured.data, total: all.count }
 }
 
 export async function fetchRouteSummaries() {
@@ -61,12 +74,45 @@ export async function fetchRouteById(id) {
   return data
 }
 
+// A route fetched ahead of its page opening, so the page can show it straight away with no
+// loading message. If this fails the page fetches the route itself and shows any error.
+let preloadedRoute = null
+const preloadWaitMs = 8000
+
+// Settles once the route has loaded or failed, or after a few seconds on a slow connection
+export function preloadRoute(id) {
+  const loaded = fetchRouteById(id)
+    .then((route) => {
+      preloadedRoute = route
+    })
+    .catch(() => {
+      preloadedRoute = null
+    })
+  return Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, preloadWaitMs))])
+}
+
+// Used once: a later visit to the same page fetches a fresh copy
+export function takePreloadedRoute(id) {
+  const route = preloadedRoute?.id === id ? preloadedRoute : null
+  preloadedRoute = null
+  return route
+}
+
 export async function fetchRoutesByIds(ids) {
   if (!ids || ids.length === 0) {
     return []
   }
 
   const { data, error } = await listRoutesByIds(ids)
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchRouteAlerts(routeId) {
+  const { data, error } = await listAlertsForRoute(routeId)
   if (error) {
     throw error
   }

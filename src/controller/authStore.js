@@ -7,7 +7,15 @@ import {
   onAuthStateChange,
   getProfile,
   updateQuizAnswers,
+  updateExperience,
+  updateProfile,
+  updatePassword,
 } from '@/model/authModel'
+import {
+  profileColumnsFrom,
+  validatePasswordForm,
+  validateProfileForm,
+} from '@/lib/profileTools'
 
 let sessionReady = null
 
@@ -77,7 +85,7 @@ export const useAuthStore = defineStore('auth', {
       this.profile = null
     },
 
-    // fitness_score is computed by a trigger, so we save the answers and read back.
+    // Save the answers, then read the profile back so the store has the saved row.
     async saveQuiz(answers) {
       if (!this.user) return { success: false, error: 'Not signed in' }
 
@@ -90,6 +98,57 @@ export const useAuthStore = defineStore('auth', {
 
       await this.fetchProfile()
       return { success: true }
+    },
+
+    // After a completed hike: raise any experience stat the hike beats.
+    // Never lowers one. Returns the columns that went up.
+    async raiseExperience(experience) {
+      if (!this.user || !this.profile) return { success: false, error: 'Not signed in', raised: [] }
+
+      const fields = {}
+      for (const [column, value] of Object.entries(experience)) {
+        const current = this.profile[column]
+        if (value != null && (current == null || value > Number(current))) fields[column] = value
+      }
+      const raised = Object.keys(fields)
+      if (!raised.length) return { success: true, raised }
+
+      const { error } = await updateExperience(this.user.id, fields)
+      if (error) return { success: false, error: error.message, raised: [] }
+
+      this.profile = { ...this.profile, ...fields }
+      return { success: true, raised }
+    },
+
+    async saveProfile({ name, age, gender, country, about }) {
+      const form = { name, age, gender, country, about }
+      const [problem] = Object.values(validateProfileForm(form))
+      if (problem || !this.user) return this.failAccountChange(problem ?? 'Not signed in')
+
+      this.error = null
+      const { data, error } = await updateProfile(this.user.id, profileColumnsFrom(form))
+
+      if (error) return this.failAccountChange(error.message)
+      if (!data?.length) return this.failAccountChange('You do not have permission to edit this profile.')
+
+      await this.fetchProfile()
+      return { success: true }
+    },
+
+    async changePassword(password) {
+      const { password: problem } = validatePasswordForm({ password, confirm: password })
+      if (problem || !this.user) return this.failAccountChange(problem ?? 'Not signed in')
+
+      this.error = null
+      const { error } = await updatePassword(password)
+
+      if (error) return this.failAccountChange(error.message)
+      return { success: true }
+    },
+
+    failAccountChange(message) {
+      this.error = message
+      return { success: false, error: message }
     },
 
     async fetchProfile() {

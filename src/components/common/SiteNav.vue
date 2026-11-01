@@ -49,6 +49,7 @@ async function logout() {
       <nav class="site-nav-group is-right" aria-label="Account">
         <template v-if="auth.isLoggedIn">
           <RouterLink class="site-nav-link" to="/profile" active-class="is-current">Profile</RouterLink>
+          <RouterLink v-if="auth.isAdmin" class="site-nav-link" to="/admin" active-class="is-current">Admin</RouterLink>
           <button type="button" class="site-nav-link" @click="logout">Log out</button>
         </template>
         <RouterLink v-else class="site-nav-link is-solid" to="/auth">Sign in</RouterLink>
@@ -76,6 +77,7 @@ async function logout() {
       <RouterLink class="site-nav-panel-link" to="/globe">Globe</RouterLink>
       <template v-if="auth.isLoggedIn">
         <RouterLink class="site-nav-panel-link" to="/profile">Profile</RouterLink>
+        <RouterLink v-if="auth.isAdmin" class="site-nav-panel-link" to="/admin">Admin</RouterLink>
         <button type="button" class="site-nav-panel-link" @click="logout">Log out</button>
       </template>
       <RouterLink v-else class="site-nav-panel-link" to="/auth">Sign in</RouterLink>

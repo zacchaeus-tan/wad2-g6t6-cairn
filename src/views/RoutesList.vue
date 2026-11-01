@@ -1,13 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'motion-v'
-import { fetchRouteTiles } from '../controller/routesController'
+import { AnimatePresence, motion, useScroll, useTransform } from 'motion-v'
+import { useRouter } from 'vue-router'
+import { fetchRouteTiles, preloadRoute } from '../controller/routesController'
 import { tripType } from '@/lib/matching'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import FilterDropdown from '@/components/routes/FilterDropdown.vue'
 import RangeFilter from '@/components/routes/RangeFilter.vue'
 import RouteTile from '@/components/routes/RouteTile.vue'
+import RouteTransitionScreen from '@/components/routes/RouteTransitionScreen.vue'
 import cairnPhoto from '@/assets/img/cairn1.jpg'
 import cairnMask from '@/assets/img/cairn1-mask.png'
 import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
@@ -205,7 +207,7 @@ function scrollToResults(upOnly = false) {
   if (upOnly && offset >= 0) {
     return
   }
-  window.scrollTo({ top: window.scrollY + offset, behavior: reduceMotion.value ? 'auto' : 'smooth' })
+  window.scrollTo({ top: window.scrollY + offset, behavior: 'smooth' })
 }
 
 // Start again from the first page, at the top of the results, whenever the results change
@@ -309,15 +311,26 @@ function photoFor(route, index) {
 }
 
 // Banner parallax: the sky, the title and the mountain move at different speeds
-const reduceMotion = useReducedMotion()
 const { scrollY } = useScroll()
-const skyY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.6))
-const titleY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.45))
-const frontY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.05))
-const introOpacity = useTransform(scrollY, (y) => (reduceMotion.value ? 1 : Math.max(0, 1 - y / 360)))
+const skyY = useTransform(scrollY, (y) => y * 0.6)
+const titleY = useTransform(scrollY, (y) => y * 0.45)
+const frontY = useTransform(scrollY, (y) => y * 0.05)
+const introOpacity = useTransform(scrollY, (y) => Math.max(0, 1 - y / 360))
 
 const bannerPhoto = `url(${cairnPhoto})`
 const bannerMask = `url(${cairnMask})`
+
+// The route being opened, shown on the transition screen while its details load ahead
+const router = useRouter()
+const openingRoute = ref(null)
+let openingRouteLoaded
+
+function openRoute(route) {
+  if (!openingRoute.value) {
+    openingRouteLoaded = preloadRoute(route.id)
+    openingRoute.value = route
+  }
+}
 
 // Once the filter bar sticks to the top of a wide screen, a search field slides into it
 const barSentinel = ref(null)
@@ -378,6 +391,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
             v-model="searchTerm"
             type="search"
             placeholder="Search a route, like Kinabalu"
+            data-testid="routes-search"
             @keydown.enter="scrollToResults()"
           />
         </label>
@@ -566,7 +580,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
           </ul>
         </div>
 
-        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status">
+        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status" data-testid="routes-empty">
           <h2>No routes match these filters</h2>
           <p>Try a wider distance or climb range, or include more difficulty grades.</p>
           <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">Clear all filters</button>
@@ -582,7 +596,12 @@ onBeforeUnmount(() => stickObserver?.disconnect())
             :exit="{ opacity: 0, transition: { duration: 0.15 } }"
             :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
           >
-            <RouteTile :route="route" :photo="photoFor(route, index)" />
+            <!-- Caught before the tile's link acts on it. Ctrl or Cmd-click still opens a new tab. -->
+            <RouteTile
+              :route="route"
+              :photo="photoFor(route, index)"
+              @click.capture.exact.prevent="openRoute(route)"
+            />
           </motion.div>
         </AnimatePresence>
 
@@ -591,6 +610,13 @@ onBeforeUnmount(() => stickObserver?.disconnect())
         </div>
       </section>
     </template>
+
+    <RouteTransitionScreen
+      v-if="openingRoute"
+      :route-name="openingRoute.name"
+      :route-loaded="openingRouteLoaded"
+      @done="router.push({ name: 'route-detail', params: { id: openingRoute.id } })"
+    />
   </div>
 </template>
 

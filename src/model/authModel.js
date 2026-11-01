@@ -29,6 +29,11 @@ export function getProfile(userId) {
   return supabase.from('profiles').select('*').eq('id', userId).single()
 }
 
+// fields is a subset of the quiz experience columns
+export function updateExperience(userId, fields) {
+  return supabase.from('profiles').update(fields).eq('id', userId)
+}
+
 export function updateQuizAnswers(userId, answers) {
   return supabase
     .from('profiles')
@@ -41,4 +46,22 @@ export function updateQuizAnswers(userId, answers) {
       quiz_completed_at: new Date().toISOString(),
     })
     .eq('id', userId)
+}
+
+// Only these columns can be changed from the profile page, whatever is passed in. Asks for the
+// row back because a blocked update otherwise looks like a success that changed nothing.
+const EDITABLE_PROFILE_COLUMNS = ['display_name', 'age', 'gender', 'country', 'about']
+
+export function updateProfile(userId, fields) {
+  const allowed = Object.fromEntries(
+    EDITABLE_PROFILE_COLUMNS.filter((column) => column in fields).map((column) => [
+      column,
+      fields[column],
+    ]),
+  )
+  return supabase.from('profiles').update(allowed).eq('id', userId).select('id')
+}
+
+export function updatePassword(password) {
+  return supabase.auth.updateUser({ password })
 }
