@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'motion-v'
+import { AnimatePresence, motion, useScroll, useTransform } from 'motion-v'
 import { useRouter } from 'vue-router'
 import { fetchRouteTiles, preloadRoute } from '../controller/routesController'
 import { tripType } from '@/lib/matching'
@@ -207,7 +207,7 @@ function scrollToResults(upOnly = false) {
   if (upOnly && offset >= 0) {
     return
   }
-  window.scrollTo({ top: window.scrollY + offset, behavior: reduceMotion.value ? 'auto' : 'smooth' })
+  window.scrollTo({ top: window.scrollY + offset, behavior: 'smooth' })
 }
 
 // Start again from the first page, at the top of the results, whenever the results change
@@ -311,12 +311,11 @@ function photoFor(route, index) {
 }
 
 // Banner parallax: the sky, the title and the mountain move at different speeds
-const reduceMotion = useReducedMotion()
 const { scrollY } = useScroll()
-const skyY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.6))
-const titleY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.45))
-const frontY = useTransform(scrollY, (y) => (reduceMotion.value ? 0 : y * 0.05))
-const introOpacity = useTransform(scrollY, (y) => (reduceMotion.value ? 1 : Math.max(0, 1 - y / 360)))
+const skyY = useTransform(scrollY, (y) => y * 0.6)
+const titleY = useTransform(scrollY, (y) => y * 0.45)
+const frontY = useTransform(scrollY, (y) => y * 0.05)
+const introOpacity = useTransform(scrollY, (y) => Math.max(0, 1 - y / 360))
 
 const bannerPhoto = `url(${cairnPhoto})`
 const bannerMask = `url(${cairnMask})`
@@ -326,15 +325,7 @@ const router = useRouter()
 const openingRoute = ref(null)
 let openingRouteLoaded
 
-function openRoutePage(routeId) {
-  router.push({ name: 'route-detail', params: { id: routeId } })
-}
-
 function openRoute(route) {
-  if (reduceMotion.value) {
-    openRoutePage(route.id)
-    return
-  }
   if (!openingRoute.value) {
     openingRouteLoaded = preloadRoute(route.id)
     openingRoute.value = route
@@ -624,7 +615,7 @@ onBeforeUnmount(() => stickObserver?.disconnect())
       v-if="openingRoute"
       :route-name="openingRoute.name"
       :route-loaded="openingRouteLoaded"
-      @done="openRoutePage(openingRoute.id)"
+      @done="router.push({ name: 'route-detail', params: { id: openingRoute.id } })"
     />
   </div>
 </template>
