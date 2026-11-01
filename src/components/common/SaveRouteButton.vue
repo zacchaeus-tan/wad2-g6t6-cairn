@@ -38,65 +38,37 @@ async function routeCompleted() {
 </script>
 
 <template>
-  <div class="save-route">
-    <span v-if="isCompleted" class="completed">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
-        <path d="M5 12.5l4.5 4.5L19 7" />
-      </svg>
-      Completed
-    </span>
-
-    <template v-else>
-      <button
-        type="button"
-        class="cairn-btn is-small"
-        :class="isSaved ? 'is-saved' : 'is-outline'"
-        :aria-pressed="isSaved"
-        @click="onToggleRouteSaved"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          :fill="isSaved ? 'currentColor' : 'none'"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M6 3h12v18l-6-4.5L6 21z" />
-        </svg>
-        {{ isSaved ? 'Saved' : 'Save route' }}
-      </button>
-      <button v-if="isSaved" type="button" class="cairn-btn is-small is-outline" @click="routeCompleted">
-        Mark as completed
-      </button>
-    </template>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <button
+      type="button"
+      class="btn btn-sm"
+      :class="isSaved ? 'btn-warning' : 'btn-outline-warning'"
+      :hidden="isCompleted"
+      :disabled="isCompleted"
+      :aria-pressed="isSaved"
+      @click="onToggleRouteSaved"
+    >
+      {{ isSaved ? '⛊ Saved' : '⛉ Save route' }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-success"
+      :hidden="!isSaved || isCompleted"
+      :disabled="isCompleted"
+      @click="routeCompleted"
+    >
+      Mark as completed
+    </button>
+    <span class="completed" :hidden="!isCompleted">✓ Completed</span>
   </div>
 </template>
 
 <style scoped>
-.save-route {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Takes the text colour around it, so it works on the dark banner and on light pages */
-.is-outline:not(:hover) {
-  background: transparent;
-  border-color: currentColor;
-  color: inherit;
-}
-
-.is-saved:not(:hover) {
-  background: var(--pine);
-  border-color: var(--pine);
-  color: var(--paper);
-}
-
 .completed {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-weight: 700;
 }
+
 </style>
