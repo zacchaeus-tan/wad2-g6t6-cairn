@@ -11,6 +11,7 @@ import ReviewList from './ReviewList.vue'
 const props = defineProps({
   route: { type: Object, required: true },
   userId: { type: String, default: null },
+  isAdmin: { type: Boolean, default: false },
   signInTo: { type: Object, required: true },
 })
 
@@ -42,6 +43,11 @@ function onSaved() {
 function onDeleted() {
   formOpen.value = false
   emit('deleted')
+}
+
+async function deleteFromList(review) {
+  const deleted = await reviewsStore.remove(review.id, props.route.id)
+  if (deleted) onDeleted()
 }
 </script>
 
@@ -117,7 +123,16 @@ function onDeleted() {
       <div>
         <p v-if="reviewsStore.loadError">Unable to load reviews: {{ reviewsStore.loadError }}</p>
         <template v-else>
-          <ReviewList :reviews="reviewsStore.reviews" />
+          <p v-if="reviewsStore.error && !formOpen" class="register-error" role="alert">
+            {{ reviewsStore.error }}
+          </p>
+          <ReviewList
+            :reviews="reviewsStore.reviews"
+            :user-id="userId"
+            :is-admin="isAdmin"
+            @edit="formOpen = true"
+            @delete="deleteFromList"
+          />
           <div v-if="reviewsStore.hasMore" class="register-more">
             <button
               type="button"
@@ -225,6 +240,14 @@ function onDeleted() {
   font-size: 22px;
   font-weight: 600;
   line-height: 1.1;
+}
+
+.register-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #fdecea;
+  color: #b42318;
+  font-size: 14px;
 }
 
 .register-more {

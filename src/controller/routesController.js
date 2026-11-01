@@ -7,6 +7,7 @@ import {
   getRoute,
   getRouteGeometry,
   listRoutesByIds,
+  listAlertsForRoute,
 } from '@/model/routesModel'
 
 export async function fetchRoutes() {
@@ -103,6 +104,15 @@ export async function fetchRoutesByIds(ids) {
   }
 
   const { data, error } = await listRoutesByIds(ids)
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchRouteAlerts(routeId) {
+  const { data, error } = await listAlertsForRoute(routeId)
   if (error) {
     throw error
   }
