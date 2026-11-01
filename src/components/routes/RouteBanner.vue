@@ -110,6 +110,11 @@ const warnings = computed(() => {
   filter: saturate(0.5) brightness(0.75);
 }
 
+/* Focus rings on a dark photo are Glacier */
+.route-banner-labels :deep(.cairn-btn:focus-visible) {
+  outline-color: var(--glacier);
+}
+
 .route-banner-warning {
   position: absolute;
   top: 96px;
