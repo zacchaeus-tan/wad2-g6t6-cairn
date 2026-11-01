@@ -427,21 +427,24 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
     </div>
     <!-- Custom confirmation dialog -->
     <ConfirmDialog
-      :model-value="Boolean(confirmation)"
+      :open="Boolean(confirmation)"
       :title="confirmation?.type === 'delete' ? 'Remove this item?' : 'Regenerate checklist?'"
-      :message-before="
-        confirmation?.type === 'delete'
-          ? 'Are you sure you want to remove'
-          : 'Your current checklist will be replaced with a newly generated one. This action cannot be undone.'
-      "
-      :highlight="confirmation?.type === 'delete' ? confirmation.item.label : ''"
-      :message-after="confirmation?.type === 'delete' ? 'from your checklist?' : ''"
-      :confirm-text="confirmation?.type === 'delete' ? 'Remove item' : 'Regenerate'"
-      :danger="confirmation?.type === 'delete'"
+      :confirm-label="confirmation?.type === 'delete' ? 'Remove item' : 'Regenerate'"
       :disabled="checklistStore.loading || deletingItemId !== null"
       @confirm="confirmAction"
       @cancel="cancelConfirmation"
-    />
+    >
+      <template v-if="confirmation?.type === 'delete'">
+        Are you sure you want to remove
+        <strong>{{ confirmation.item.label }}</strong>
+        from your checklist?
+      </template>
+
+      <template v-else>
+        Your current checklist will be replaced with a newly generated one. This action cannot be
+        undone.
+      </template>
+    </ConfirmDialog>
   </article>
 </template>
 

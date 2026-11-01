@@ -136,9 +136,27 @@ async function printChecklist(checklist) {
   window.print()
 }
 
-function packedCount(items) {
-  return items.filter((i) => i.is_checked).length
+function checkedCount(items = []) {
+  return items.filter((item) => item.is_checked).length
 }
+
+function packingProgress(items = []) {
+  if (!items.length) return 0
+
+  return Math.round((checkedCount(items) / items.length) * 100)
+}
+
+function isPackingComplete(items = []) {
+  return items.length > 0 && packingProgress(items) === 100
+}
+
+const confettiPieces = Array.from({ length: 35 }, (_, i) => ({
+  id: i,
+  x: `${(i * 37) % 100}%`,
+  delay: (i % 10) * 0.08,
+  rotation: (i * 47) % 360,
+  size: 12 + (i % 3) * 4,
+}))
 </script>
 
 <template>
@@ -194,7 +212,7 @@ function packedCount(items) {
               <span class="checklist-meta">
                 <span v-if="c.country" class="cairn-label">{{ c.country }}</span>
                 <span class="cairn-data">
-                  {{ packedCount(c.items) }} / {{ c.items.length }} packed
+                  {{ checkedCount(c.items) }} / {{ c.items.length }} packed
                 </span>
               </span>
             </span>
@@ -205,6 +223,7 @@ function packedCount(items) {
         </div>
 
         <!-- body: only when expanded -->
+
         <AnimatePresence>
           <motion.div
             v-if="isOpen(c.id)"
@@ -213,6 +232,33 @@ function packedCount(items) {
             class="checklist-pad"
           >
             <div class="checklist-sheet">
+              <!-- Confetti across the entire checklist -->
+              <div v-if="isPackingComplete(c.items)" class="gear-confetti" aria-hidden="true">
+                <motion.span
+                  v-for="piece in confettiPieces"
+                  :key="piece.id"
+                  class="gear-confetti-piece"
+                  :style="{
+                    left: piece.x,
+                    width: `${piece.size}px`,
+                    height: `${piece.size}px`,
+                  }"
+                  :initial="{ opacity: 0, y: -20, rotate: 0 }"
+                  :animate="{
+                    opacity: [0, 1, 1, 0],
+                    y: [0, 100, 200, 300],
+                    rotate: piece.rotation,
+                  }"
+                  :transition="{
+                    duration: 2.5,
+                    delay: piece.delay * 0.3,
+                    duration: 1.8,
+                    ease: 'easeOut',
+                  }"
+                >
+                  ★
+                </motion.span>
+              </div>
               <div class="checklist-sheet-head">
                 <h3 class="checklist-sheet-title">{{ c.route_name }} · packing list</h3>
                 <div class="checklist-sheet-tools">
@@ -243,6 +289,49 @@ function packedCount(items) {
               <p v-if="!c.items.length" class="checklist-empty">
                 This checklist is empty. Add an item below.
               </p>
+
+              <!-- Progress and completion status -->
+              <div v-if="c.items.length" class="gear-progress">
+                <motion.div
+                  v-if="isPackingComplete(c.items)"
+                  class="gear-complete"
+                  role="status"
+                  aria-live="polite"
+                  :initial="{ opacity: 0, y: 8, scale: 0.97 }"
+                  :animate="{ opacity: 1, y: 0, scale: 1 }"
+                  :transition="{ type: 'spring', stiffness: 300, damping: 22 }"
+                >
+                  <!-- Completion message -->
+                  <span class="gear-complete-icon" aria-hidden="true">✓</span>
+                  <span>
+                    <strong>Packing complete!</strong>
+                    You're ready for the trail.
+                  </span>
+                </motion.div>
+
+                <div class="gear-progress-top">
+                  <span>
+                    <strong>{{ checkedCount(c.items) }}</strong> / {{ c.items.length }} packed
+                  </span>
+                  <span class="gear-progress-percent">{{ packingProgress(c.items) }}%</span>
+                </div>
+
+                <div
+                  class="gear-progress-track"
+                  role="progressbar"
+                  :aria-valuenow="packingProgress(c.items)"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-label="packingProgress(c.items) + '% of gear packed'"
+                >
+                  <motion.div
+                    class="gear-progress-fill"
+                    :initial="false"
+                    :animate="{ width: packingProgress(c.items) + '%' }"
+                    :transition="{ duration: 0.4, ease: 'easeOut' }"
+                  />
+                </div>
+              </div>
 
               <div v-for="group in groupChecklistItems(c.items)" :key="group.key">
                 <h4 class="checklist-group-title">{{ group.label }}</h4>
@@ -357,17 +446,17 @@ function packedCount(items) {
       </div>
     </Teleport>
     <ConfirmDialog
-      :model-value="Boolean(confirmation)"
+      :open="Boolean(confirmation)"
       title="Remove this item?"
-      message-before="Are you sure you want to remove"
-      :highlight="confirmation?.item?.label || ''"
-      message-after="from this checklist?"
-      confirm-text="Remove item"
-      :danger="true"
+      confirm-label="Remove item"
       :disabled="deletingItemId !== null"
       @confirm="confirmRemove"
       @cancel="cancelConfirmation"
-    />
+    >
+      Are you sure you want to remove
+      <strong>{{ confirmation?.item?.label || '' }}</strong>
+      from this checklist?
+    </ConfirmDialog>
   </section>
 </template>
 
@@ -703,5 +792,100 @@ function packedCount(items) {
 .checklist-item-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* progress card */
+.gear-progress {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 2px solid #000;
+  background: #fff;
+  color: var(--gear-pine);
+  font-size: 14px;
+}
+
+.gear-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--gear-pine);
+}
+
+.gear-progress-top strong {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.gear-progress-percent {
+  color: #1f4935;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.gear-progress-track {
+  height: 10px;
+  overflow: hidden;
+  background: #dce8df;
+  border: 1px solid #1f4935;
+}
+
+.gear-progress-fill {
+  width: 0%;
+  height: 100%;
+  background-color: #1f4935;
+  transition: width 0.4s ease;
+}
+
+.gear-complete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #b8d0bd;
+  background: #e3eee5;
+  color: var(--gear-pine);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.gear-complete strong {
+  color: var(--gear-pine);
+}
+
+.gear-complete-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #1f4935;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* Confetti across the entire checklist */
+.checklist-sheet {
+  position: relative;
+}
+
+.gear-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.gear-confetti-piece {
+  position: absolute;
+  top: 0;
+  display: block;
+  color: #f5c542;
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 15%);
 }
 </style>

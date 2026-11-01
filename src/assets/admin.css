@@ -1,8 +1,10 @@
 /* Admin page, built on the CAIRN tokens in cairn.css. Imported by AdminView. */
 
-.admin-page {
+/* A darker page, so the white panels stand out from it */
+.cairn.admin-page {
   min-height: 100vh;
   padding: 56px 0 96px;
+  background: var(--linen);
 }
 
 .admin-header {
@@ -18,13 +20,18 @@
   margin-top: 8px;
 }
 
+/* The usual label grey is too faint on the darker page */
+.admin-header .cairn-label {
+  color: var(--granite-700);
+}
+
 /* A section of the page: white card with a heavy top rule */
 .admin-panel {
   height: 100%;
   padding: clamp(20px, 2.4vw, 32px);
   border-top: 4px solid var(--ink);
   background: var(--white);
-  box-shadow: 0 1px 0 var(--granite-200);
+  box-shadow: var(--shadow-panel);
 }
 
 /* .cairn resets heading margins, so this needs the extra specificity */

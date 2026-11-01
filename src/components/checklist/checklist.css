@@ -447,7 +447,6 @@
   /* The ruling above reads --gear-margin, so only the values change here */
   .gear-sheet {
     --gear-margin: 44px;
-
     padding-left: 62px;
   }
 }
