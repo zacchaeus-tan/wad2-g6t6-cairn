@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
 import { defaultAlertEnd } from '@/lib/alertDrafts'
+import { fadeMotion } from '@/lib/motion'
 import AdminNote from '@/components/admin/AdminNote.vue'
 
 const props = defineProps({
@@ -17,13 +19,7 @@ const routeSearch = ref('')
 
 const editing = computed(() => editingId.value !== null)
 
-const routeMatches = computed(() => {
-  const term = routeSearch.value.trim().toLowerCase()
-  if (!term) return []
-  return adminStore.routes
-    .filter((r) => r.name?.toLowerCase().includes(term) || r.country?.toLowerCase().includes(term))
-    .slice(0, 8)
-})
+const routeMatches = computed(() => adminStore.searchRoutes(routeSearch.value))
 
 function emptyForm() {
   return {
@@ -38,9 +34,7 @@ function emptyForm() {
 
 const form = ref(emptyForm())
 
-const selectedRoute = computed(
-  () => adminStore.routes.find((r) => r.id === form.value.routeId) || null,
-)
+const selectedRoute = computed(() => adminStore.routes.find((r) => r.id === form.value.routeId))
 
 function chooseRoute(route) {
   form.value.routeId = route.id
@@ -133,7 +127,7 @@ async function submit() {
           autocomplete="off"
           @keydown.enter.prevent
         />
-        <ul v-if="routeMatches.length" class="admin-results">
+        <motion.ul v-if="routeMatches.length" v-bind="fadeMotion" class="admin-results">
           <li v-for="route in routeMatches" :key="route.id">
             <button type="button" @click="chooseRoute(route)">
               <span
@@ -141,11 +135,17 @@ async function submit() {
               >
             </button>
           </li>
-        </ul>
-        <p v-if="selectedRoute" class="mt-2 mb-0">
+        </motion.ul>
+        <!-- The key replays the fade each time the route changes -->
+        <motion.p
+          v-if="selectedRoute"
+          :key="selectedRoute.id"
+          v-bind="fadeMotion"
+          class="mt-2 mb-0"
+        >
           Selected: <strong>{{ selectedRoute.name }}</strong>
           <span class="admin-hint"> {{ selectedRoute.country }}</span>
-        </p>
+        </motion.p>
       </div>
 
       <div class="col-12 col-md-4 admin-field">

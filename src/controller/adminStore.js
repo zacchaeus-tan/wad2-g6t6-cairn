@@ -108,6 +108,15 @@ export const useAdminStore = defineStore('admin', () => {
 
   const routeNames = computed(() => new Map(routes.value.map((r) => [r.id, r.name])))
 
+  // What a route search box lists for the text typed into it.
+  function searchRoutes(text) {
+    const term = text.trim().toLowerCase()
+    if (!term) return []
+    return routes.value
+      .filter((r) => r.name.toLowerCase().includes(term) || r.country?.toLowerCase().includes(term))
+      .slice(0, 8)
+  }
+
   const difficultyMismatches = computed(() =>
     routes.value
       .filter(
@@ -381,6 +390,7 @@ export const useAdminStore = defineStore('admin', () => {
     difficultyMismatches,
     incompleteRoutes,
     attentionCount,
+    searchRoutes,
     fetchAll,
     saveAlert,
     takeDownAlert,

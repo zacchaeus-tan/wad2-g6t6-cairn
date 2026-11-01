@@ -1,10 +1,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { motion } from 'motion-v'
+import { AnimatePresence, motion } from 'motion-v'
 import { useAdminStore } from '@/controller/adminStore'
 import { modifierClass } from '@/lib/format'
-import { fadeMotion } from '@/lib/motion'
+import { fadeMotion, rowMotion } from '@/lib/motion'
 import AdminNote from '@/components/admin/AdminNote.vue'
+
+const emit = defineEmits(['choose-from-list'])
 
 const adminStore = useAdminStore()
 const search = ref('')
@@ -13,15 +15,12 @@ const form = ref({ safetyStatus: 'open', safetyStatusNote: '' })
 const saving = ref(false)
 const saved = ref(false)
 
-const matches = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  if (!term) return []
-  return adminStore.routes
-    .filter((r) => r.name?.toLowerCase().includes(term) || r.country?.toLowerCase().includes(term))
-    .slice(0, 8)
-})
+const selected = computed(() => adminStore.routes.find((r) => r.id === selectedId.value))
 
-const selected = computed(() => adminStore.routes.find((r) => r.id === selectedId.value) || null)
+// The box holds the chosen route's name until it's saved, so don't list it as a search.
+const matches = computed(() =>
+  search.value === selected.value?.name ? [] : adminStore.searchRoutes(search.value),
+)
 
 // Routes an admin has already marked as caution or closed.
 const flaggedRoutes = computed(() =>
@@ -39,13 +38,20 @@ watch(selected, (route) => {
 
 function choose(route) {
   selectedId.value = route.id
-  search.value = ''
+  search.value = route.name
+}
+
+// The "Not open" list can be long, so the admin page jumps back up to the form.
+function chooseFromList(route) {
+  choose(route)
+  emit('choose-from-list')
 }
 
 async function save() {
   saving.value = true
   saved.value = await adminStore.saveRouteSafety(selectedId.value, form.value)
   saving.value = false
+  if (saved.value) search.value = ''
 }
 </script>
 
@@ -62,7 +68,7 @@ async function save() {
         autocomplete="off"
       />
     </div>
-    <ul v-if="matches.length" class="admin-results">
+    <motion.ul v-if="matches.length" v-bind="fadeMotion" class="admin-results">
       <li v-for="route in matches" :key="route.id">
         <button type="button" @click="choose(route)">
           <span
@@ -73,7 +79,7 @@ async function save() {
           }}</span>
         </button>
       </li>
-    </ul>
+    </motion.ul>
 
     <motion.form
       v-if="selected"
@@ -124,14 +130,20 @@ async function save() {
 
     <div v-if="flaggedRoutes.length" class="admin-group mt-4">
       <h3 class="cairn-label">Not open</h3>
-      <ul class="admin-list">
-        <li v-for="route in flaggedRoutes" :key="route.id" class="admin-item">
+      <AnimatePresence as="ul" class="admin-list">
+        <motion.li
+          v-for="route in flaggedRoutes"
+          :key="route.id"
+          v-bind="rowMotion"
+          layout="position"
+          class="admin-item"
+        >
           <div class="admin-item-body">
             <p>
               <span class="admin-tag" :class="modifierClass(route.safety_status)">{{
                 route.safety_status
               }}</span>
-              <button type="button" class="cairn-link" @click="choose(route)">
+              <button type="button" class="cairn-link" @click="chooseFromList(route)">
                 {{ route.name }}
               </button>
             </p>
@@ -139,8 +151,8 @@ async function save() {
               {{ route.safety_status_note }}
             </p>
           </div>
-        </li>
-      </ul>
+        </motion.li>
+      </AnimatePresence>
     </div>
   </div>
 </template>
