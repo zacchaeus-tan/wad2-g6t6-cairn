@@ -18,7 +18,12 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
   <!-- A plain labelled section, not role="alert": the notices are part of the
        page, so screen readers should not announce them on load. -->
   <MotionConfig reduced-motion="user">
-    <section v-if="alerts.length" class="trail-notices" aria-labelledby="trail-notices-title">
+    <section
+      v-if="alerts.length"
+      id="trail-notices"
+      class="trail-notices"
+      aria-labelledby="trail-notices-title"
+    >
       <h2 id="trail-notices-title" class="cairn-label">{{ title }}</h2>
       <ul class="trail-notices-list">
         <motion.li

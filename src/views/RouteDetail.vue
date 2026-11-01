@@ -131,7 +131,7 @@ async function reloadRoute() {
     </div>
 
     <template v-else>
-      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn"/>
+      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn" :alerts="alerts" />
       <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">
