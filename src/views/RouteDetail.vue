@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { fetchRouteById, fetchRouteAlerts, takePreloadedRoute } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
@@ -34,12 +34,15 @@ const signInTo = computed(() => ({ name: 'auth', query: { redirect: routeParams.
 const itinerary = ref(null)
 const itineraryLoading = ref(false)
 const itineraryError = ref('')
+// itinerary input for checklist generation
+const itineraryInputs = ref(null)
 
 async function onGenerate(form) {
   itineraryLoading.value = true
   itineraryError.value = ''
   try {
     itinerary.value = await generateItinerary(route.value, form)
+    itineraryInputs.value = form
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     itineraryError.value = `Unable to generate an itinerary: ${message}`
@@ -84,6 +87,12 @@ onMounted(async () => {
       userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
+
+    // A link to a section (#reviews): the section only has its final position now
+    if (routeParams.hash) {
+      await nextTick()
+      document.getElementById(routeParams.hash.slice(1))?.scrollIntoView()
+    }
   }
 })
 
@@ -211,7 +220,15 @@ async function reloadRoute() {
         </div>
 
         <section id="gear" class="mt-4" aria-labelledby="gear-title">
-          <GearChecklist :route="route" :is-logged-in="auth.isLoggedIn" :sign-in-to="signInTo" />
+          <GearChecklist
+            :route="route"
+            :weather="weather"
+            :weather-ready="Boolean(weather) || Boolean(weatherError)"
+            :itinerary="itinerary"
+            :trip="itineraryInputs"
+            :is-logged-in="auth.isLoggedIn"
+            :sign-in-to="signInTo"
+          />
         </section>
 
         <section id="reviews" class="mt-4">
@@ -230,6 +247,10 @@ async function reloadRoute() {
 </template>
 
 <style scoped>
+#reviews {
+  scroll-margin-top: 24px;
+}
+
 .route-detail {
   min-height: 100vh;
 }

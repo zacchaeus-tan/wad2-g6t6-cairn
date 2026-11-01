@@ -8,6 +8,10 @@ import ChecklistCategory from './ChecklistCategory.vue'
 
 const props = defineProps({
   route: { type: Object, required: true },
+  weather: { type: Object, default: null },
+  weatherReady: { type: Boolean, default: true }, // is forecast request ready
+  itinerary: { type: Object, default: null }, // ai output
+  trip: { type: Object, default: null }, // user input
   isLoggedIn: { type: Boolean, required: true },
   signInTo: { type: Object, required: true },
 })
@@ -24,7 +28,10 @@ async function generateChecklist() {
   ) {
     return
   }
-  await checklistStore.generate(props.route)
+  await checklistStore.generate(props.route, props.weather, {
+    itinerary: props.itinerary,
+    trip: props.trip,
+  })
   categoryComponent.value?.resetCategory()
 }
 
@@ -123,7 +130,7 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
       This checklist is empty. Add items, or unsave it to generate a new one.
     </p>
 
-    <div v-else class="gear-grid">
+    <div v-if="isLoggedIn" class="gear-grid">
       <div class="gear-pad">
         <div class="gear-binding" aria-hidden="true"><i v-for="hole in 12" :key="hole"></i></div>
         <div class="gear-sheet">
@@ -267,7 +274,7 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
         <button
           type="button"
           class="cairn-btn is-blaze"
-          :disabled="checklistStore.loading || isSaved"
+          :disabled="checklistStore.loading || isSaved || !weatherReady"
           @click="generateChecklist"
         >
           {{

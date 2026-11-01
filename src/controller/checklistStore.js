@@ -28,6 +28,53 @@ async function currentUser() {
   return data?.user ?? null
 }
 
+// A compact version of the forecast for the checklist generator.
+// Only the fields that change what to pack are sent.
+function forecastForChecklist(weather) {
+  if (!weather || !Array.isArray(weather.days)) {
+    return []
+  }
+  return weather.days.map((day) => ({
+    date: day.date,
+    min: day.min,
+    max: day.max,
+    summitMin: day.summit ? day.summit.min : null,
+    summitMax: day.summit ? day.summit.max : null,
+    feelsMin: day.feelsMin,
+    rainMm: day.rain,
+    rainChance: day.rainChance,
+    windKph: day.windMax,
+    gustKph: day.gustMax,
+    uv: day.uv,
+    warnings: day.warnings,
+  }))
+}
+
+// The itinerary and start date, if the user has generated an itinerary.
+// Returns null when either is missing, so generation falls back to route + forecast only.
+function tripPlan(plan) {
+  const trip = plan?.trip
+  const itinerary = plan?.itinerary
+  if (!trip?.startDate || !itinerary || !Array.isArray(itinerary.days)) {
+    return null
+  }
+  return {
+    start_date: trip.startDate,
+    days: trip.days,
+    pace: trip.pace,
+    day_plan: itinerary.days.slice(0, 14).map((d) => ({
+      day: d.day,
+      date: d.date,
+      title: d.title,
+      start: d.start,
+      end: d.end,
+      distance_km: d.distance_km,
+      elevation_gain_m: d.elevation_gain_m,
+      est_hours: d.est_hours,
+    })),
+  }
+}
+
 export const useChecklistStore = defineStore('checklist', () => {
   const checklist = ref(null) // current checklist row, or null
   const items = ref([])
@@ -76,8 +123,14 @@ export const useChecklistStore = defineStore('checklist', () => {
   }
 
   // LLM (via the generate-checklist Edge Function)
-  async function fetchItemsFromLLM(route) {
-    const { data, error: err } = await checklistModel.invokeGenerateChecklist(route.id)
+  async function fetchItemsFromLLM(route, weather, plan) {
+    const forecast = forecastForChecklist(weather)
+    const trip = tripPlan(plan)
+    const { data, error: err } = await checklistModel.invokeGenerateChecklist(
+      route.id,
+      forecast,
+      trip,
+    )
     if (err || !Array.isArray(data?.items)) {
       console.error('generate-checklist failed:', err, data)
       throw new Error('Could not generate a checklist right now. Please try again.')
@@ -101,7 +154,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     )
   }
 
-  async function generate(route) {
+  async function generate(route, weather, plan) {
     if (checklist.value?.is_saved) {
       error.value = 'Unsave this checklist before generating a new one.'
       return false
@@ -116,7 +169,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
 
       // 1. call the LLM first so a failure never deletes the existing checklist
-      const generated = await fetchItemsFromLLM(route)
+      const generated = await fetchItemsFromLLM(route, weather, plan)
       if (!generated.length) {
         throw new Error('No items were generated. Please try again.')
       }

@@ -26,22 +26,103 @@ const experienceStats = computed(() =>
 </script>
 
 <template>
-  <section aria-labelledby="experience-title">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h2 id="experience-title" class="h6 text-muted text-uppercase mb-0">Your experience</h2>
-      <RouterLink class="btn btn-sm btn-outline-primary" :to="{ name: 'quiz' }">
+  <section class="profile-experience" aria-labelledby="experience-title">
+    <div class="profile-experience-head">
+      <h2 id="experience-title" class="cairn-headline">Your experience</h2>
+      <RouterLink class="cairn-btn is-light is-small" :to="{ name: 'quiz' }">
         {{ profile.quiz_completed_at ? 'Retake quiz' : 'Take the quiz' }}
       </RouterLink>
     </div>
-    <div class="row g-3 mb-4">
-      <div v-for="stat in experienceStats" :key="stat.label" class="col-6 col-md-3">
-        <div class="card h-100 text-center">
-          <div class="card-body">
-            <div class="small text-muted">{{ stat.label }}</div>
-            <div class="h6 mb-0">{{ stat.value ?? '—' }}</div>
-          </div>
-        </div>
+    <dl class="profile-experience-list">
+      <div v-for="stat in experienceStats" :key="stat.label">
+        <dt class="cairn-label">{{ stat.label }}</dt>
+        <dd v-if="stat.value">{{ stat.value }}</dd>
+        <dd v-else aria-label="Not listed">—</dd>
       </div>
-    </div>
+    </dl>
   </section>
 </template>
+
+<style scoped>
+.profile-experience {
+  margin-inline: calc(-1 * var(--panel-pad));
+  padding: clamp(24px, 3vw, 44px) var(--panel-pad);
+  background: var(--pine);
+  color: var(--paper);
+}
+
+.profile-experience-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--paper);
+}
+
+.profile-experience-head a:focus-visible {
+  outline-color: var(--glacier);
+}
+
+.profile-experience-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+}
+
+.profile-experience-list > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 20px 16px;
+  border-left: 1px solid rgb(242 239 234 / 0.18);
+}
+
+.profile-experience-list > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.profile-experience-list dt {
+  color: var(--sage);
+}
+
+.profile-experience-list dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 22px;
+}
+
+/* Sized by the card, which is narrower than the screen beside the signpost */
+@container profile-panel (max-width: 640px) {
+  .profile-experience-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-experience-list > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .profile-experience-list > div:nth-child(n + 3) {
+    border-top: 1px solid rgb(242 239 234 / 0.18);
+  }
+}
+
+@container profile-panel (max-width: 480px) {
+  .profile-experience-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-experience-list > div {
+    padding-inline: 0;
+    border-left: 0;
+  }
+
+  .profile-experience-list > div:nth-child(n + 2) {
+    border-top: 1px solid rgb(242 239 234 / 0.18);
+  }
+}
+</style>

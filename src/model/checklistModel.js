@@ -9,8 +9,10 @@ export function getUser() {
 }
 
 // LLM
-export function invokeGenerateChecklist(routeId) {
-  return supabase.functions.invoke('generate-checklist', { body: { route_id: routeId } })
+export function invokeGenerateChecklist(routeId, forecast, plan) {
+  return supabase.functions.invoke('generate-checklist', {
+    body: { route_id: routeId, forecast: forecast, plan: plan },
+  })
 }
 
 // checklists
