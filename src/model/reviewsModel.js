@@ -71,8 +71,10 @@ export function insertIncidents(reviewId, routeId, incidents) {
 }
 
 // Its incident notes are deleted with it (on delete cascade).
+// Returns the deleted row, because Row Level Security blocks a delete by
+// removing nothing rather than by returning an error.
 export function deleteReview(reviewId) {
-  return supabase.from('reviews').delete().eq('id', reviewId)
+  return supabase.from('reviews').delete().eq('id', reviewId).select('id')
 }
 
 // Community stats on `routes` are written by the recalc-route-stats Edge

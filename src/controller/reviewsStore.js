@@ -172,12 +172,17 @@ export const useReviewsStore = defineStore('reviews', () => {
 
   async function remove(reviewId, routeId) {
     clearError()
-    const { error: err } = await reviewsModel.deleteReview(reviewId)
+    const { data, error: err } = await reviewsModel.deleteReview(reviewId)
     if (err) {
       error.value = err.message
       return false
     }
-    ownReview.value = null
+    if (!data?.length) {
+      error.value = 'The review was not deleted. You may not have permission to delete it.'
+      return false
+    }
+    // An admin may be deleting someone else's review
+    if (ownReview.value?.id === reviewId) ownReview.value = null
     await recalcStats(routeId)
     await fetchForRoute(routeId)
     return true

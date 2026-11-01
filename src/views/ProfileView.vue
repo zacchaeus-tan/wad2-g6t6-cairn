@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
 import { useChecklistStore } from '@/controller/checklistStore'
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
+import TrailNotices from '@/components/routes/TrailNotices.vue'
 import ProfileSummary from '@/components/profile/ProfileSummary.vue'
 import ProfileExperience from '@/components/profile/ProfileExperience.vue'
 import ProfileHikeTotals from '@/components/profile/ProfileHikeTotals.vue'
@@ -131,6 +132,12 @@ onMounted(async () => {
         </nav>
 
         <section class="profile-panel">
+          <!-- Above the tabs, so a safety notice shows whichever tab is open -->
+          <TrailNotices
+            :alerts="userRoutesStore.savedRouteNotices"
+            title="Notices on your saved routes"
+          />
+
           <AnimatePresence mode="wait" :initial="false">
             <motion.div
               :key="activeName"
