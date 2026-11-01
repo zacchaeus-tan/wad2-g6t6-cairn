@@ -9,7 +9,7 @@ import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
 import { useChecklistStore } from '@/controller/checklistStore'
-import ChecklistForm from '../components/checklist/ChecklistForm.vue'
+import GearChecklist from '@/components/checklist/GearChecklist.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
@@ -101,41 +101,6 @@ async function reloadRoute() {
     console.warn('Could not reload the route after a review change:', err)
   }
 }
-
-
-// gear checklist
-async function generateChecklist() {
-  if (
-    checklistStore.items.length &&
-    !confirm('Generating a new checklist will delete the current one and replace it. Continue?')
-  ) {
-    return
-  }
-  await checklistStore.generate(route.value)
-}
-
-const showForm = ref(false)
-const editingItem = ref(null)
-
-function openForm(item = null) {
-  editingItem.value = item
-  showForm.value = true
-}
-
-function closeForm() {
-  showForm.value = false
-  editingItem.value = null
-  checklistStore.clearError()
-}
-
-const isSaved = computed(() => Boolean(checklistStore.checklist?.is_saved))
-
-async function onToggleSaved() {
-  await checklistStore.toggleSaved()
-  if (!isSaved.value) {
-    closeForm() // don't leave a half-open form behind after unsaving
-  }
-}
 </script>
 
 <template>
@@ -145,7 +110,9 @@ async function onToggleSaved() {
         <p v-if="loading" role="status">Loading route...</p>
         <p v-else-if="error" role="alert">{{ error }}</p>
         <p v-else>This route could not be found.</p>
-        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes">Back to all routes</RouterLink>
+        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes"
+          >Back to all routes</RouterLink
+        >
       </div>
     </div>
 
@@ -172,182 +139,95 @@ async function onToggleSaved() {
           <WeatherForecast :weather="weather" :error="weatherError" />
         </section>
 
-        <section id="plan" class="col-12" aria-labelledby="plan-title">
-          <article class="route-plan">
-            <div class="route-plan-head">
-              <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
-              <span class="route-ai-tag">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
-                </svg>
-                AI-generated
-              </span>
-            </div>
-            <p class="route-plan-intro">
-              Choose when you're starting, how many days you have and your pace, and we'll suggest a day-by-day
-              plan.
-            </p>
+                <p
+                  v-for="warning in suitability.warnings"
+                  :key="warning"
+                  class="alert alert-danger mt-4 mb-0"
+                  role="note"
+                >
+                  {{ warning }}
+                </p>
 
-            <ItineraryForm v-if="auth.isLoggedIn" :route="route" :loading="itineraryLoading" @generate="onGenerate" />
-            <p v-else class="route-plan-intro">
-              <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">Sign in</RouterLink>
-              to generate an itinerary.
-            </p>
-
-            <p v-if="itineraryError" class="route-plan-error" role="alert">{{ itineraryError }}</p>
-
-            <template v-if="itinerary">
-              <p v-if="itinerary.summary" class="route-plan-summary">{{ itinerary.summary }}</p>
-
-              <div class="route-plan-days">
-                <ItineraryDay v-for="day in itinerary.days" :key="day.day" :day="day" />
-              </div>
-
-              <template v-if="itinerary.tips && itinerary.tips.length">
-                <h3 class="route-plan-tips-title">Tips</h3>
-                <ul class="route-plan-tips">
-                  <li v-for="tip in itinerary.tips" :key="tip">{{ tip }}</li>
-                </ul>
+                <p class="small text-body-secondary mt-3 mb-0">
+                  Based on your quiz answers. Only you know your real fitness, so treat this as a
+                  guide.
+                </p>
               </template>
-
-              <p class="cairn-fine">AI-generated. Check trail conditions, weather and permits before you hike.</p>
-            </template>
-          </article>
-        </section>
-      </div>
-
-      <section class="mt-4 route-checklist" aria-labelledby="gear-checklist-title">
-        <div class="route-detail-section">
-          <h2 id="gear-checklist-title" class="h4 mb-3">Gear checklist</h2>
-
-          <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
-            <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }">
-              Sign in
-            </RouterLink>
-            to make a new checklist.
-          </p>
-
-          <div v-else>
-            <!-- Generate and save buttons -->
-            <div class="d-flex flex-wrap gap-2 mb-2 route-checklist-toolbar">
-              <button
-                class="btn btn-sm btn-outline-primary"
-                :disabled="checklistStore.loading || isSaved"
-                @click="generateChecklist"
-              >
-                {{
-                  checklistStore.loading
-                    ? 'Generating...'
-                    : checklistStore.items.length
-                      ? 'Regenerate'
-                      : 'Generate checklist'
-                }}
-              </button>
-
-              <button
-                v-if="checklistStore.checklist"
-                class="btn btn-sm"
-                :class="isSaved ? 'btn-warning' : 'btn-outline-warning'"
-                @click="onToggleSaved"
-              >
-                {{ isSaved ? '★ Saved' : '☆ Save checklist' }}
-              </button>
             </div>
+          </section>
 
-            <p v-if="checklistStore.checklist && !isSaved" class="small text-muted">
-              Save this checklist to edit it and find it in your profile.
-            </p>
+          <section class="col-12">
+            <WeatherForecast :weather="weather" :error="weatherError" />
+          </section>
 
-            <p v-if="isSaved" class="small text-muted">
-              To generate a new checklist, unsave this one first by clicking "★ Saved". Generating a
-              new checklist deletes this one.
-            </p>
+          <section id="plan" class="col-12" aria-labelledby="plan-title">
+            <article class="route-plan">
+              <div class="route-plan-head">
+                <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
+                <span class="route-ai-tag">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+                  </svg>
+                  AI-generated
+                </span>
+              </div>
+              <p class="route-plan-intro">
+                Choose when you're starting, how many days you have and your pace, and we'll suggest
+                a day-by-day plan.
+              </p>
 
-            <p v-if="isSaved && !checklistStore.items.length" class="small text-muted">
-              This checklist is empty. Add items below, or unsave it to generate a new one.
-            </p>
+              <ItineraryForm
+                v-if="auth.isLoggedIn"
+                :route="route"
+                :loading="itineraryLoading"
+                @generate="onGenerate"
+              />
+              <p v-else class="route-plan-intro">
+                <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+                  >Sign in</RouterLink
+                >
+                to generate an itinerary.
+              </p>
 
-            <div
-              v-if="checklistStore.error && !showForm"
-              class="alert alert-danger py-2 small"
-              role="alert"
-            >
-              {{ checklistStore.error }}
-            </div>
+              <p v-if="itineraryError" class="route-plan-error" role="alert">
+                {{ itineraryError }}
+              </p>
 
-            <!-- Checklist items -->
-            <ul v-if="checklistStore.items.length" class="mb-2 route-checklist-list">
-              <li v-for="item in checklistStore.items" :key="item.id" class="route-checklist-row">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  :checked="item.is_checked"
-                  @change="checklistStore.toggleChecked(item.id, !item.is_checked)"
-                />
+              <template v-if="itinerary">
+                <p v-if="itinerary.summary" class="route-plan-summary">{{ itinerary.summary }}</p>
 
-                <div class="route-checklist-item-content">
-                  <span
-                    :class="{
-                      'text-decoration-line-through text-muted': item.is_checked,
-                    }"
-                  >
-                    {{ item.label }}
-                    <span v-if="item.quantity" class="text-muted"> — {{ item.quantity }} </span>
-                  </span>
-
-                  <div v-if="item.reason" class="small text-muted">
-                    {{ item.reason }}
-                  </div>
+                <div class="route-plan-days">
+                  <ItineraryDay v-for="day in itinerary.days" :key="day.day" :day="day" />
                 </div>
 
-                <div v-if="isSaved" class="route-checklist-item-actions">
-                  <button class="btn btn-sm btn-link text-primary p-0" @click="openForm(item)">
-                    edit
-                  </button>
+                <template v-if="itinerary.tips && itinerary.tips.length">
+                  <h3 class="route-plan-tips-title">Tips</h3>
+                  <ul class="route-plan-tips">
+                    <li v-for="tip in itinerary.tips" :key="tip">{{ tip }}</li>
+                  </ul>
+                </template>
 
-                  <span aria-hidden="true"> | </span>
-
-                  <button
-                    class="btn btn-sm btn-link text-danger p-0"
-                    @click="checklistStore.deleteItem(item.id)"
-                  >
-                    remove
-                  </button>
-                </div>
-                <ChecklistForm
-                  v-if="showForm && editingItem?.id === item.id"
-                  :key="editingItem?.id"
-                  class="w-100"
-                  :item="editingItem"
-                  @done="closeForm"
-                />
-              </li>
-            </ul>
-
-            <!-- Add or edit an item -->
-            <div v-if="checklistStore.checklist && isSaved" class="checklist-form-area">
-              <ChecklistForm v-if="showForm && !editingItem" key="new" @done="closeForm" />
-              <button v-else class="btn btn-sm btn-outline-secondary" @click="openForm()">
-                + Add item
-              </button>
-            </div>
-          </div>
-
-          <p class="small text-body-secondary mt-3 mb-0">
-            AI-generated. Adjust the list to your own experience and the conditions on the day.
-          </p>
+                <p class="cairn-fine">
+                  AI-generated. Check trail conditions, weather and permits before you hike.
+                </p>
+              </template>
+            </article>
+          </section>
         </div>
-      </section>
 
-      <section id="reviews" class="mt-4">
-        <TrailRegister
-          :route="route"
-          :user-id="auth.user?.id ?? null"
-          :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-          @saved="reloadRoute"
-          @deleted="reloadRoute"
-        />
-      </section>
+        <section id="gear" class="mt-4" aria-labelledby="gear-title">
+          <GearChecklist :route="route" :is-logged-in="auth.isLoggedIn" :sign-in-to="signInTo" />
+        </section>
+
+        <section id="reviews" class="mt-4">
+          <TrailRegister
+            :route="route"
+            :user-id="auth.user?.id ?? null"
+            :sign-in-to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+            @saved="reloadRoute"
+            @deleted="reloadRoute"
+          />
+        </section>
       </div>
     </template>
   </div>
@@ -452,65 +332,7 @@ async function onToggleSaved() {
   line-height: 24px;
 }
 
-.route-checklist .route-detail-section {
-  border-color: #dee2e6;
-}
-
-.route-checklist-toolbar {
-  align-items: center;
-}
-
-/* Checklist items container */
-.route-checklist-list {
+.route-match-checks li + li {
   margin-top: 0.75rem;
-  padding: 0;
-  list-style: none;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-/* Individual checklist item */
-.route-checklist .route-checklist-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.route-checklist .route-checklist-row + .route-checklist-row {
-  border-top: 1px solid #dee2e6;
-}
-
-/* Checkbox */
-.route-checklist-row .form-check-input {
-  flex-shrink: 0;
-  margin-top: 0.25rem;
-}
-
-/* Item name, quantity and reason */
-.route-checklist-item-content {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.5;
-}
-
-/* Edit and remove actions */
-.route-checklist-item-actions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
-}
-
-/* Spacing around the add/edit form */
-.route-checklist .checklist-form-area {
-  margin-top: 1rem;
 }
 </style>
