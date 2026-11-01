@@ -2,9 +2,6 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { motion, useMotionValueEvent } from 'motion-v'
 
-// Decorative only: a brown trail with grass that winds behind the sections and is drawn
-// as you scroll. It is not the real route. The parent passes how far along to draw (0-1),
-// and the elements marked .route-stop that the trail passes beside.
 const props = defineProps({
   progress: { type: Object, required: true },
 })
@@ -13,7 +10,7 @@ const root = ref(null)
 const width = ref(0)
 const height = ref(0)
 const pathData = ref('')
-const tufts = ref([]) // { d, at } where at is the distance along the trail
+const grass = ref([]) // { d, at } where at is the distance along the trail
 const walkedLength = ref(0)
 const hiker = ref({ x: 0, y: 0 })
 
@@ -70,7 +67,7 @@ async function build() {
   height.value = h
   pathData.value = smoothPath(points)
 
-  // Measure the drawn path, then scatter grass tufts along both sides of it
+  // Measure the drawn path, then scatter grass along both sides of it
   await nextTick()
   const path = trailPath.value
   totalLength = path.getTotalLength()
@@ -93,7 +90,7 @@ async function build() {
       d: `M${x} ${y} l-${size * 0.45} -${size * 0.8} M${x} ${y} l0 -${size} M${x} ${y} l${size * 0.45} -${size * 0.8}`,
     })
   }
-  tufts.value = list
+  grass.value = list
   draw(props.progress.get())
 }
 
@@ -128,10 +125,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
       />
       <g class="walked-trail-grass">
         <path
-          v-for="tuft in tufts"
-          :key="tuft.at"
-          :d="tuft.d"
-          :class="{ 'is-grown': walkedLength >= tuft.at }"
+          v-for="g in grass"
+          :key="g.at"
+          :d="g.d"
+          :class="{ 'is-grown': walkedLength >= g.at }"
         />
       </g>
       <g :transform="`translate(${hiker.x} ${hiker.y})`">
@@ -165,7 +162,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 
 .walked-trail-ghost {
   fill: none;
-  stroke: #cfc5b2;
+  stroke: var(--granite-300);
   stroke-width: 3;
   stroke-dasharray: 1 10;
   stroke-linecap: round;
