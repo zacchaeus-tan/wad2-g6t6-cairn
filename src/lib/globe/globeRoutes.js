@@ -156,7 +156,7 @@ export function routeCardDetails(route) {
 }
 
 // One entry per country for the globe's "Fly to" list: how many routes it has and the
-// corners of the box around their trailheads. Most routes first.
+// corners of the box around their trailheads. In alphabetical order.
 export function countrySummaries(routes) {
   const countries = new Map()
   for (const route of routes) {
@@ -185,7 +185,7 @@ export function countrySummaries(routes) {
   }
 
   return [...countries.values()]
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((country) => ({
       name: country.name,
       count: country.count,

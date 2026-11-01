@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // MapLibre GL JS (https://maplibre.org, BSD-3-Clause) draws the 3D globe; see src/lib/globe/globeMap.js
-import { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
+import { Map as MapLibreMap, Marker, Popup, ScaleControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 // Motion for Vue (https://motion.dev, MIT) fades and clears the globe
 import { motion } from 'motion-v'
@@ -86,6 +86,9 @@ const hoverCardElement = ref(null)
 const clickedCardElement = ref(null)
 // The country the globe last flew to, highlighted in the route index
 const selectedCountry = ref('')
+// What the GPS-style readout shows
+const readoutPosition = ref('')
+const scaleHost = ref(null)
 const pillsVisible = computed(() => phase.value === 'explore' && !openingRouteName.value)
 // The route whose card is showing, so its pill is highlighted
 const activeRouteId = computed(
@@ -352,6 +355,11 @@ function globePadding() {
   return { top: navHeightPx, bottom: 0, left: indexPanelPx, right: 0 }
 }
 
+function closeRouteCards() {
+  hideHoverPopup()
+  closeClickedCard()
+}
+
 function flyToCountry(countryName) {
   const country = countries.value.find((item) => item.name === countryName)
   if (!country || !globeView) {
@@ -359,13 +367,32 @@ function flyToCountry(countryName) {
   }
 
   selectedCountry.value = countryName
-  hideHoverPopup()
-  closeClickedCard()
+  closeRouteCards()
   globeView.fitBounds(country.bounds, {
     padding: 60,
     maxZoom: 8,
     duration: prefersReducedMotion ? 0 : 1600,
   })
+}
+
+// Back to the opening view of all the routes, facing north
+function showAllRoutes() {
+  selectedCountry.value = ''
+  closeRouteCards()
+  globeView?.easeTo({
+    ...exploreView,
+    bearing: 0,
+    pitch: 0,
+    duration: prefersReducedMotion ? 0 : 1400,
+  })
+}
+
+// Keeps the readout on the middle of the view
+function updateReadout() {
+  const { lat, lng } = globeView.getCenter().wrap()
+  const latitude = `${lat >= 0 ? 'N' : 'S'} ${Math.abs(lat).toFixed(2)}°`
+  const longitude = `${lng >= 0 ? 'E' : 'W'} ${Math.abs(lng).toFixed(2)}°`
+  readoutPosition.value = `${latitude} ${longitude}`
 }
 
 // Glides the globe so a pill sits just under the navbar, and waits until it has
@@ -710,6 +737,11 @@ onMounted(async () => {
     })
     setMapInteraction(globeView, false)
     globeView.on('moveend', saveView)
+    globeView.on('move', updateReadout)
+    updateReadout()
+    // The scale bar goes in the readout rather than in one of the map's own corners
+    const scaleControl = new ScaleControl({ maxWidth: 90, unit: 'metric' })
+    scaleHost.value.append(scaleControl.onAdd(globeView))
     globeView.on('error', (event) => {
       if (event.error) {
         mapError.value = `Globe rendering error: ${event.error.message}`
@@ -799,7 +831,52 @@ onBeforeUnmount(() => {
       :error="error"
       :map-error="mapError"
       @fly-to="flyToCountry"
+      @show-all="showAllRoutes"
     />
+
+    <motion.div
+      v-if="phase === 'explore'"
+      class="globe-zoom"
+      role="group"
+      aria-label="Zoom"
+      :initial="{ opacity: 0 }"
+      :animate="{ opacity: 1 }"
+      :transition="{ duration: 0.6, delay: 0.4 }"
+    >
+      <button
+        type="button"
+        aria-label="Zoom in"
+        data-testid="globe-zoom-in"
+        @click="globeView?.zoomIn()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        aria-label="Zoom out"
+        data-testid="globe-zoom-out"
+        @click="globeView?.zoomOut()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h14" />
+        </svg>
+      </button>
+    </motion.div>
+
+    <!-- Where the camera is, like the readout on a GPS unit, with the map's scale bar added to it.
+         Always in the page, as the scale bar is added when the map is created. -->
+    <motion.div
+      class="globe-readout"
+      aria-hidden="true"
+      :initial="{ opacity: 0 }"
+      :animate="{ opacity: phase === 'explore' ? 1 : 0 }"
+      :transition="{ duration: 0.6, delay: 0.4 }"
+    >
+      <span class="cairn-data">{{ readoutPosition }}</span>
+      <div ref="scaleHost"></div>
+    </motion.div>
 
     <!-- Each pill is rendered here but teleported into its map marker, which the map keeps
          positioned over the route's trailhead as the globe moves -->
@@ -957,10 +1034,92 @@ onBeforeUnmount(() => {
     opacity: 1;
   }
 }
-/* On phones the route index is a bar along the bottom, so the map's credit sits above it */
+/* Bottom right */
+.globe-zoom {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 40px;
+  z-index: 3;
+  display: grid;
+  background: var(--ground);
+  box-shadow: var(--shadow-panel);
+}
+
+.globe-zoom button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-bottom: 1px solid var(--granite-200);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.globe-zoom button:last-child {
+  border-bottom: 0;
+}
+
+.globe-zoom button:hover {
+  background: var(--paper);
+}
+
+.globe-zoom button:focus-visible {
+  outline: 3px solid var(--glacier);
+  outline-offset: 2px;
+}
+
+.globe-zoom svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+/* Bottom left, just past the board */
+.globe-readout {
+  position: absolute;
+  bottom: 14px;
+  left: calc(var(--gutter) + 332px);
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 5px 10px;
+  background: rgb(16 24 20 / 0.72);
+  color: var(--lichen);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.globe-readout :deep(.maplibregl-ctrl-scale) {
+  margin: 0;
+  padding: 0 4px;
+  border: 2px solid var(--lichen);
+  border-top: 0;
+  background: none;
+  color: var(--lichen);
+  font: 600 10px var(--font-data);
+  white-space: nowrap;
+}
+
+/* On phones the route index is a bar along the bottom, so the zoom buttons and the map's
+   credit sit above it, side by side, and there is no room for the readout */
 @media (max-width: 640px) {
+  .globe-zoom {
+    right: 12px;
+    bottom: 68px;
+  }
+
   .globe-surface :deep(.maplibregl-ctrl-bottom-right) {
+    right: 64px;
     bottom: 52px;
+  }
+
+  .globe-readout {
+    display: none;
   }
 }
 </style>

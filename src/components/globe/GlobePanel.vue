@@ -6,8 +6,9 @@ import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import TrailPlank from './TrailPlank.vue'
 
 // The route index over the globe once exploring, as a trailhead notice board: how many routes
-// are shown, any errors, fingerposts for the countries to fly to, the difficulty key and the
-// Map/Satellite switch (used with v-model:satellite). On phones it folds into a bar along the bottom.
+// are shown, any errors, fingerposts back to all routes and to each country, the difficulty key
+// and the Map/Satellite switch (used with v-model:satellite). On phones it folds into a bar along
+// the bottom.
 defineProps({
   routeCount: { type: Number, required: true },
   shownCount: { type: Number, required: true },
@@ -22,7 +23,7 @@ defineProps({
   satellite: { type: Boolean, required: true },
 })
 
-const emit = defineEmits(['update:satellite', 'fly-to'])
+const emit = defineEmits(['update:satellite', 'fly-to', 'show-all'])
 
 // Slides in from the left, or rises from the bottom on phones. Same width as the phone styles below.
 const startOffset = window.matchMedia('(max-width: 640px)').matches ? { y: 16 } : { x: -16 }
@@ -33,9 +34,14 @@ const grades = [1, 2, 3, 4, null]
 // Only used on phones, where the index starts folded away
 const isOpen = ref(false)
 
+// Both get the sheet out of the way so the user can see where the globe went
 function flyTo(countryName) {
   emit('fly-to', countryName)
-  // Get the sheet out of the way so the user can see where the globe went
+  isOpen.value = false
+}
+
+function showAll() {
+  emit('show-all')
   isOpen.value = false
 }
 </script>
@@ -94,9 +100,22 @@ function flyTo(countryName) {
         <template v-if="countries.length">
           <p class="cairn-label">This way to</p>
           <ol class="globe-countries">
+            <li>
+              <TrailPlank
+                hover-colour="var(--wood-light)"
+                data-testid="globe-all-routes-button"
+                @click="showAll"
+              >
+                <span>All routes</span>
+                <span class="cairn-data globe-country-count">
+                  {{ shownCount }}
+                  <span class="cairn-visually-hidden">routes</span>
+                </span>
+              </TrailPlank>
+            </li>
             <li v-for="(country, index) in countries" :key="country.name">
               <TrailPlank
-                :class="{ 'is-short': index % 2 === 1 }"
+                :class="{ 'is-short': index % 2 === 0 }"
                 :selected="country.name === selectedCountry"
                 hover-colour="var(--wood-light)"
                 :aria-pressed="country.name === selectedCountry ? 'true' : 'false'"
@@ -353,7 +372,7 @@ function flyTo(countryName) {
     padding: 0;
   }
 
-  /* The open sheet covers the compass and zoom buttons */
+  /* The open sheet covers the zoom buttons */
   .globe-panel.is-open {
     z-index: 4;
   }
