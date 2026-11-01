@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { fetchRouteById } from '../controller/routesController'
+import { fetchRouteById, takePreloadedRoute } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
 import TrailRegister from '@/components/reviews/TrailRegister.vue'
@@ -23,10 +23,8 @@ const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
 const checklistStore = useChecklistStore()
 const userRoutesStore = useUserRoutesStore()
-const route = ref(null)
-// "Sign in" links come back to this page afterwards
-const signInTo = computed(() => ({ name: 'auth', query: { redirect: routeParams.fullPath } }))
-const loading = ref(true)
+const route = ref(takePreloadedRoute(routeParams.params.id))
+const loading = ref(!route.value)
 const error = ref('')
 
 const itinerary = ref(null)
@@ -64,7 +62,7 @@ async function loadWeather() {
 onMounted(async () => {
   checklistStore.reset()
   try {
-    route.value = await fetchRouteById(routeParams.params.id)
+    route.value ??= await fetchRouteById(routeParams.params.id)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     error.value = `Unable to load this route: ${message}`
