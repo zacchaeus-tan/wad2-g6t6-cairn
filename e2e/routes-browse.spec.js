@@ -152,6 +152,41 @@ test.describe('Browsing routes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
   })
 
+  // Verify that the transition screen shows the route, and its page then opens with no loading message.
+  test('should show the transition screen before the route page opens', async ({ page }) => {
+    // setup
+    await page.goto('/routes')
+    const firstTile = page.getByTestId('route-tile').first()
+    const name = await firstTile.getByRole('heading').textContent()
+
+    // actions
+    await firstTile.click()
+
+    // assert
+    await expect(page.getByTestId('route-transition-screen')).toContainText(name)
+    await expect(page).toHaveURL(/\/routes\/[^/]+$/)
+    await expect(page.getByText('Loading route...')).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
+  })
+
+  // Verify that a tile is still a real link that can open in a new tab, with no transition screen.
+  test('should open a tile in a new tab when Ctrl or Cmd is held', async ({ page, context }) => {
+    // setup
+    await page.goto('/routes')
+    const firstTile = page.getByTestId('route-tile').first()
+    const name = await firstTile.getByRole('heading').textContent()
+
+    // actions
+    const newTabOpened = context.waitForEvent('page')
+    await firstTile.click({ modifiers: ['ControlOrMeta'] })
+    const newTab = await newTabOpened
+
+    // assert
+    await expect(newTab.getByRole('heading', { level: 1 })).toHaveText(name)
+    await expect(page.getByTestId('route-transition-screen')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/routes$/)
+  })
+
   // Verify that a database failure shows an error rather than an empty page.
   test('should show an error when the database is unavailable', async ({ page }) => {
     // setup: make the routes request fail before the page loads

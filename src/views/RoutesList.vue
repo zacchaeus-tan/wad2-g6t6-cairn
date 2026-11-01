@@ -1,13 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'motion-v'
-import { fetchRouteTiles } from '../controller/routesController'
+import { useRouter } from 'vue-router'
+import { fetchRouteTiles, preloadRoute } from '../controller/routesController'
 import { tripType } from '@/lib/matching'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import FilterDropdown from '@/components/routes/FilterDropdown.vue'
 import RangeFilter from '@/components/routes/RangeFilter.vue'
 import RouteTile from '@/components/routes/RouteTile.vue'
+import RouteTransitionScreen from '@/components/routes/RouteTransitionScreen.vue'
 import cairnPhoto from '@/assets/img/cairn1.jpg'
 import cairnMask from '@/assets/img/cairn1-mask.png'
 import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
@@ -319,6 +321,26 @@ const introOpacity = useTransform(scrollY, (y) => (reduceMotion.value ? 1 : Math
 const bannerPhoto = `url(${cairnPhoto})`
 const bannerMask = `url(${cairnMask})`
 
+// The route being opened, shown on the transition screen while its details load ahead
+const router = useRouter()
+const openingRoute = ref(null)
+let openingRouteLoaded
+
+function openRoutePage(routeId) {
+  router.push({ name: 'route-detail', params: { id: routeId } })
+}
+
+function openRoute(route) {
+  if (reduceMotion.value) {
+    openRoutePage(route.id)
+    return
+  }
+  if (!openingRoute.value) {
+    openingRouteLoaded = preloadRoute(route.id)
+    openingRoute.value = route
+  }
+}
+
 // Once the filter bar sticks to the top of a wide screen, a search field slides into it
 const barSentinel = ref(null)
 const barIsStuck = ref(false)
@@ -583,7 +605,12 @@ onBeforeUnmount(() => stickObserver?.disconnect())
             :exit="{ opacity: 0, transition: { duration: 0.15 } }"
             :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
           >
-            <RouteTile :route="route" :photo="photoFor(route, index)" />
+            <!-- Caught before the tile's link acts on it. Ctrl or Cmd-click still opens a new tab. -->
+            <RouteTile
+              :route="route"
+              :photo="photoFor(route, index)"
+              @click.capture.exact.prevent="openRoute(route)"
+            />
           </motion.div>
         </AnimatePresence>
 
@@ -592,6 +619,13 @@ onBeforeUnmount(() => stickObserver?.disconnect())
         </div>
       </section>
     </template>
+
+    <RouteTransitionScreen
+      v-if="openingRoute"
+      :route-name="openingRoute.name"
+      :route-loaded="openingRouteLoaded"
+      @done="openRoutePage(openingRoute.id)"
+    />
   </div>
 </template>
 
