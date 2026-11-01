@@ -229,6 +229,15 @@
   white-space: nowrap;
 }
 
+/* The largest headline, for full-screen statements */
+.cairn-display {
+  font-size: clamp(40px, 6vw, 88px);
+  line-height: 0.98;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
 /* Section headline used across the route pages */
 .cairn-headline {
   font-size: clamp(30px, 3.6vw, 52px);
