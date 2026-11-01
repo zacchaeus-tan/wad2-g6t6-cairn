@@ -22,7 +22,6 @@ import {
 } from '@/lib/globe/globeMap'
 import {
   assignMarkerStacks,
-  difficultyColour,
   hasRenderableGeometry,
   routeBounds,
   routeCardDetails,
@@ -78,6 +77,11 @@ const hoverCardRoute = ref(null)
 const clickedCardRoute = ref(null)
 const hoverCardElement = ref(null)
 const clickedCardElement = ref(null)
+const pillsVisible = computed(() => phase.value === 'explore' && !openingRouteName.value)
+// The route whose card is showing, so its pill is highlighted
+const activeRouteId = computed(
+  () => hoverCardRoute.value?.routeId ?? clickedCardRoute.value?.routeId ?? null,
+)
 // Pills on the globe: { key, element, label, coordinates } plus routeId (one route) or
 // clusterId (a group). Each is drawn by <RoutePill>, teleported into its map marker's element.
 const pills = ref([])
@@ -198,15 +202,37 @@ async function showRouteGeometry(routeId) {
   }
 }
 
+// The size of a route's pill on screen, so its card can open clear of it
+function pillSize(routeId) {
+  const pill = markers.get(`route-${routeId}`)?.getElement().firstElementChild
+  return { width: pill?.offsetWidth ?? 0, height: pill?.offsetHeight ?? 0 }
+}
+
 // Adds the card once to measure it, then places it on the side away from its route
 function addRouteCardPopup(options, content, properties, lngLat) {
-  const measuringPopup = new Popup(options).setLngLat(lngLat).setDOMContent(content).addTo(globeView)
+  const pill = pillSize(properties.routeId)
+  const offset = popupOffset(properties.stackOffsetY, pill)
+  const measuringPopup = new Popup({ ...options, offset })
+    .setLngLat(lngLat)
+    .setDOMContent(content)
+    .addTo(globeView)
   const { width, height } = measuringPopup.getElement().getBoundingClientRect()
   measuringPopup.remove()
 
   const line = routeLines.get(properties.routeId) ?? null
-  const anchor = anchorAwayFromRoute(globeView, line, lngLat, width, height, properties.stackOffsetY)
-  return new Popup({ ...options, anchor }).setLngLat(lngLat).setDOMContent(content).addTo(globeView)
+  const anchor = anchorAwayFromRoute(
+    globeView,
+    line,
+    lngLat,
+    width,
+    height,
+    properties.stackOffsetY,
+    pill,
+  )
+  return new Popup({ ...options, offset, anchor })
+    .setLngLat(lngLat)
+    .setDOMContent(content)
+    .addTo(globeView)
 }
 
 async function showHoverPopup(properties, lngLat) {
@@ -219,13 +245,13 @@ async function showHoverPopup(properties, lngLat) {
   }
 
   hoverPopup?.remove()
+  // is-preview lets the cursor pass through the card, so it can never take the hover from its pill
   hoverPopup = addRouteCardPopup(
     {
-      className: 'route-card-popup',
+      className: 'route-card-popup is-preview',
       closeButton: false,
       closeOnClick: false,
       maxWidth: '380px',
-      offset: popupOffset(properties.stackOffsetY),
     },
     hoverCardElement.value,
     properties,
@@ -250,16 +276,29 @@ async function showRoutePopup(properties, lngLat) {
     return
   }
 
-  activePopup?.remove()
+  // Cleared first, so the old card's close handler knows it is being replaced, not closed
+  const previousPopup = activePopup
+  activePopup = null
+  previousPopup?.remove()
   pinnedRouteId = properties.routeId
   showRouteGeometry(pinnedRouteId)
-  // Stays open (keeping its route highlighted) until the user clicks its close button
+
+  // A phone is too narrow for the card beside or above a pill, so the globe first moves the
+  // pill up under the navbar and the card then hangs below it
+  if (isPhone()) {
+    await movePillNearTop(lngLat, properties.stackOffsetY)
+    if (clickedCardRoute.value?.routeId !== properties.routeId) {
+      return
+    }
+  }
+
+  // Stays open (keeping its route highlighted) until the user clicks the card's close button
   const popup = addRouteCardPopup(
     {
       className: 'route-card-popup',
+      closeButton: false,
       closeOnClick: false,
       maxWidth: '380px',
-      offset: popupOffset(properties.stackOffsetY),
     },
     clickedCardElement.value,
     properties,
@@ -271,8 +310,34 @@ async function showRoutePopup(properties, lngLat) {
       pinnedRouteId = null
       showRouteGeometry(null)
     }
+    // Only when the user closed this card; a card replacing it has already cleared activePopup
+    if (activePopup === popup) {
+      activePopup = null
+      clickedCardRoute.value = null
+    }
   })
   activePopup = popup
+}
+
+// Same width as the phone layout
+function isPhone() {
+  return window.matchMedia('(max-width: 640px)').matches
+}
+
+// Glides the globe so a pill sits just under the navbar, and waits until it has
+function movePillNearTop(lngLat, offsetY = 0) {
+  return new Promise((resolve) => {
+    const padding = globeView.getPadding()
+    const mapHeight = globeView.getCanvas().clientHeight
+    const middleY = (padding.top + mapHeight - padding.bottom) / 2
+    // Listen first: with no animation, easeTo finishes (and fires moveend) straight away
+    globeView.once('moveend', resolve)
+    globeView.easeTo({
+      center: lngLat,
+      offset: [0, padding.top + 72 - offsetY - middleY],
+      duration: prefersReducedMotion ? 0 : 500,
+    })
+  })
 }
 
 // Flies the camera down onto the route, fades to black, then opens its details page
@@ -324,6 +389,11 @@ function openClickedRoute() {
   openRouteDetails(clickedCardRoute.value, clickedCardLngLat)
 }
 
+// Its close handler clears activePopup and the card
+function closeClickedCard() {
+  activePopup?.remove()
+}
+
 // Waits on the route until its satellite photos have finished loading (or for a few seconds
 // on a slow connection), then fades to black and opens the details page
 function fadeOutWhenSharp(detailsPage) {
@@ -362,7 +432,7 @@ async function zoomIntoCluster(pill) {
   globeView.easeTo({ center: pill.coordinates, zoom })
 }
 
-// Show clusters as "N routes" pills and single routes as distance pills, adding new ones and
+// Show clusters as count pills and single routes as name pills, adding new ones and
 // removing ones that have merged or split up. Runs every time the map redraws.
 function updatePills() {
   if (!globeView.getSource('route-markers') || !globeView.isSourceLoaded('route-markers')) {
@@ -392,15 +462,17 @@ function updatePills() {
     nextMarkers.set(key, marker)
 
     if (cluster) {
-      newPills.push({ key, element, coordinates, clusterId, label: `${routeCount} routes` })
+      newPills.push({ key, element, coordinates, clusterId, label: String(routeCount) })
     } else {
       newPills.push({
         key,
         element,
         coordinates,
         routeId,
-        label: properties.distanceLabel,
-        dotColour: difficultyColour(properties.difficulty),
+        label: properties.shortName,
+        name: properties.name,
+        grade: properties.difficulty,
+        difficultyLabel: properties.difficultyLabel,
       })
       // Start downloading the line now, so it's usually ready by the time the pill is hovered
       loadRouteLine(routeId)
@@ -409,6 +481,10 @@ function updatePills() {
 
   let removedAny = false
   for (const [key, marker] of markers) {
+    // A pinned card hangs off its pill, which the map may stop listing near the edge of the globe
+    if (!nextMarkers.has(key) && key === `route-${pinnedRouteId}`) {
+      nextMarkers.set(key, marker)
+    }
     if (!nextMarkers.has(key)) {
       // A removed pill never fires mouseleave, so close its hover card here
       if (marker.getElement().matches(':hover')) {
@@ -672,15 +748,24 @@ onBeforeUnmount(() => {
         <RoutePill
           v-if="pill.routeId"
           :label="pill.label"
-          :dot-colour="pill.dotColour"
+          :grade="pill.grade"
+          :is-active="pill.routeId === activeRouteId"
+          :is-visible="pillsVisible"
+          :title="pill.name"
+          :aria-label="`${pill.name}, ${pill.difficultyLabel}`"
           data-testid="route-pill"
           @mouseenter="onPillEnter(pill)"
           @mouseleave="onPillLeave"
+          @focus="onPillEnter(pill)"
+          @blur="onPillLeave"
           @click.stop="onPillClick(pill)"
         />
         <RoutePill
           v-else
           :label="pill.label"
+          is-group
+          :is-visible="pillsVisible"
+          :aria-label="`${pill.label} routes here, zoom in`"
           data-testid="route-cluster-pill"
           @click="zoomIntoCluster(pill)"
         />
@@ -699,6 +784,7 @@ onBeforeUnmount(() => {
           :route="clickedCardRoute"
           show-view-more
           @view-more="openClickedRoute"
+          @close="closeClickedCard"
         />
       </div>
     </div>
@@ -773,29 +859,22 @@ onBeforeUnmount(() => {
   filter: none;
 }
 
-/* Route pills stay hidden until the user starts exploring. MapLibre sets marker opacity
-   inline (to dim ones behind the globe), so this needs !important */
-.globe-page:not(.is-explore) :deep(.map-pill) {
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-/* MapLibre builds the popup frame around our RouteCard, so its parts need :deep() */
+/* MapLibre builds the popup frame around our RouteCard, so its parts need :deep().
+   The frame is invisible: the card is its own page, with its own shadow. */
 .globe-surface :deep(.route-card-popup .maplibregl-popup-content) {
   padding: 0;
-  overflow: hidden;
-  border-radius: 0.9rem;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .globe-surface :deep(.route-card-popup .maplibregl-popup-tip) {
   display: none;
 }
 
-.globe-surface :deep(.route-card-popup .maplibregl-popup-close-button) {
-  top: 0.35rem;
-  right: 0.5rem;
-  font-size: 1.1rem;
+/* The hover card has nothing to click, so the cursor passes through it */
+.globe-surface :deep(.route-card-popup.is-preview) {
+  pointer-events: none;
 }
 
 /* Sits over the globe while it dives onto a route; the label shows straight away and

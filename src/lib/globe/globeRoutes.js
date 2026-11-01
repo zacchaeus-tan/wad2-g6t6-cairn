@@ -6,7 +6,7 @@ import { GRADES } from '@/lib/difficultyStyle'
 
 // Route pills closer together than this are stacked so none is hidden behind another
 export const stackRadiusMetres = 100
-const stackSpacingPx = 28
+const stackSpacingPx = 32
 
 // Light enough to read on the dark globe
 export const unratedColour = '#c9d0cb'
@@ -94,33 +94,63 @@ export function difficultyColour(difficulty) {
   return GRADES[difficulty]?.line ?? unratedColour
 }
 
+// The card's facts are metric: km to 1 decimal, metres with separators, climb signed and
+// highest point not. A missing value gives '', which the card shows as a dash read out as
+// "Not listed".
+function isMissing(value) {
+  return value == null || value === '' || !Number.isFinite(Number(value))
+}
+
 function formatRouteDistance(distance) {
-  if (distance == null || distance === '' || !Number.isFinite(Number(distance))) {
-    return 'Route'
+  if (isMissing(distance)) {
+    return ''
   }
 
-  return `${Number(distance).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`
+  const km = Number(distance).toLocaleString('en-GB', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+  return `${km} km`
+}
+
+function formatMetres(metres, sign = '') {
+  if (isMissing(metres)) {
+    return ''
+  }
+
+  return `${sign}${Math.round(Number(metres)).toLocaleString('en-GB')} m`
 }
 
 function formatRouteDuration(days) {
-  if (days == null || days === '') {
-    return 'Not listed'
+  if (isMissing(days)) {
+    return ''
   }
 
   return `${days} ${Number(days) === 1 ? 'day' : 'days'}`
 }
 
+// "Gunung Merbabu (Wekas BC)" -> "Gunung Merbabu", so pills on the globe stay short.
+// The card always shows the full name.
+export function shortRouteName(name) {
+  const short = name.replace(/\s*\(.*\)\s*$/, '')
+  return short || name
+}
+
 // Everything a route's pill and card show, ready to display
 export function routeCardDetails(route) {
   const difficulty = difficultyLevel(route)
+  const name = route.name || 'Unnamed route'
   return {
     routeId: route.id,
-    name: route.name || 'Unnamed route',
+    name,
+    shortName: shortRouteName(name),
     country: route.country || 'Not listed',
     difficulty,
     difficultyLabel: GRADES[difficulty]?.label ?? 'Not rated',
     durationLabel: formatRouteDuration(route.duration_days),
     distanceLabel: formatRouteDistance(route.distance_km),
+    climbLabel: formatMetres(route.elevation_gain_m, '+'),
+    highestLabel: formatMetres(route.altitude_m),
     ratingLabel: route.avg_rating == null ? '' : Number(route.avg_rating).toFixed(1),
   }
 }

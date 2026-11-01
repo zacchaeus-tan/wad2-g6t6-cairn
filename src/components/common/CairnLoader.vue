@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) drops the stones into place
-import { motion, useReducedMotion } from 'motion-v'
+import { motion } from 'motion-v'
 
 // A cairn that grows as loading progresses, with a line of text under it while there's a message
 const props = defineProps({
@@ -9,8 +9,6 @@ const props = defineProps({
   progress: { type: Number, required: true },
   message: { type: String, default: '' },
 })
-
-const reduceMotion = useReducedMotion()
 
 // The cairn from its biggest stone at the bottom up to the smallest
 const stones = [
@@ -46,7 +44,7 @@ const placedStones = computed(() =>
         v-bind="stone"
         :initial="{ opacity: 0, y: -16 }"
         :animate="{ opacity: 1, y: 0 }"
-        :transition="{ duration: reduceMotion ? 0 : 0.45, ease: [0.16, 1, 0.3, 1] }"
+        :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
       />
     </svg>
 
