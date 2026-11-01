@@ -234,13 +234,13 @@ Elevation gain: ${route.elevation_gain_m ?? 'unknown'} m
 Maximum altitude: ${route.altitude_m ?? 'unknown'} m
 Hiking days: ${hikingDays}
 Multiday: ${route.is_multiday || (plan && plan.days > 1) ? 'yes' : 'no'}
-Official rating: ${route.technical_rating ?? 'unknown'}
-Community-adjusted difficulty (1 easy to 4 strenuous): ${route.effective_difficulty ?? 'unknown'}
+Difficulty (1 easy to 4 strenuous): ${route.effective_difficulty ?? route.official_difficulty ?? 'unknown'}
 Safety status: ${route.safety_status ?? 'unknown'}
 Safety note: ${route.safety_status_note ?? 'none'}
 Community hazard level: ${route.community_hazard_level ?? 'unknown'}
-Permit required: ${route.permit_required ? 'yes' : 'no'}
-Guide required: ${route.guide_required ? 'yes' : 'no'}
+Permit required: ${route.permit_required == null ? 'unknown' : route.permit_required ? 'yes' : 'no'}
+Permit hint: ${route.permit_hint ?? 'none'}
+Guide required: ${route.guide_required ? 'yes' : 'unknown'}
 
 ${planSection(plan)}${forecastSection(forecast, plan)}
 
@@ -266,7 +266,7 @@ Reply with JSON only, in exactly this shape:
 Rules:
 - Give 10 to 20 items.
 - "quantity" is always a short non-empty string.
-- Include documents (permit, ID) only if a permit or guide is required.
+- Include documents (permit, ID) if a permit or guide is required. If either is unknown, add one item: "Check permit and guide requirements before you go".
 - Include shelter items only if the route is multiday or has camps.
 - Do not repeat items.
 - Scale quantities to the number of hiking days (for example food, water, socks, underwear, batteries and toilet paper).
