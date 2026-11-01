@@ -6,12 +6,17 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 // Motion for Vue (https://motion.dev, MIT) fades and clears the globe
 import { motion } from 'motion-v'
 import { useRouter } from 'vue-router'
-import { fetchRouteGeometry, fetchRouteSummaries } from '../controller/routesController'
+import {
+  fetchRouteGeometry,
+  fetchRouteSummaries,
+  preloadRoute,
+} from '../controller/routesController'
 import GlobeContours from '@/components/globe/GlobeContours.vue'
 import GlobeIntro from '@/components/globe/GlobeIntro.vue'
 import GlobePanel from '@/components/globe/GlobePanel.vue'
 import RouteCard from '@/components/globe/RouteCard.vue'
 import RoutePill from '@/components/globe/RoutePill.vue'
+import RouteTransitionScreen from '@/components/routes/RouteTransitionScreen.vue'
 import {
   addCloudLayer,
   addGlobeBaseLayers,
@@ -39,11 +44,10 @@ const exploreView = { center: [119, 4], zoom: 2.6 }
 const navHeightPx = 65
 const indexPanelPx = 342
 const introMinimumMs = 2200
-// How long the camera takes to dive onto a route, the longest it then waits for the satellite
-// photos to sharpen, and how long the fade to black takes (matches .globe-route-dive::before)
+// How long the camera takes to dive onto a route, and the longest it then waits for the satellite
+// photos to sharpen
 const routeDiveMs = 2400
 const routeTileWaitMs = 8000
-const routeFadeMs = 600
 const spinDegreesPerMs = 360 / 150000
 
 // Where the user was last looking, so coming back from a route's page skips the intro and lands
@@ -75,9 +79,10 @@ const mapReady = ref(false)
 const satelliteView = ref(savedView?.satellite ?? true)
 // A returning visitor has already seen the title animation, so there's nothing to wait for
 const introTimeDone = ref(Boolean(savedView))
-// Name of the route being opened, shown while the globe dives onto it
-const openingRouteName = ref('')
-const routeDiveFading = ref(false)
+// The route being opened, shown while the globe dives onto it, and its details loading ahead
+const openingRoute = ref(null)
+const routeScreenShowing = ref(false)
+let openingRouteLoaded
 // What the hover card and the clicked card show. Vue renders both cards into the hidden holder
 // in the template, and the map popups display those same elements (see addRouteCardPopup).
 const hoverCardRoute = ref(null)
@@ -89,7 +94,7 @@ const selectedCountry = ref('')
 // What the GPS-style readout shows
 const readoutPosition = ref('')
 const scaleHost = ref(null)
-const pillsVisible = computed(() => phase.value === 'explore' && !openingRouteName.value)
+const pillsVisible = computed(() => phase.value === 'explore' && !openingRoute.value)
 // The route whose card is showing, so its pill is highlighted
 const activeRouteId = computed(
   () => hoverCardRoute.value?.routeId ?? clickedCardRoute.value?.routeId ?? null,
@@ -219,7 +224,7 @@ async function showRouteGeometry(routeId) {
   // Only the pinned route gets a dot, and not during the dive onto it
   stopWalker?.()
   stopWalker = null
-  if (line && routeId === pinnedRouteId && !openingRouteName.value && !prefersReducedMotion) {
+  if (line && routeId === pinnedRouteId && !openingRoute.value && !prefersReducedMotion) {
     stopWalker = walkRoute(globeView, line)
   }
 }
@@ -411,19 +416,20 @@ function movePillNearTop(lngLat, offsetY = 0) {
   })
 }
 
-// Flies the camera down onto the route, fades to black, then opens its details page
+// Flies the camera down onto the route, shows the transition screen, then opens its details page
 async function openRouteDetails(properties, lngLat) {
-  if (openingRouteName.value) {
+  if (openingRoute.value) {
     return
   }
 
-  const detailsPage = { name: 'route-detail', params: { id: properties.routeId } }
   if (!globeView || prefersReducedMotion) {
-    router.push(detailsPage)
+    openRoutePage(properties.routeId)
     return
   }
 
-  openingRouteName.value = properties.name
+  openingRoute.value = properties
+  // Started now, so the details are usually ready by the time the dive ends
+  openingRouteLoaded = preloadRoute(properties.routeId)
   setMapInteraction(globeView, false)
   hideHoverPopup()
   // Closing the card unpins its line, so pin it again to keep it drawn during the dive
@@ -453,7 +459,7 @@ async function openRouteDetails(properties, lngLat) {
     duration: routeDiveMs,
     essential: true,
   })
-  globeView.once('moveend', () => fadeOutWhenSharp(detailsPage))
+  globeView.once('moveend', showScreenWhenSharp)
 }
 
 function openClickedRoute() {
@@ -466,22 +472,20 @@ function closeClickedCard() {
 }
 
 // Waits on the route until its satellite photos have finished loading (or for a few seconds
-// on a slow connection), then fades to black and opens the details page
-function fadeOutWhenSharp(detailsPage) {
-  let fading = false
-  function fadeOut() {
-    if (fading) {
-      return
-    }
-    fading = true
+// on a slow connection), then shows the transition screen
+function showScreenWhenSharp() {
+  function showScreen() {
     clearTimeout(routeDiveTimer)
-    routeDiveFading.value = true
-    routeDiveTimer = setTimeout(() => router.push(detailsPage), routeFadeMs)
+    routeScreenShowing.value = true
   }
 
   // 'idle' fires once every tile on screen has loaded and faded in
-  globeView.once('idle', fadeOut)
-  routeDiveTimer = setTimeout(fadeOut, routeTileWaitMs)
+  globeView.once('idle', showScreen)
+  routeDiveTimer = setTimeout(showScreen, routeTileWaitMs)
+}
+
+function openRoutePage(routeId) {
+  router.push({ name: 'route-detail', params: { id: routeId } })
 }
 
 function onPillEnter(pill) {
@@ -598,7 +602,7 @@ watch(satelliteView, (showSatellite) => {
 
 function saveView() {
   // Not during the dive, so coming back lands where the user clicked rather than zoomed in on the route
-  if (phase.value !== 'explore' || openingRouteName.value) {
+  if (phase.value !== 'explore' || openingRoute.value) {
     return
   }
 
@@ -926,16 +930,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Covers the globe during the dive so nothing can be clicked, then fades to black -->
-    <div
-      v-if="openingRouteName"
-      class="globe-route-dive"
-      :class="{ 'is-fading': routeDiveFading }"
-      role="status"
-    >
-      <p class="globe-route-dive-label">
-        Heading to <strong>{{ openingRouteName }}</strong>
-      </p>
+    <!-- Covers the page during the dive so nothing can be clicked, then holds the screen -->
+    <div v-if="openingRoute" class="globe-route-dive">
+      <RouteTransitionScreen
+        v-if="routeScreenShowing"
+        :route-name="openingRoute.name"
+        :route-loaded="openingRouteLoaded"
+        @done="openRoutePage(openingRoute.routeId)"
+      />
     </div>
   </div>
 </template>
@@ -987,53 +989,13 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* Sits over the globe while it dives onto a route; the label shows straight away and
-   the black fade starts once the route's satellite photos have loaded (.is-fading) */
+/* Above the navbar (z-index 20 in SiteNav.vue), as nothing can be clicked during the dive */
 .globe-route-dive {
   position: absolute;
   inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 3rem;
+  z-index: 30;
 }
 
-/* The black layer fades its opacity rather than its colour, so the browser can blend it
-   without repainting the whole screen on every frame of the dive */
-.globe-route-dive::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: #000000;
-  opacity: 0;
-  transition: opacity 0.6s ease-in;
-}
-
-.globe-route-dive.is-fading::before {
-  opacity: 1;
-}
-
-.globe-route-dive-label {
-  position: relative;
-  margin: 0;
-  padding: 0.6rem 1.25rem;
-  border-radius: 999px;
-  background: rgba(17, 24, 39, 0.85);
-  color: #ffffff;
-  letter-spacing: 0.04em;
-  opacity: 0;
-  animation: fade-in 0.4s ease forwards;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 /* Bottom right */
 .globe-zoom {
   position: absolute;
