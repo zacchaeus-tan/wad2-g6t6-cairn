@@ -1,9 +1,9 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { animate, useInView, useReducedMotion } from 'motion-v'
+import { animate, useInView } from 'motion-v'
 
 // A number that counts up from zero once it scrolls into view.
-// Screen readers and reduced motion get the final value straight away.
+// Screen readers get the final value straight away.
 const props = defineProps({
   value: { type: Number, required: true },
   decimals: { type: Number, default: 0 },
@@ -13,9 +13,8 @@ const props = defineProps({
 
 const root = ref(null)
 const inView = useInView(root, { once: true, amount: 0.6 })
-const reduceMotion = useReducedMotion()
 // Starts at zero so the count doesn't flash the final value first
-const shown = ref(reduceMotion.value ? props.value : 0)
+const shown = ref(0)
 let controls = null
 
 function format(number) {
@@ -29,10 +28,6 @@ const finalText = computed(() => format(props.value))
 
 function run() {
   controls?.stop()
-  if (reduceMotion.value) {
-    shown.value = props.value
-    return
-  }
   controls = animate(0, props.value, {
     duration: 1.2,
     ease: [0.16, 1, 0.3, 1],
