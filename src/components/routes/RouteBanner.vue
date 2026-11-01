@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { alertMessageForHikers } from '@/lib/alertDrafts'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
@@ -11,7 +12,7 @@ import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 
 const props = defineProps({
   route: { type: Object, required: true },
-  isLoggedIn : {type:Boolean, required:true},
+  isLoggedIn: { type: Boolean, required: true },
   alerts: { type: Array, default: () => [] }, // live alerts published by admins
 })
 
@@ -36,7 +37,11 @@ const dangerAlerts = computed(() => props.alerts.filter((a) => a.severity === 'd
 const warningLink = computed(() => (dangerAlerts.value.length ? '#trail-notices' : '#reviews'))
 
 const warnings = computed(() => {
-  const list = dangerAlerts.value.map((a) => ({ key: a.id, title: a.title, note: a.message }))
+  const list = dangerAlerts.value.map((a) => ({
+    key: a.id,
+    title: a.title,
+    note: alertMessageForHikers(a.message),
+  }))
   const safety = SAFETY_TITLES[props.route.safety_status]
   if (safety) {
     list.push({ key: 'safety', title: safety, note: props.route.safety_status_note })
@@ -68,7 +73,8 @@ const warnings = computed(() => {
     <div class="cairn-wrap route-banner-inner">
       <div>
         <p class="route-banner-crumb">
-          <RouterLink to="/routes">Routes</RouterLink><template v-if="route.country"> / {{ route.country }}</template>
+          <RouterLink to="/routes">Routes</RouterLink
+          ><template v-if="route.country"> / {{ route.country }}</template>
         </p>
         <h1 id="route-title" class="route-banner-title">{{ route.name }}</h1>
         <p class="route-banner-labels">
@@ -80,7 +86,12 @@ const warnings = computed(() => {
         </p>
       </div>
       <div class="route-banner-art">
-        <RouteLine class="route-banner-line" :geometry="route.geometry" :color="lineColor" :width="5" />
+        <RouteLine
+          class="route-banner-line"
+          :geometry="route.geometry"
+          :color="lineColor"
+          :width="5"
+        />
       </div>
     </div>
   </section>
