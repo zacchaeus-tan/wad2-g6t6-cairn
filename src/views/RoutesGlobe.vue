@@ -18,7 +18,7 @@ import {
   mapStyle,
   prepareGlobeStyle,
   setMapInteraction,
-  showRouteLines,
+  walkRoute,
 } from '@/lib/globe/globeMap'
 import {
   assignMarkerStacks,
@@ -99,6 +99,8 @@ let markers = new Map()
 let routeProperties = new Map()
 // Route whose line is drawn or being downloaded to be drawn
 let highlightedRouteId = null
+// Stops the dot walking along the pinned route, while it is walking
+let stopWalker = null
 let routeFetchReady = false
 let routeOverlayReady = false
 let routeInteractionReady = false
@@ -163,7 +165,7 @@ function updateRouteLayer() {
   if (markerSource) {
     markerSource.setData(markerData)
   } else {
-    addRouteLayers(globeView, markerData, routeLineOpacity())
+    addRouteLayers(globeView, markerData)
   }
 
   if (!routeInteractionReady && globeView.getLayer('route-lines')) {
@@ -187,6 +189,13 @@ async function showRouteGeometry(routeId) {
     type: 'FeatureCollection',
     features: line ? [{ type: 'Feature', properties: routeProperties.get(routeId), geometry: line }] : [],
   })
+
+  // Only the pinned route gets a dot, and not during the dive onto it
+  stopWalker?.()
+  stopWalker = null
+  if (line && routeId === pinnedRouteId && !openingRouteName.value && !prefersReducedMotion) {
+    stopWalker = walkRoute(globeView, line)
+  }
 }
 
 // Adds the card once to measure it, then places it on the side away from its route
@@ -435,10 +444,6 @@ function setupRouteInteraction() {
   })
 }
 
-function routeLineOpacity() {
-  return phase.value === 'explore' ? 1 : 0
-}
-
 watch(satelliteView, (showSatellite) => {
   applyMapType(globeView, showSatellite, layersUnderSatellite)
   saveView()
@@ -500,7 +505,6 @@ function startExploring() {
     return
   }
 
-  showRouteLines(globeView)
   // Only hand control to the user once the globe has settled on the routes
   globeView.once('moveend', () => setMapInteraction(globeView, true))
   globeView.easeTo({ ...exploreView, duration: prefersReducedMotion ? 0 : 2000 })
@@ -510,7 +514,6 @@ function startExploring() {
 function resumeExploring() {
   phase.value = 'explore'
   if (globeView) {
-    showRouteLines(globeView)
     setMapInteraction(globeView, true)
   }
 }
@@ -622,6 +625,7 @@ onBeforeUnmount(() => {
   clearTimeout(routeDiveTimer)
   stopSpinning()
   window.removeEventListener('keydown', onKeydown)
+  stopWalker?.()
   globeView?.remove()
   // Lets route lines that finish downloading after the page closes see there's no map to draw on
   globeView = null

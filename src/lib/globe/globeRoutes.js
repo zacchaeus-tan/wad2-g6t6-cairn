@@ -2,14 +2,14 @@
 // placing pills, and the labels shown on pills and route cards. Plain functions with no
 // map or Vue state, so they can be tested on their own.
 
+import { GRADES } from '@/lib/difficultyStyle'
+
 // Route pills closer together than this are stacked so none is hidden behind another
 export const stackRadiusMetres = 100
 const stackSpacingPx = 28
 
-const difficultyNames = { 1: 'Easy', 2: 'Moderate', 3: 'Hard', 4: 'Strenuous' }
-// Also used for the route line colours in globeMap.js; the legend in GlobePanel.vue matches these
-export const difficultyColours = { 1: '#24883b', 2: '#e6b700', 3: '#ec741c', 4: '#cb3030' }
-export const unratedColour = '#64748b'
+// Light enough to read on the dark globe
+export const unratedColour = '#c9d0cb'
 
 export function isPosition(position) {
   return (
@@ -91,7 +91,7 @@ export function difficultyLevel(route) {
 }
 
 export function difficultyColour(difficulty) {
-  return difficultyColours[difficulty] ?? unratedColour
+  return GRADES[difficulty]?.line ?? unratedColour
 }
 
 function formatRouteDistance(distance) {
@@ -118,14 +118,14 @@ export function routeCardDetails(route) {
     name: route.name || 'Unnamed route',
     country: route.country || 'Not listed',
     difficulty,
-    difficultyLabel: difficultyNames[difficulty] ?? 'Not rated',
+    difficultyLabel: GRADES[difficulty]?.label ?? 'Not rated',
     durationLabel: formatRouteDuration(route.duration_days),
     distanceLabel: formatRouteDistance(route.distance_km),
     ratingLabel: route.avg_rating == null ? '' : Number(route.avg_rating).toFixed(1),
   }
 }
 
-function distanceInMetres([lng1, lat1], [lng2, lat2]) {
+export function distanceInMetres([lng1, lat1], [lng2, lat2]) {
   const toRadians = Math.PI / 180
   const latDelta = (lat2 - lat1) * toRadians
   const lngDelta = (lng2 - lng1) * toRadians

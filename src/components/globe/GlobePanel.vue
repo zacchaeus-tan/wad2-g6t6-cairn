@@ -1,6 +1,8 @@
 <script setup>
 // Floating panel over the globe once exploring: how many routes are shown, any errors,
 // the difficulty colour legend and the Map/Satellite switch (used with v-model:satellite).
+import { GRADES } from '@/lib/difficultyStyle'
+
 defineProps({
   routeCount: { type: Number, required: true },
   shownCount: { type: Number, required: true },
@@ -39,10 +41,9 @@ const emit = defineEmits(['update:satellite'])
     </template>
 
     <ul class="difficulty-legend" aria-label="Route difficulty colors">
-      <li><span class="legend-swatch difficulty-easy"></span>Easy</li>
-      <li><span class="legend-swatch difficulty-moderate"></span>Moderate</li>
-      <li><span class="legend-swatch difficulty-hard"></span>Hard</li>
-      <li><span class="legend-swatch difficulty-strenuous"></span>Strenuous</li>
+      <li v-for="grade in GRADES" :key="grade.key">
+        <span class="legend-swatch" :style="{ background: grade.line }"></span>{{ grade.label }}
+      </li>
     </ul>
 
     <div class="btn-group btn-group-sm mt-3" role="group" aria-label="Map type">
@@ -121,23 +122,6 @@ const emit = defineEmits(['update:satellite'])
   width: 0.8rem;
   height: 0.8rem;
   border-radius: 50%;
-}
-
-/* Same colours as difficultyColours in src/lib/globe/globeRoutes.js */
-.difficulty-easy {
-  background: #24883b;
-}
-
-.difficulty-moderate {
-  background: #e6b700;
-}
-
-.difficulty-hard {
-  background: #ec741c;
-}
-
-.difficulty-strenuous {
-  background: #cb3030;
 }
 
 @keyframes fade-in {
