@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { alertsHaveReports, withLiveReportCount } from '@/lib/alertDrafts'
 
 // Model: talks to the database only. Each function returns Supabase's
 // { data, error } unchanged; the controller decides what to do with errors.
@@ -56,23 +57,47 @@ export function listRoutesByIds(ids) {
   return supabase.from('routes').select('id, name, country, distance_km').in('id', ids)
 }
 
+// The same window the admin page counts serious reports over.
+const REPORT_COUNT_MONTHS = 12
+
 // Only published alerts inside their time window. Row Level Security already
 // limits hikers to these, but admins can read every alert, so filter here too.
 function liveAlerts() {
   const now = new Date().toISOString()
   return supabase
     .from('route_alerts')
-    .select('id, route_id, severity, title, message, starts_at, ends_at')
+    .select('id, route_id, severity, title, message, starts_at, ends_at, external_ref')
     .eq('status', 'active')
     .lte('starts_at', now)
     .or(`ends_at.is.null,ends_at.gt.${now}`)
     .order('starts_at', { ascending: false })
 }
 
+// Fills in how many hikers have reported each alert's problem. If the count can't be loaded, the
+// alert still shows with its published text, since a safety notice matters more than its count.
+async function withReportCounts(alertsQuery) {
+  const result = await alertsQuery
+  if (result.error || !alertsHaveReports(result.data)) return result
+
+  const since = new Date()
+  since.setMonth(since.getMonth() - REPORT_COUNT_MONTHS)
+  const { data: incidents, error } = await supabase
+    .from('review_incidents')
+    .select('route_id, point_id, category, created_at, reviews!inner(user_id)')
+    .in('route_id', [...new Set(result.data.map((alert) => alert.route_id))])
+    .gt('created_at', since.toISOString())
+
+  if (error) {
+    console.warn('Could not load report counts for notices:', error.message)
+    return result
+  }
+  return { ...result, data: result.data.map((alert) => withLiveReportCount(alert, incidents)) }
+}
+
 export function listAlertsForRoute(routeId) {
-  return liveAlerts().eq('route_id', routeId)
+  return withReportCounts(liveAlerts().eq('route_id', routeId))
 }
 
 export function listAlertsForRoutes(routeIds) {
-  return liveAlerts().in('route_id', routeIds)
+  return withReportCounts(liveAlerts().in('route_id', routeIds))
 }

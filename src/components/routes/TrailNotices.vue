@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import { MotionConfig, motion } from 'motion-v'
+import { alertMessageLines } from '@/lib/alertDrafts'
 import { formatDate, modifierClass } from '@/lib/format'
 import { rowMotion } from '@/lib/motion'
 
@@ -34,17 +35,23 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
           class="trail-notice"
           :class="modifierClass(alert.severity)"
         >
-          <p class="trail-notice-severity">{{ SEVERITY_LABELS[alert.severity] || 'Notice' }}</p>
-          <p class="trail-notice-title">{{ alert.title }}</p>
-          <p v-if="alert.route_name" class="cairn-fine">
-            <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
-              alert.route_name
-            }}</RouterLink>
-          </p>
-          <p v-if="alert.message" class="trail-notice-message">{{ alert.message }}</p>
-          <p v-if="alert.ends_at" class="cairn-fine">
-            Expected until {{ formatDate(alert.ends_at) }}
-          </p>
+          <div class="trail-notice-head">
+            <p class="trail-notice-severity">{{ SEVERITY_LABELS[alert.severity] || 'Notice' }}</p>
+            <p class="trail-notice-title">{{ alert.title }}</p>
+            <p v-if="alert.route_name" class="cairn-fine">
+              <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
+                alert.route_name
+              }}</RouterLink>
+            </p>
+            <p v-if="alert.ends_at" class="cairn-fine">
+              Expected until {{ formatDate(alert.ends_at) }}
+            </p>
+          </div>
+          <div v-if="alert.message" class="trail-notice-message">
+            <p v-for="(line, lineIndex) in alertMessageLines(alert.message)" :key="lineIndex">
+              {{ line }}
+            </p>
+          </div>
         </motion.li>
       </ul>
     </section>
@@ -53,6 +60,7 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
 
 <style scoped>
 .trail-notices {
+  container: trail-notices / inline-size;
   margin-bottom: 32px;
 }
 
@@ -66,8 +74,8 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
 
 .trail-notice {
   display: grid;
-  gap: 4px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 14px 20px;
   border-left: 6px solid var(--lake);
   background: #e3eef6;
   color: var(--ink);
@@ -104,12 +112,41 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
   color: var(--blaze-deep);
 }
 
-.trail-notice-title {
-  font-size: 18px;
-  font-weight: 900;
+.trail-notice-head {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
 }
 
+.trail-notice-title {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 22px;
+}
+
+/* Full ink, because these notices are safety information */
 .trail-notice-message {
-  color: var(--granite-700);
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+/* Sized by the space it has, which is narrower than the screen on the profile page */
+@container trail-notices (min-width: 720px) {
+  .trail-notice {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 28px;
+  }
+
+  .trail-notice-message {
+    padding-left: 28px;
+    border-left: 1px solid rgb(23 32 28 / 0.15);
+  }
 }
 </style>

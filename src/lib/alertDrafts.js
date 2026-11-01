@@ -25,6 +25,26 @@ function sentence(text) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
 }
 
+// A published message as separate lines, so who reported it, what they said and what to do don't
+// run together. Splits at the sentences the drafts below write, which also covers alerts already
+// published, and at any line breaks an admin typed.
+const DRAFT_SENTENCE =
+  /\s+(?=Their report:|Latest report:|One report:|Take extra care|Based on recent|Check conditions)/
+
+// Older drafts said this, and alerts keep the text they were published with. It means a second
+// hiker hasn't reported it, which reads to hikers as if nobody has checked the notice.
+export function alertMessageForHikers(message) {
+  return message?.replace(/ and not yet confirmed/g, '')
+}
+
+export function alertMessageLines(message) {
+  return alertMessageForHikers(message)
+    .split('\n')
+    .flatMap((line) => line.split(DRAFT_SENTENCE))
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
 // Alerts raised from a report keep a reference to it in external_ref, so the
 // admin page can tell which reports already have a live alert. A timestamp is
 // added because external_ref is unique per route, and the same report may be
@@ -41,6 +61,80 @@ export const DIFFICULTY_REF = 'difficulty'
 // One grouped report from the store's unconfirmedReports.
 export function unconfirmedRef(report) {
   return `unconfirmed:${report.point_id ?? 'route'}:${report.category}`
+}
+
+// The same with several hikers. Includes the count, so each new hiker brings it back to the admin
+// even while a notice with the older number is live.
+export function repeatedRef(report) {
+  return `repeated:${report.point_id ?? 'route'}:${report.category}:${report.reporter_count}`
+}
+
+// What an alert raised from a report is about, read from its external_ref. Null for anything
+// else, such as a notice an admin wrote by hand or one about a route's overall hazard level.
+function reportFromRef(externalRef) {
+  const match = /^(?:unconfirmed|repeated|point):([^:]+):([^:]+):/.exec(externalRef ?? '')
+  return match && { pointId: match[1] === 'route' ? null : match[1], category: match[2] }
+}
+
+export function alertsHaveReports(alerts) {
+  return alerts.some((alert) => reportFromRef(alert.external_ref))
+}
+
+const REPORTED_SENTENCE = /^Reported by \d+ hikers?(?: on |, most recently on )[^.]*\./
+
+// An alert's message with today's count of hikers, because its saved text only has the count from
+// when it was published. A message an admin reworded is left as they wrote it. The quote stays the
+// one the admin published, so a new hiker's words never reach the page without being looked at.
+export function withLiveReportCount(alert, incidents) {
+  const report = reportFromRef(alert.external_ref)
+  if (!report || !REPORTED_SENTENCE.test(alert.message ?? '')) return alert
+
+  const matching = incidents.filter(
+    (incident) =>
+      incident.route_id === alert.route_id &&
+      String(incident.point_id ?? '') === String(report.pointId ?? '') &&
+      incident.category === report.category,
+  )
+  if (!matching.length) return alert
+
+  const count = new Set(matching.map((incident) => incident.reviews.user_id)).size
+  const latest = formatDate(
+    matching.reduce((a, b) => (new Date(a) > new Date(b.created_at) ? a : b.created_at), 0),
+  )
+  const reported =
+    count === 1
+      ? `Reported by 1 hiker on ${latest}.`
+      : `Reported by ${count} hikers, most recently on ${latest}.`
+  const message = alert.message.replace(REPORTED_SENTENCE, reported)
+
+  return {
+    ...alert,
+    message: count > 1 ? message.replace(/\b(?:Their|Latest) report:/, 'One report:') : message,
+  }
+}
+
+// Serious incidents, newest first, as one report per route, place and type. Counts hikers rather
+// than incidents, so one hiker reporting twice stays one.
+export function groupSeriousIncidents(incidents) {
+  const groups = new Map()
+  for (const incident of incidents) {
+    const key = `${incident.route_id}|${incident.point_id}|${incident.category}`
+    if (!groups.has(key)) groups.set(key, { latest: incident, reporters: new Set() })
+    groups.get(key).reporters.add(incident.reviews.user_id)
+  }
+
+  return [...groups.values()].map(({ latest, reporters }) => ({
+    route_id: latest.route_id,
+    point_id: latest.point_id,
+    category: latest.category,
+    label: latest.incident_categories.label,
+    point_name: latest.route_points?.name,
+    day_number: latest.route_points?.day_number,
+    note: latest.note,
+    created_at: latest.created_at,
+    reporter: latest.reviews.profiles?.display_name,
+    reporter_count: reporters.size,
+  }))
 }
 
 function linkTo(reportRef) {
@@ -67,20 +161,38 @@ export function draftFromPointWarning(warning) {
   }
 }
 
-// One hiker's serious report. Only "warning" because nobody has confirmed it yet.
-export function draftFromUnconfirmedReport(report) {
-  const place = report.point_name
+function reportPlace(report) {
+  return report.point_name
     ? `at ${placeName(report.point_name, report.day_number)}`
     : 'on this route'
+}
+
+// One hiker's serious report. Only "warning" because nobody has confirmed it yet.
+export function draftFromUnconfirmedReport(report) {
+  const place = reportPlace(report)
   const note = report.note ? ` Their report: "${sentence(report.note)}"` : ''
 
   return {
     routeId: report.route_id,
     severity: 'warning',
     title: `${report.label} reported ${place}`,
-    message: `Reported by 1 hiker on ${formatDate(report.created_at)} and not yet confirmed.${note} Check conditions before you set out.`,
+    message: `Reported by 1 hiker on ${formatDate(report.created_at)}.${note} Check conditions before you set out.`,
     endsAt: defaultAlertEnd(),
     ...linkTo(unconfirmedRef(report)),
+  }
+}
+
+// A serious report from several hikers, so it can be published as a danger notice.
+export function draftFromRepeatedReport(report) {
+  const note = report.note ? ` Latest report: "${sentence(report.note)}"` : ''
+
+  return {
+    routeId: report.route_id,
+    severity: 'danger',
+    title: `${report.label} reported ${reportPlace(report)}`,
+    message: `Reported by ${report.reporter_count} hikers, most recently on ${formatDate(report.created_at)}.${note} Check conditions before you set out.`,
+    endsAt: defaultAlertEnd(),
+    ...linkTo(repeatedRef(report)),
   }
 }
 

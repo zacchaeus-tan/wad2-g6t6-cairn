@@ -5,7 +5,9 @@ import { deleteReview, recalcRouteStats } from '@/model/reviewsModel'
 import {
   DIFFICULTY_REF,
   HAZARD_ROUTE_REF,
+  groupSeriousIncidents,
   pointWarningRef,
+  repeatedRef,
   unconfirmedRef,
 } from '@/lib/alertDrafts'
 
@@ -82,37 +84,27 @@ export const useAdminStore = defineStore('admin', () => {
     ),
   )
 
-  // Serious incidents one hiker has reported, grouped by place and type. They
-  // are too thin to change a route's hazard level, but an admin should see them.
-  // Those on the confirmed list already (its window is longer) are left out.
-  const unconfirmedReports = computed(() => {
-    const groups = new Map()
-    for (const incident of seriousIncidents.value) {
-      const key = `${incident.route_id}|${incident.point_id}|${incident.category}`
-      if (!groups.has(key)) groups.set(key, { latest: incident, reporters: new Set() })
-      groups.get(key).reporters.add(incident.reviews.user_id)
-    }
+  // Serious incidents grouped by place and type. Those on the confirmed list already (its window
+  // is longer) are left out.
+  const seriousReports = computed(() =>
+    groupSeriousIncidents(seriousIncidents.value).filter(
+      (r) =>
+        !pointWarnings.value.some((w) => w.point_id === r.point_id && w.category === r.category),
+    ),
+  )
 
-    return [...groups.values()]
-      .filter(({ reporters }) => reporters.size === 1)
-      .map(({ latest }) => ({
-        route_id: latest.route_id,
-        point_id: latest.point_id,
-        category: latest.category,
-        label: latest.incident_categories.label,
-        point_name: latest.route_points?.name,
-        day_number: latest.route_points?.day_number,
-        note: latest.note,
-        created_at: latest.created_at,
-        reporter: latest.reviews.profiles?.display_name,
-      }))
-      .filter(
-        (r) =>
-          !pointWarnings.value.some(
-            (w) => w.point_id === r.point_id && w.category === r.category,
-          ) && needsAttention(r.route_id, unconfirmedRef(r), r.created_at),
-      )
-  })
+  // One hiker each: too thin to change a route's hazard level, but an admin should see them.
+  const unconfirmedReports = computed(() =>
+    seriousReports.value.filter(
+      (r) => r.reporter_count === 1 && needsAttention(r.route_id, unconfirmedRef(r), r.created_at),
+    ),
+  )
+
+  const repeatedReports = computed(() =>
+    seriousReports.value.filter(
+      (r) => r.reporter_count > 1 && needsAttention(r.route_id, repeatedRef(r), r.created_at),
+    ),
+  )
 
   const routeNames = computed(() => new Map(routes.value.map((r) => [r.id, r.name])))
 
@@ -150,6 +142,7 @@ export const useAdminStore = defineStore('admin', () => {
       openHazardRoutes.value.length +
       openPointWarnings.value.length +
       unconfirmedReports.value.length +
+      repeatedReports.value.length +
       difficultyMismatches.value.length,
   )
 
@@ -383,6 +376,7 @@ export const useAdminStore = defineStore('admin', () => {
     openHazardRoutes,
     openPointWarnings,
     unconfirmedReports,
+    repeatedReports,
     routeNames,
     difficultyMismatches,
     incompleteRoutes,

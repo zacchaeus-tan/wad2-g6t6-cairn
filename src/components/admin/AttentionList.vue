@@ -12,8 +12,10 @@ import {
   HAZARD_ROUTE_REF,
   draftFromHazardRoute,
   draftFromPointWarning,
+  draftFromRepeatedReport,
   draftFromUnconfirmedReport,
   pointWarningRef,
+  repeatedRef,
   unconfirmedRef,
 } from '@/lib/alertDrafts'
 
@@ -65,6 +67,42 @@ function gradeFor(route) {
         <ReportActions
           @raise="emit('raise-alert', draftFromPointWarning(warning))"
           @review="adminStore.markReviewed(warning.route_id, pointWarningRef(warning))"
+        />
+      </motion.li>
+    </AttentionGroup>
+
+    <AttentionGroup
+      title="Serious reports from several hikers"
+      hint="Hikers don't see these until you raise an alert. A live notice for one of these already shows the new count, so publish again only to raise its severity, then take the older one down."
+      :show="adminStore.repeatedReports.length > 0"
+    >
+      <motion.li
+        v-for="report in adminStore.repeatedReports"
+        :key="`${report.route_id}-${report.point_id}-${report.category}`"
+        v-bind="rowMotion"
+        layout="position"
+        class="admin-item"
+      >
+        <div class="admin-item-body">
+          <p>
+            <strong>{{ report.label }}</strong>
+            <template v-if="report.point_name">
+              at {{ report.point_name
+              }}<template v-if="report.day_number"> (day {{ report.day_number }})</template>
+            </template>
+            on
+            <RouterLink :to="{ name: 'route-detail', params: { id: report.route_id } }">{{
+              adminStore.routeNames.get(report.route_id) || 'a route'
+            }}</RouterLink>
+          </p>
+          <p class="cairn-fine">
+            {{ report.reporter_count }} hikers, last on {{ formatDate(report.created_at)
+            }}<template v-if="report.note">: “{{ report.note }}”</template>
+          </p>
+        </div>
+        <ReportActions
+          @raise="emit('raise-alert', draftFromRepeatedReport(report))"
+          @review="adminStore.markReviewed(report.route_id, repeatedRef(report))"
         />
       </motion.li>
     </AttentionGroup>
