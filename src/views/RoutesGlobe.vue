@@ -3,8 +3,11 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // MapLibre GL JS (https://maplibre.org, BSD-3-Clause) draws the 3D globe; see src/lib/globe/globeMap.js
 import { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// Motion for Vue (https://motion.dev, MIT) fades and clears the globe
+import { motion } from 'motion-v'
 import { useRouter } from 'vue-router'
 import { fetchRouteGeometry, fetchRouteSummaries } from '../controller/routesController'
+import GlobeContours from '@/components/globe/GlobeContours.vue'
 import GlobeIntro from '@/components/globe/GlobeIntro.vue'
 import GlobePanel from '@/components/globe/GlobePanel.vue'
 import RouteCard from '@/components/globe/RouteCard.vue'
@@ -117,6 +120,15 @@ let routeInteractionReady = false
 // The outdoor map's own layers drawn under the satellite photos (land, water, hillshade, contours)
 let layersUnderSatellite = []
 
+// The globe is dim and spinning behind the title, then clears for exploring. 'none' at the end,
+// as a filter left on the map, even one that changes nothing, slows down every frame.
+const dimGlobe = 'brightness(0.45) saturate(0.6)'
+const globeLook = computed(() => {
+  if (phase.value === 'explore') {
+    return { opacity: 1, filter: 'brightness(1) saturate(1)', transitionEnd: { filter: 'none' } }
+  }
+  return { opacity: phase.value === 'hero' ? 1 : 0, filter: dimGlobe }
+})
 const routesOnGlobe = computed(() => routes.value.filter((route) => routePosition(route)))
 const countries = computed(() => countrySummaries(routesOnGlobe.value))
 const routesNotOnGlobe = computed(() => routes.value.filter((route) => !routePosition(route)))
@@ -748,18 +760,26 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="globe-page"
-    :class="[`is-${phase}`, { 'is-satellite': satelliteView }]"
     @wheel.passive="onWheel"
     @touchstart.passive="onTouchStart"
     @touchmove.passive="onTouchMove"
   >
-    <div
-      ref="globeHost"
+    <GlobeContours />
+
+    <motion.div
       class="globe-surface"
-      role="region"
-      aria-label="Interactive globe"
-      aria-roledescription="3D globe"
-    ></div>
+      :initial="{ opacity: 0, filter: dimGlobe }"
+      :animate="globeLook"
+      :transition="{ duration: 1.5, ease: 'easeInOut' }"
+    >
+      <div
+        ref="globeHost"
+        class="globe-map"
+        role="region"
+        aria-label="Interactive globe"
+        aria-roledescription="3D globe"
+      ></div>
+    </motion.div>
 
     <GlobeIntro
       :phase="phase"
@@ -844,41 +864,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Fills the whole screen, under the see-through navbar; the three phases are driven by the
-   is-* class */
+/* Fills the whole screen, under the see-through navbar. Night is the base under the globe,
+   like under every dimmed photo in CAIRN. */
 .globe-page {
   position: relative;
   height: 100dvh;
   min-height: 480px;
   overflow: hidden;
-  background: #2a2a2a;
-  color: #ffffff;
-  transition: background-color 1.5s ease;
-}
-
-.globe-page.is-explore {
-  background: #000000;
-}
-
-/* Scattered stars behind the satellite globe. Each layer of dots repeats at a different
-   size so the pattern doesn't look like a grid. */
-.globe-page.is-explore.is-satellite {
-  background-image:
-    radial-gradient(1px 1px at 20px 30px, #ffffff, transparent),
-    radial-gradient(1px 1px at 140px 90px, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 230px 170px, #ffffff, transparent),
-    radial-gradient(1px 1px at 310px 40px, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 90px 240px, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1.5px 1.5px at 270px 280px, rgba(255, 255, 255, 0.8), transparent),
-    radial-gradient(1px 1px at 360px 200px, rgba(255, 255, 255, 0.4), transparent);
-  background-size:
-    380px 320px,
-    430px 390px,
-    510px 470px,
-    350px 410px,
-    460px 350px,
-    560px 520px,
-    400px 440px;
+  background: var(--night);
+  color: var(--ground);
 }
 
 /* Darkens the top of the screen so the navbar's paper text always reads over the globe */
@@ -892,23 +886,10 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.globe-surface {
+.globe-surface,
+.globe-map {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  filter: brightness(0.45) saturate(0.6);
-  transition:
-    opacity 1.5s ease,
-    filter 1.5s ease;
-}
-
-.is-hero .globe-surface {
-  opacity: 1;
-}
-
-.is-explore .globe-surface {
-  opacity: 1;
-  filter: none;
 }
 
 /* MapLibre builds the popup frame around our RouteCard, so its parts need :deep().
