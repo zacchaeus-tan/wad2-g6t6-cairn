@@ -1,6 +1,7 @@
 <script setup>
 import { useUserRoutesStore } from '@/controller/userRoutesStore'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import TickIcon from '@/components/common/TickIcon.vue'
 // Save and completed buttons for a route. The parent owns the route's status
 // and does the saving when these emit.
@@ -30,9 +31,11 @@ async function onToggleRouteSaved() {
 }
 
 // marking a route done
+const confirmingCompleted = ref(false)
+
 async function routeCompleted() {
+  confirmingCompleted.value = false
   if (isCompleted.value) return
-  if (!confirm('Have you completed the hike?')) return
   await userRoutesStore.setStatus(props.routeId, 'completed')
 }
 </script>
@@ -62,7 +65,7 @@ async function routeCompleted() {
         v-if="isSaved"
         type="button"
         class="cairn-btn is-ghost is-small"
-        @click="routeCompleted"
+        @click="confirmingCompleted = true"
       >
         Mark as completed
       </button>
@@ -71,6 +74,15 @@ async function routeCompleted() {
       <TickIcon />
       Completed
     </span>
+    <ConfirmDialog
+      :open="confirmingCompleted"
+      title="Have you completed this hike?"
+      confirm-label="Mark as completed"
+      @confirm="routeCompleted"
+      @cancel="confirmingCompleted = false"
+    >
+      It will count towards your hike totals, and you can't undo this.
+    </ConfirmDialog>
   </div>
 </template>
 
