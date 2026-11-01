@@ -8,19 +8,21 @@ import TrailRegister from '@/components/reviews/TrailRegister.vue'
 import { generateItinerary } from '../controller/itineraryController'
 import ItineraryForm from '../components/itinerary/ItineraryForm.vue'
 import ItineraryDay from '../components/itinerary/ItineraryDay.vue'
-import { checkRouteSuitability } from '@/lib/matching'
 import { useChecklistStore } from '@/controller/checklistStore'
 import GearChecklist from '@/components/checklist/GearChecklist.vue'
 import { fetchRouteWeather } from '@/controller/weatherController'
 import WeatherForecast from '@/components/weather/WeatherForecast.vue'
+import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import RouteBanner from '@/components/routes/RouteBanner.vue'
 import RouteNumbers from '@/components/routes/RouteNumbers.vue'
+import RouteSuitability from '@/components/routes/RouteSuitability.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
 const auth = useAuthStore()
 const checklistStore = useChecklistStore()
+const userRoutesStore = useUserRoutesStore()
 const route = ref(null)
 // "Sign in" links come back to this page afterwards
 const signInTo = computed(() => ({ name: 'auth', query: { redirect: routeParams.fullPath } }))
@@ -42,40 +44,6 @@ async function onGenerate(form) {
   } finally {
     itineraryLoading.value = false
   }
-}
-
-// Recomputed whenever the route or the signed-in user's profile changes.
-const suitability = computed(() => {
-  if (!route.value || !auth.profile) return null
-  return checkRouteSuitability(auth.profile, route.value)
-})
-
-const verdictLabels = {
-  comfortable: 'Comfortable — within what you have done before',
-  good_challenge: 'Good challenge — a step up in one or two areas',
-  stretch: 'A stretch — well beyond what you have done so far',
-  unknown: 'Not enough information yet',
-}
-
-const verdictClasses = {
-  comfortable: 'alert-success',
-  good_challenge: 'alert-info',
-  stretch: 'alert-warning',
-  unknown: 'alert-secondary',
-}
-
-const ruleLabels = {
-  difficulty: 'Difficulty',
-  distance: 'Distance',
-  elevation_gain: 'Elevation gain',
-  altitude: 'Altitude',
-  trip_type: 'Trip length',
-}
-
-const statusBadges = {
-  pass: { text: 'Done before', class: 'bg-success' },
-  fail: { text: 'New for you', class: 'bg-warning text-dark' },
-  unknown: { text: 'Unknown', class: 'bg-secondary' },
 }
 
 // weather forecast
@@ -110,6 +78,7 @@ onMounted(async () => {
       reviewsStore.fetchMyReview(routeParams.params.id, auth.user?.id),
       reviewsStore.fetchCategories(),
       checklistStore.loadForRoute(route.value.id),
+      userRoutesStore.loadForRoute(route.value.id),
       loadWeather(),
     ])
   }
@@ -150,47 +119,27 @@ async function reloadRoute() {
     </div>
 
     <template v-else>
-      <RouteBanner :route="route" />
+      <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn"/>
       <RouteNumbers :route="route" />
 
       <div class="container route-detail-sections py-5">
-        <div class="row g-4">
-          <section class="col-12">
-            <GradeDial :route="route" />
-          </section>
+      <div class="row g-4">
+        <section class="col-12">
+          <GradeDial :route="route" />
+        </section>
 
-          <section class="col-12" aria-labelledby="route-match-title">
-            <div class="route-detail-section">
-              <h2 id="route-match-title" class="h4 mb-4">Is this route right for you?</h2>
+        <section class="col-12">
+          <RouteSuitability
+            :route="route"
+            :isLoggedIn="auth.isLoggedIn"
+            :profile="auth.profile"
+            :signInTo="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+          />
+        </section>
 
-              <p v-if="!auth.isLoggedIn" class="alert alert-secondary mb-0">
-                <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-                  >Sign in</RouterLink
-                >
-                to compare this route with your hiking experience.
-              </p>
-
-              <p v-else-if="!suitability" class="mb-0" role="status">Loading your profile...</p>
-
-              <template v-else>
-                <p class="alert mb-4" :class="verdictClasses[suitability.verdict]">
-                  <strong>{{ verdictLabels[suitability.verdict] }}</strong>
-                  <template v-if="suitability.verdict === 'unknown'">
-                    — <RouterLink to="/quiz">update your hiking profile</RouterLink> to see how this
-                    route compares.
-                  </template>
-                </p>
-
-                <ul class="list-unstyled route-match-checks mb-0">
-                  <template v-for="check in suitability.checks" :key="check.rule">
-                    <li v-if="check.status !== 'not_applicable'">
-                      <span class="badge me-2" :class="statusBadges[check.status].class">
-                        {{ statusBadges[check.status].text }}
-                      </span>
-                      <strong>{{ ruleLabels[check.rule] }}:</strong> {{ check.message }}
-                    </li>
-                  </template>
-                </ul>
+        <section class="col-12">
+          <WeatherForecast :weather="weather" :error="weatherError" />
+        </section>
 
                 <p
                   v-for="warning in suitability.warnings"

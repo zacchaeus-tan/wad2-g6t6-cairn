@@ -4,12 +4,14 @@ import { RouterLink } from 'vue-router'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
+import SaveRouteButton from '@/components/common/SaveRouteButton.vue'
 import WarningIcon from '@/components/common/WarningIcon.vue'
 import RouteLine from './RouteLine.vue'
 import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 
 const props = defineProps({
   route: { type: Object, required: true },
+  isLoggedIn : {type:Boolean, required:true},
 })
 
 const grade = computed(() => gradeOf(props.route))
@@ -68,6 +70,7 @@ const warnings = computed(() => {
           <span v-if="route.avg_rating != null" class="route-banner-stars">
             <StarIcon v-for="(fill, index) in starFills" :key="index" :fill="fill" />
           </span>
+          <SaveRouteButton v-if="isLoggedIn" :routeId="route.id"></SaveRouteButton>
         </p>
       </div>
       <div class="route-banner-art">
