@@ -6,6 +6,9 @@ import { motion } from 'motion-v'
 // <TrailPlank> go straight to the button; the parent sets its size.
 defineProps({
   big: { type: Boolean, default: false },
+  // Stays pine, as a fingerpost does for the country the globe last flew to
+  selected: { type: Boolean, default: false },
+  hoverColour: { type: String, default: 'var(--pine)' },
 })
 </script>
 
@@ -14,7 +17,9 @@ defineProps({
     type="button"
     class="trail-plank"
     :class="{ 'is-big': big }"
-    :while-hover="{ backgroundColor: 'var(--pine)' }"
+    :initial="false"
+    :animate="{ backgroundColor: selected ? 'var(--pine)' : 'var(--trail)' }"
+    :while-hover="{ backgroundColor: hoverColour }"
     :while-focus="{ backgroundColor: 'var(--pine)' }"
     :transition="{ duration: 0.15 }"
   >
@@ -29,7 +34,6 @@ defineProps({
   display: inline-flex;
   align-items: center;
   border: 0;
-  background-color: var(--trail);
   background-image: var(--wood-grain);
   color: var(--paper);
   font: 700 12px var(--font);

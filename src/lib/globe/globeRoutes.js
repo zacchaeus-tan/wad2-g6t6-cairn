@@ -155,6 +155,47 @@ export function routeCardDetails(route) {
   }
 }
 
+// One entry per country for the globe's "Fly to" list: how many routes it has and the
+// corners of the box around their trailheads. Most routes first.
+export function countrySummaries(routes) {
+  const countries = new Map()
+  for (const route of routes) {
+    const position = routePosition(route)
+    if (!position) {
+      continue
+    }
+
+    const name = route.country || 'Not listed'
+    if (!countries.has(name)) {
+      countries.set(name, {
+        name,
+        count: 0,
+        west: Infinity,
+        south: Infinity,
+        east: -Infinity,
+        north: -Infinity,
+      })
+    }
+    const country = countries.get(name)
+    country.count++
+    country.west = Math.min(country.west, position[0])
+    country.south = Math.min(country.south, position[1])
+    country.east = Math.max(country.east, position[0])
+    country.north = Math.max(country.north, position[1])
+  }
+
+  return [...countries.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .map((country) => ({
+      name: country.name,
+      count: country.count,
+      bounds: [
+        [country.west, country.south],
+        [country.east, country.north],
+      ],
+    }))
+}
+
 export function distanceInMetres([lng1, lat1], [lng2, lat2]) {
   const toRadians = Math.PI / 180
   const latDelta = (lat2 - lat1) * toRadians

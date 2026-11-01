@@ -22,6 +22,7 @@ import {
 } from '@/lib/globe/globeMap'
 import {
   assignMarkerStacks,
+  countrySummaries,
   hasRenderableGeometry,
   routeBounds,
   routeCardDetails,
@@ -30,7 +31,10 @@ import {
 import { anchorAwayFromRoute, popupOffset } from '@/lib/globe/routeCardPlacement'
 
 // The globe view used once the user starts exploring, centred on our routes in Southeast Asia
-const exploreView = { center: [119, 9], zoom: 2.5 }
+const exploreView = { center: [119, 4], zoom: 2.6 }
+// The space the navbar and the route index take up, which the globe centres itself beside
+const navHeightPx = 65
+const indexPanelPx = 342
 const introMinimumMs = 2200
 // How long the camera takes to dive onto a route, the longest it then waits for the satellite
 // photos to sharpen, and how long the fade to black takes (matches .globe-route-dive::before)
@@ -77,6 +81,8 @@ const hoverCardRoute = ref(null)
 const clickedCardRoute = ref(null)
 const hoverCardElement = ref(null)
 const clickedCardElement = ref(null)
+// The country the globe last flew to, highlighted in the route index
+const selectedCountry = ref('')
 const pillsVisible = computed(() => phase.value === 'explore' && !openingRouteName.value)
 // The route whose card is showing, so its pill is highlighted
 const activeRouteId = computed(
@@ -112,6 +118,7 @@ let routeInteractionReady = false
 let layersUnderSatellite = []
 
 const routesOnGlobe = computed(() => routes.value.filter((route) => routePosition(route)))
+const countries = computed(() => countrySummaries(routesOnGlobe.value))
 const routesNotOnGlobe = computed(() => routes.value.filter((route) => !routePosition(route)))
 
 // Each route's line is only downloaded the first time it's needed, then kept by route id.
@@ -319,9 +326,34 @@ async function showRoutePopup(properties, lngLat) {
   activePopup = popup
 }
 
-// Same width as the phone layout
+// Same width as the phone layout in GlobePanel.vue
 function isPhone() {
   return window.matchMedia('(max-width: 640px)').matches
+}
+
+// Keeps the globe centred in the space the navbar and route index leave free. On phones the
+// index is a bar along the bottom instead of a panel on the left.
+function globePadding() {
+  if (isPhone()) {
+    return { top: navHeightPx, bottom: 52, left: 0, right: 0 }
+  }
+  return { top: navHeightPx, bottom: 0, left: indexPanelPx, right: 0 }
+}
+
+function flyToCountry(countryName) {
+  const country = countries.value.find((item) => item.name === countryName)
+  if (!country || !globeView) {
+    return
+  }
+
+  selectedCountry.value = countryName
+  hideHoverPopup()
+  closeClickedCard()
+  globeView.fitBounds(country.bounds, {
+    padding: 60,
+    maxZoom: 8,
+    duration: prefersReducedMotion ? 0 : 1600,
+  })
 }
 
 // Glides the globe so a pill sits just under the navbar, and waits until it has
@@ -583,13 +615,18 @@ function startExploring() {
 
   // Only hand control to the user once the globe has settled on the routes
   globeView.once('moveend', () => setMapInteraction(globeView, true))
-  globeView.easeTo({ ...exploreView, duration: prefersReducedMotion ? 0 : 2000 })
+  globeView.easeTo({
+    ...exploreView,
+    padding: globePadding(),
+    duration: prefersReducedMotion ? 0 : 2000,
+  })
 }
 
 // Coming back to the globe: skip the hero screen and carry on exploring from the saved view
 function resumeExploring() {
   phase.value = 'explore'
   if (globeView) {
+    globeView.setPadding(globePadding())
     setMapInteraction(globeView, true)
   }
 }
@@ -737,8 +774,11 @@ onBeforeUnmount(() => {
       :route-count="routes.length"
       :shown-count="routesOnGlobe.length"
       :missing-routes="routesNotOnGlobe"
+      :countries="countries"
+      :selected-country="selectedCountry"
       :error="error"
       :map-error="mapError"
+      @fly-to="flyToCountry"
     />
 
     <!-- Each pill is rendered here but teleported into its map marker, which the map keeps
@@ -804,10 +844,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Fills the screen below the site header; the three phases are driven by the is-* class */
+/* Fills the whole screen, under the see-through navbar; the three phases are driven by the
+   is-* class */
 .globe-page {
   position: relative;
-  height: calc(100dvh - 4rem - 1px);
+  height: 100dvh;
   min-height: 480px;
   overflow: hidden;
   background: #2a2a2a;
@@ -838,6 +879,17 @@ onBeforeUnmount(() => {
     460px 350px,
     560px 520px,
     400px 440px;
+}
+
+/* Darkens the top of the screen so the navbar's paper text always reads over the globe */
+.globe-page::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 160px;
+  background: linear-gradient(rgb(16 24 20 / 0.7), transparent);
+  pointer-events: none;
 }
 
 .globe-surface {
@@ -922,6 +974,12 @@ onBeforeUnmount(() => {
   }
   to {
     opacity: 1;
+  }
+}
+/* On phones the route index is a bar along the bottom, so the map's credit sits above it */
+@media (max-width: 640px) {
+  .globe-surface :deep(.maplibregl-ctrl-bottom-right) {
+    bottom: 52px;
   }
 }
 </style>
