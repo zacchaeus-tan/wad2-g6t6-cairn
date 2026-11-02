@@ -902,7 +902,7 @@ onBeforeUnmount(() => {
       :animate="{ opacity: phase === 'explore' ? 1 : 0 }"
       :transition="{ duration: 0.6, delay: 0.4 }"
     >
-      <span class="cairn-data">{{ readoutPosition }}</span>
+      <span class="cairn-data" data-testid="globe-readout">{{ readoutPosition }}</span>
       <div ref="scaleHost"></div>
     </motion.div>
 

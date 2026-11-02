@@ -50,7 +50,7 @@ pnpm vitest run src/lib/__tests__/globeRoutes.spec.js
 
 ### Run End-to-End Tests with [Playwright](https://playwright.dev)
 
-The tests in `e2e/` drive the real app in a browser, against the Supabase project in your `.env`. They run on Chromium, Firefox and WebKit by default, and browser windows open while they run.
+The tests in `e2e/` drive the real app in a browser, against the Supabase project in your `.env`. They run on Chromium, Firefox and WebKit by default, with no browser windows showing.
 
 Before the first run:
 
@@ -71,6 +71,8 @@ pnpm playwright test
 pnpm playwright test --project=chromium
 # Run the tests in one file
 pnpm playwright test e2e/routes-browse.spec.js
+# Run the tests with browser windows showing
+pnpm playwright test --headed
 # Run the tests in debug mode
 pnpm playwright test --debug
 # Open the HTML report from the last run
@@ -82,6 +84,8 @@ You can also run them from the Testing panel in VS Code with the [Playwright Tes
 | Spec | User journey |
 | --- | --- |
 | `e2e/routes-browse.spec.js` | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable |
+| `e2e/globe.spec.js` | Start exploring the globe, fly to a country and back, and open a route from its pill |
+| `e2e/route-detail.spec.js` | Read a route's details, weather and reviews, get prompted to sign in, and find a way back from a missing route |
 | `e2e/auth.spec.js` | See the sign-in form, switch to registering, and see an error for a wrong password |
 | `e2e/quiz.spec.js` | Sign in, answer the quiz, go back, review the summary, save to the profile, retake it, and see an error if saving fails |
 
