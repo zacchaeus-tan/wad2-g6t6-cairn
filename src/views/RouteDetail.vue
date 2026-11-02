@@ -43,7 +43,7 @@ async function onGenerate(form) {
   itineraryLoading.value = true
   itineraryError.value = ''
   try {
-    itinerary.value = await generateItinerary(route.value, form)
+    itinerary.value = await generateItinerary(route.value, weather.value, form)
     itineraryInputs.value = form
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -196,6 +196,8 @@ const { scrollYProgress: trailProgress } = useScroll({
               <ItineraryForm
                 v-if="auth.isLoggedIn"
                 :route="route"
+                :weather="weather"
+                :weather-ready="Boolean(weather) || Boolean(weatherError)"
                 :loading="itineraryLoading"
                 @generate="onGenerate"
               />

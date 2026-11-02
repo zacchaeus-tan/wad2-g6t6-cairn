@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { AnimatePresence, motion } from 'motion-v'
 import {
   LONG_ITINERARY_DAYS,
   PACES,
@@ -9,6 +10,8 @@ import {
 
 const props = defineProps({
   route: Object,
+  weather: { type: Object, default: null },
+  weatherReady: { type: Boolean, default: true }, // is forecast request ready
   loading: Boolean,
 })
 
@@ -30,6 +33,36 @@ const isValid = computed(
 )
 
 const isLong = computed(() => days.value > LONG_ITINERARY_DAYS)
+
+// Text that steps forward while the plan is being written, then stays on the last step
+const loadingMessages = computed(() => {
+  const steps = ['Reading the route…']
+  if (props.weather) steps.push('Checking the forecast…')
+  steps.push('Planning your days…')
+  return steps
+})
+
+const messageIndex = ref(0)
+let messageTimer = null
+
+watch(
+  () => props.loading,
+  (isLoading) => {
+    clearInterval(messageTimer)
+    messageIndex.value = 0
+    if (isLoading) {
+      messageTimer = setInterval(() => {
+        messageIndex.value = Math.min(messageIndex.value + 1, loadingMessages.value.length - 1)
+      }, 3500)
+    }
+  },
+)
+
+onBeforeUnmount(() => clearInterval(messageTimer))
+
+const generateLabel = computed(() =>
+  props.loading ? loadingMessages.value[messageIndex.value] : 'Generate plan',
+)
 
 function submit() {
   emit('generate', {
@@ -75,8 +108,37 @@ function submit() {
       </div>
     </div>
 
-    <button type="submit" class="cairn-btn is-blaze" :disabled="!isValid || loading">
-      {{ loading ? 'Generating...' : 'Generate plan' }}
+    <button
+      type="submit"
+      class="cairn-btn is-blaze itinerary-generate"
+      :class="{ 'is-loading': loading }"
+      :disabled="!isValid || loading || !weatherReady"
+      :aria-busy="loading"
+    >
+      <!-- Progress fill that creeps across while the plan is written -->
+      <motion.span
+        v-if="loading"
+        class="itinerary-generate-fill"
+        aria-hidden="true"
+        :initial="{ width: '0%' }"
+        :animate="{ width: '92%' }"
+        :transition="{ duration: 18, ease: [0.1, 0.7, 0.2, 1] }"
+      />
+
+      <span class="itinerary-generate-label" aria-live="polite">
+        <span v-if="loading" class="itinerary-generate-spinner" aria-hidden="true"></span>
+        <AnimatePresence mode="wait" :initial="false">
+          <motion.span
+            :key="generateLabel"
+            :initial="{ opacity: 0, y: 8 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :exit="{ opacity: 0, y: -8 }"
+            :transition="{ duration: 0.2 }"
+          >
+            {{ generateLabel }}
+          </motion.span>
+        </AnimatePresence>
+      </span>
     </button>
 
     <p class="itinerary-hint cairn-fine">
@@ -132,6 +194,50 @@ function submit() {
 .itinerary-pace button:focus-visible {
   outline: 3px solid var(--lake);
   outline-offset: 2px;
+}
+
+.itinerary-generate {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.itinerary-generate-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.itinerary-generate-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  background: rgb(255 255 255 / 0.28);
+}
+
+/* Keep the button at full strength while it works, even though it is disabled */
+.itinerary-generate.is-loading:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
+.itinerary-generate-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: itinerary-spin 0.7s linear infinite;
+}
+
+@keyframes itinerary-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .itinerary-hint {

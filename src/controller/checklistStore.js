@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as checklistModel from '@/model/checklistModel'
 import * as routesModel from '@/model/routesModel'
+import { forecastForLLM } from '@/controller/weatherController'
 import { checkItemName, tidyItemName, maxNameLength, maxReasonLength } from '@/lib/checklistRules'
 
 const categories = [
@@ -26,28 +27,6 @@ function unwrap(result) {
 async function currentUser() {
   const { data } = await checklistModel.getUser()
   return data?.user ?? null
-}
-
-// A compact version of the forecast for the checklist generator.
-// Only the fields that change what to pack are sent.
-function forecastForChecklist(weather) {
-  if (!weather || !Array.isArray(weather.days)) {
-    return []
-  }
-  return weather.days.map((day) => ({
-    date: day.date,
-    min: day.min,
-    max: day.max,
-    summitMin: day.summit ? day.summit.min : null,
-    summitMax: day.summit ? day.summit.max : null,
-    feelsMin: day.feelsMin,
-    rainMm: day.rain,
-    rainChance: day.rainChance,
-    windKph: day.windMax,
-    gustKph: day.gustMax,
-    uv: day.uv,
-    warnings: day.warnings,
-  }))
 }
 
 // The itinerary and start date, if the user has generated an itinerary.
@@ -124,7 +103,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   // LLM (via the generate-checklist Edge Function)
   async function fetchItemsFromLLM(route, weather, plan) {
-    const forecast = forecastForChecklist(weather)
+    const forecast = forecastForLLM(weather)
     const trip = tripPlan(plan)
     const { data, error: err } = await checklistModel.invokeGenerateChecklist(
       route.id,
