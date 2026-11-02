@@ -146,6 +146,28 @@ export function summariseWeather(start, summit, altitude) {
   }
 }
 
+// A compact version of the forecast for the checklist and itinerary generators.
+// Only the fields that change what to pack or how to plan are sent.
+export function forecastForLLM(weather) {
+  if (!weather || !Array.isArray(weather.days)) {
+    return []
+  }
+  return weather.days.map((day) => ({
+    date: day.date,
+    min: day.min,
+    max: day.max,
+    summitMin: day.summit ? day.summit.min : null,
+    summitMax: day.summit ? day.summit.max : null,
+    feelsMin: day.feelsMin,
+    rainMm: day.rain,
+    rainChance: day.rainChance,
+    windKph: day.windMax,
+    gustKph: day.gustMax,
+    uv: day.uv,
+    warnings: day.warnings,
+  }))
+}
+
 export async function fetchRouteWeather(route) {
   if (!route || route.latitude == null || route.longitude == null) {
     throw new Error('This route has no coordinates for a weather forecast.')

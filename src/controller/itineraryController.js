@@ -1,4 +1,5 @@
 import { invokeGenerateItinerary } from '@/model/itineraryModel'
+import { forecastForLLM } from '@/controller/weatherController'
 
 // Controller: checks input, calls the model, and turns errors into thrown
 // errors so views can show them.
@@ -30,7 +31,7 @@ export function todayString() {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
-export async function generateItinerary(route, form) {
+export async function generateItinerary(route, weather, form) {
   if (!route || !route.id) {
     throw new Error('A route is required to generate an itinerary.')
   }
@@ -50,6 +51,7 @@ export async function generateItinerary(route, form) {
     start_date: form.startDate,
     days: form.days,
     pace: form.pace,
+    forecast: forecastForLLM(weather),
   })
 
   if (error) {
