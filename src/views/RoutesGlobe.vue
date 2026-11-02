@@ -798,8 +798,8 @@ onMounted(async () => {
     routeFetchReady = true
     updateRouteLayer()
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    error.value = `Unable to load routes: ${message}`
+    console.error('Could not load routes:', err)
+    error.value = 'Unable to load routes. Please refresh the page to try again.'
   } finally {
     loading.value = false
   }
