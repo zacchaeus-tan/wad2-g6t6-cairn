@@ -302,7 +302,7 @@ const { scrollYProgress: trailProgress } = useScroll({
 #reviews {
   margin-bottom: 0;
   padding: 24px;
-  background: var(--ground);
+  background-color: #ebe7df;
 }
 
 .route-detail-section {

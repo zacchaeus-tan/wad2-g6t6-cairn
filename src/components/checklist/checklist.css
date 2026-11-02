@@ -244,6 +244,11 @@
   width: 100%;
 }
 
+/* Solid behind the text, because the trail passes underneath */
+.gear-side .is-ghost:not(:hover) {
+  background-color: #ffffff;
+}
+
 /* Yellow sticky note */
 .gear-note {
   display: grid;

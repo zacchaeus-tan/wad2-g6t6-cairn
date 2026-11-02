@@ -97,6 +97,7 @@ const statusBadges = {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
+  background-color: #fbfaf7;
 }
 
 .route-match-checks li + li {

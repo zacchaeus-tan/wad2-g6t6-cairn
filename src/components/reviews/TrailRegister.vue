@@ -197,6 +197,7 @@ async function deleteFromList(review) {
 .register-score .register-score-empty {
   color: var(--granite-700);
   font: 900 22px var(--font);
+  letter-spacing: 0;
 }
 
 .register-stars {
@@ -216,7 +217,7 @@ async function deleteFromList(review) {
 
 .register-stars-bar {
   height: 8px;
-  background: var(--granite-200);
+  background-color: #c9d0cb;
 }
 
 .register-stars-fill {
@@ -232,7 +233,7 @@ async function deleteFromList(review) {
   gap: 12px 24px;
   margin: 0;
   padding-top: 14px;
-  border-top: 1px solid var(--granite-200);
+  border-top: 1px solid #c9d0cb;
 }
 
 .register-facts dd {
