@@ -7,7 +7,7 @@ import {
   groupSeriousIncidents,
   repeatedRef,
   withLiveReportCount,
-} from './alertDrafts'
+} from '../alertDrafts'
 
 describe('alertMessageLines', () => {
   it('splits a published report into who, what and advice', () => {

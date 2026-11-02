@@ -45,7 +45,7 @@ pnpm test:unit
 # Run the unit tests once
 pnpm vitest run
 # Run the tests in one file
-pnpm vitest run src/lib/globe/__tests__/globeRoutes.spec.js
+pnpm vitest run src/lib/__tests__/globeRoutes.spec.js
 ```
 
 ### Run End-to-End Tests with [Playwright](https://playwright.dev)

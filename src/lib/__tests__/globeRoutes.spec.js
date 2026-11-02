@@ -11,7 +11,7 @@ import {
   hasRenderableGeometry,
   routePosition,
   shortRouteName,
-} from '../globeRoutes'
+} from '../globe/globeRoutes'
 
 describe('globeRoutes', () => {
   // Verify that only a line with at least 2 valid points can be drawn.

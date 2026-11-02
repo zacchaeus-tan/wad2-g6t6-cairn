@@ -12,7 +12,7 @@ import {
   sortRoutes,
   validatePasswordForm,
   validateProfileForm,
-} from './profileTools'
+} from '../profileTools'
 
 const route = (route_name, status, country = null, completed_at = null) => ({
   route_name,
