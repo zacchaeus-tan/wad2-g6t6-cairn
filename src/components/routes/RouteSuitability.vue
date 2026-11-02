@@ -259,11 +259,13 @@ const rowVariants = {
 }
 
 .is-pass .fit-check-mark {
-  background: var(--paper);
+  background: var(--pine);
+  box-shadow: 0 0 0 3px var(--grass);
+
 }
 
 .is-pass .fit-check-mark svg {
-  stroke: var(--pine);
+  stroke: var(--paper);
 }
 
 .is-fail .fit-check-mark {
