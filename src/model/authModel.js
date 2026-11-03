@@ -19,6 +19,11 @@ export function signInWithGoogle(returnPath) {
   return supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: `${window.location.origin}${returnPath}` },
+// Supabase emails a link that signs them in on /reset-password, where they pick a new password.
+// That URL has to be in the project's allowed redirect URLs.
+export function sendPasswordReset(email) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
   })
 }
 

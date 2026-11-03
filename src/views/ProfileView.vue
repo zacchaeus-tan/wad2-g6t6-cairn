@@ -78,7 +78,7 @@ const tabs = computed(() => [
   {
     name: 'Checklists',
     value: 'checklists',
-    colour: '#fff4db',
+    colour: '#ffecc2',
     views: [{ component: ProfileChecklists, props: {} }],
   },
   {

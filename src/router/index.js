@@ -22,6 +22,7 @@ const router = createRouter({
     { path: '/routes/:id', name: 'route-detail', component: () => import('@/views/RouteDetail.vue') },
     { path: '/auth', name: 'auth', component: () => import('@/views/AuthView.vue') },
     { path: '/welcome', name: 'complete-profile', component: () => import('@/views/CompleteProfileView.vue'), meta: { requiresAuth: true } },
+    { path: '/reset-password', name: 'reset-password', component: () => import('@/views/ResetPasswordView.vue') },
     { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/quiz', name: 'quiz', component: () => import('@/views/QuizView.vue'), meta: { requiresAuth: true } },
     { path: '/privacy', name: 'privacy', component: () => import('@/views/PrivacyView.vue') },

@@ -4,6 +4,7 @@ import {
   signIn,
   signInWithGoogle,
   signOut,
+  sendPasswordReset,
   getSession,
   onAuthStateChange,
   getProfile,
@@ -91,6 +92,14 @@ export const useAuthStore = defineStore('auth', {
     async loginWithGoogle(returnPath) {
       this.error = null
       const { error } = await signInWithGoogle(returnPath)
+    // Supabase answers the same whether or not the email has an account, so this never says which
+    async requestPasswordReset(email) {
+      this.loading = true
+      this.error = null
+
+      const { error } = await sendPasswordReset(email.trim())
+
+      this.loading = false
       if (error) return this.failAccountChange(error.message)
       return { success: true }
     },
