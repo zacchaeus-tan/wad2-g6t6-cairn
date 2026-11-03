@@ -16,7 +16,7 @@ defineProps({
   <motion.section
     v-show="active"
     :id="`admin-panel-${tab}`"
-    class="admin-panel"
+    class="admin-panel py-5 mt-lg-5"
     role="tabpanel"
     :aria-labelledby="`admin-tab-${tab}`"
     :initial="{ opacity: 0, y: 12 }"

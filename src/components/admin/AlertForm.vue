@@ -122,7 +122,7 @@ async function submit() {
 
 <template>
   <h3 class="admin-subhead">{{ editing ? 'Edit alert' : 'Publish an alert' }}</h3>
-  <form class="admin-form" novalidate @submit.prevent="submit">
+  <form class="admin-form p-3 p-md-4" novalidate @submit.prevent="submit">
     <AdminNote v-if="editing" type="info" class="mt-0 mb-3">
       Editing a published alert. Changes show on the route page as soon as you save.
     </AdminNote>

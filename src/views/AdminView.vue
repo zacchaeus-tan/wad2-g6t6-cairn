@@ -80,7 +80,9 @@ function editAlert(alert) {
     <div ref="tabsTop"></div>
     <AdminTabs :tabs="tabs" :active="activeTab" @select="selectTab" />
 
-    <div class="cairn-wrap">
+    <!-- Padding, not the panels' margin, makes the extra room above the footer on
+         large screens, so it keeps the page's background -->
+    <div class="cairn-wrap pb-lg-5">
       <AdminNote v-if="adminStore.loadError" type="error">
         Unable to load admin data: {{ adminStore.loadError }}
       </AdminNote>
@@ -111,7 +113,7 @@ function editAlert(alert) {
           lede="Short-term warnings that show on a route's banner until they end. For a long closure, set the route status instead."
           :active="activeTab === 'alerts'"
         >
-          <div class="row g-5">
+          <div class="row g-4 g-lg-5">
             <div class="col-12 col-lg-7">
               <AlertForm ref="alertForm" :user-id="auth.user.id" />
             </div>
