@@ -19,6 +19,7 @@ const router = createRouter({
     { path: '/globe', name: 'routes-globe', component: () => import('@/views/RoutesGlobe.vue') },
     { path: '/routes/:id', name: 'route-detail', component: () => import('@/views/RouteDetail.vue') },
     { path: '/auth', name: 'auth', component: () => import('@/views/AuthView.vue') },
+    { path: '/reset-password', name: 'reset-password', component: () => import('@/views/ResetPasswordView.vue') },
     { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/quiz', name: 'quiz', component: () => import('@/views/QuizView.vue'), meta: { requiresAuth: true } },
     { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },

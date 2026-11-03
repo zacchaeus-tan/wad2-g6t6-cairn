@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AnimatePresence, MotionConfig, motion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
@@ -14,7 +14,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const mode = ref('login')
+const mode = ref('login') // login, register or forgot
 const email = ref('')
 const password = ref('')
 const name = ref('')
@@ -22,10 +22,19 @@ const age = ref('')
 const gender = ref('')
 const country = ref('')
 const about = ref('')
-const message = ref('')
+// Set when they arrive from the reset password page
+const message = ref(
+  route.query.reset === 'done' ? 'Password changed. Sign in with your new password.' : '',
+)
 
 // The unchosen word nudges until the switch has been used once
 const hasSwitched = ref(false)
+
+const headings = { login: 'Sign in', register: 'Create your profile', forgot: 'Reset your password' }
+const submitLabels = { login: 'Sign in', register: 'Create profile', forgot: 'Send reset link' }
+
+// Forgetting a password is part of signing in, so Sign In stays highlighted
+const tab = computed(() => (mode.value === 'register' ? 'register' : 'login'))
 
 function setMode(next) {
   hasSwitched.value = true
@@ -36,6 +45,15 @@ function setMode(next) {
 
 async function submit() {
   message.value = ''
+
+  if (mode.value === 'forgot') {
+    const { success } = await auth.requestPasswordReset(email.value)
+    if (success) {
+      message.value = 'If an account uses that email, a link to reset your password is on its way.'
+    }
+    return
+  }
+
   const result =
     mode.value === 'login'
       ? await auth.login(email.value, password.value)
@@ -74,27 +92,31 @@ async function submit() {
 
       <div class="auth-layout">
         <h1 class="cairn-visually-hidden">
-          {{ mode === 'login' ? 'Sign in' : 'Create your profile' }}
+          {{ headings[mode] }}
         </h1>
 
         <div class="auth-words">
           <AuthWord
             text="Sign In"
             label="Sign in"
-            :active="mode === 'login'"
-            :nudge="!hasSwitched && mode !== 'login'"
+            :active="tab === 'login'"
+            :nudge="!hasSwitched && tab !== 'login'"
             @select="setMode('login')"
           />
           <AuthWord
             text="Register"
             label="Register"
-            :active="mode === 'register'"
-            :nudge="!hasSwitched && mode !== 'register'"
+            :active="tab === 'register'"
+            :nudge="!hasSwitched && tab !== 'register'"
             @select="setMode('register')"
           />
         </div>
 
         <motion.form v-bind="rowMotion" class="auth-card" @submit.prevent="submit">
+          <p v-if="mode === 'forgot'" class="cairn-fine auth-intro">
+            Enter the email you signed up with and we'll send you a link to choose a new password.
+          </p>
+
           <AnimatePresence>
             <motion.div v-if="mode === 'register'" v-bind="expandMotion" class="auth-extra">
               <div class="auth-field">
@@ -149,7 +171,7 @@ async function submit() {
             />
           </div>
 
-          <div class="auth-field">
+          <div v-if="mode !== 'forgot'" class="auth-field">
             <label class="cairn-label" for="password">Password</label>
             <input
               id="password"
@@ -161,6 +183,14 @@ async function submit() {
               required
             />
             <p v-if="mode === 'register'" class="cairn-fine">At least 6 characters.</p>
+            <button
+              v-if="mode === 'login'"
+              type="button"
+              class="cairn-link cairn-fine auth-aside"
+              @click="setMode('forgot')"
+            >
+              Forgot password?
+            </button>
           </div>
 
           <AnimatePresence>
@@ -193,7 +223,16 @@ async function submit() {
           </AnimatePresence>
 
           <button class="cairn-btn auth-submit" :disabled="auth.loading" type="submit">
-            {{ mode === 'login' ? 'Sign in' : 'Create profile' }}
+            {{ submitLabels[mode] }}
+          </button>
+
+          <button
+            v-if="mode === 'forgot'"
+            type="button"
+            class="cairn-link cairn-fine auth-aside"
+            @click="setMode('login')"
+          >
+            Back to sign in
           </button>
 
           <NoticeBox v-if="auth.error" type="error">{{ auth.error }}</NoticeBox>
@@ -298,6 +337,14 @@ async function submit() {
 
 .auth-submit {
   width: 100%;
+}
+
+.auth-intro {
+  margin: 0;
+}
+
+.auth-aside {
+  justify-self: start;
 }
 
 @media (max-width: 479.98px) {

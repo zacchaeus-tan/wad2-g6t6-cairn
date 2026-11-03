@@ -3,6 +3,7 @@ import {
   signUp,
   signIn,
   signOut,
+  sendPasswordReset,
   getSession,
   onAuthStateChange,
   getProfile,
@@ -76,6 +77,18 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user
       await this.fetchProfile()
       this.loading = false
+      return { success: true }
+    },
+
+    // Supabase answers the same whether or not the email has an account, so this never says which
+    async requestPasswordReset(email) {
+      this.loading = true
+      this.error = null
+
+      const { error } = await sendPasswordReset(email.trim())
+
+      this.loading = false
+      if (error) return this.failAccountChange(error.message)
       return { success: true }
     },
 

@@ -50,3 +50,38 @@ test.describe('Signing in', () => {
     await expect(page.getByRole('alert')).toContainText('Invalid login credentials')
   })
 })
+
+test.describe('Forgetting a password', () => {
+  test('should send a reset link to the email given', async ({ page }) => {
+    let sentTo = null
+    await page.route('**/auth/v1/recover*', (route) => {
+      sentTo = route.request().postDataJSON().email
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    })
+    await page.goto('/auth')
+
+    await page.getByRole('button', { name: 'Forgot password?' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Reset your password', level: 1 })).toBeAttached()
+    await expect(page.getByLabel('Password')).toHaveCount(0)
+
+    await page.getByLabel('Email').fill('hiker@example.com')
+    await page.getByRole('button', { name: 'Send reset link' }).click()
+
+    await expect(page.getByRole('status')).toContainText('a link to reset your password')
+    expect(sentTo).toBe('hiker@example.com')
+  })
+
+  test('should ask them to sign in again once the password is changed', async ({ page }) => {
+    await page.goto('/auth?reset=done')
+
+    await expect(page.getByRole('status')).toContainText('Sign in with your new password')
+    await expect(page.getByLabel('Password')).toBeVisible()
+  })
+
+  test('should say when a reset link is no longer valid', async ({ page }) => {
+    await page.goto('/reset-password')
+
+    await expect(page.getByRole('alert')).toContainText('expired or has already been used')
+  })
+})
