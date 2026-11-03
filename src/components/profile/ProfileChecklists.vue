@@ -733,6 +733,8 @@ const confettiPieces = Array.from({ length: 35 }, (_, i) => ({
     background-color 0.2s ease,
     color 0.2s ease,
     border-color 0.2s ease;
+.checklist-print {
+  display: none;
 }
 
 @media print {

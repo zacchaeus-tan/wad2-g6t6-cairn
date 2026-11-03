@@ -106,7 +106,7 @@ function nameOf(review) {
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 16px;
   padding: 20px 0;
-  border-bottom: 1px solid var(--granite-200);
+  border-bottom: 1px solid #c9d0cb;
 }
 
 .review-entry-who {

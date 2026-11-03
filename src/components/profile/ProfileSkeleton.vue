@@ -49,10 +49,4 @@ defineProps({
     opacity: 0.45;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .profile-skeleton-block {
-    animation: none;
-  }
-}
 </style>

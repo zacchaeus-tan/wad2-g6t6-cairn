@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import { MotionConfig, motion } from 'motion-v'
+import { motion } from 'motion-v'
 import { alertMessageLines } from '@/lib/alertDrafts'
 import { formatDate, modifierClass } from '@/lib/format'
 import { rowMotion } from '@/lib/motion'
@@ -18,44 +18,42 @@ const SEVERITY_LABELS = { info: 'Notice', warning: 'Warning', danger: 'Danger' }
 <template>
   <!-- A plain labelled section, not role="alert": the notices are part of the
        page, so screen readers should not announce them on load. -->
-  <MotionConfig reduced-motion="user">
-    <section
-      v-if="alerts.length"
-      id="trail-notices"
-      class="trail-notices"
-      aria-labelledby="trail-notices-title"
-    >
-      <h2 id="trail-notices-title" class="cairn-label">{{ title }}</h2>
-      <ul class="trail-notices-list">
-        <motion.li
-          v-for="(alert, index) in alerts"
-          :key="alert.id"
-          v-bind="rowMotion"
-          :transition="{ ...rowMotion.transition, delay: index * 0.06 }"
-          class="trail-notice"
-          :class="modifierClass(alert.severity)"
-        >
-          <div class="trail-notice-head">
-            <p class="trail-notice-severity">{{ SEVERITY_LABELS[alert.severity] || 'Notice' }}</p>
-            <p class="trail-notice-title">{{ alert.title }}</p>
-            <p v-if="alert.route_name" class="cairn-fine">
-              <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
-                alert.route_name
-              }}</RouterLink>
-            </p>
-            <p v-if="alert.ends_at" class="cairn-fine">
-              Expected until {{ formatDate(alert.ends_at) }}
-            </p>
-          </div>
-          <div v-if="alert.message" class="trail-notice-message">
-            <p v-for="(line, lineIndex) in alertMessageLines(alert.message)" :key="lineIndex">
-              {{ line }}
-            </p>
-          </div>
-        </motion.li>
-      </ul>
-    </section>
-  </MotionConfig>
+  <section
+    v-if="alerts.length"
+    id="trail-notices"
+    class="trail-notices"
+    aria-labelledby="trail-notices-title"
+  >
+    <h2 id="trail-notices-title" class="cairn-label">{{ title }}</h2>
+    <ul class="trail-notices-list">
+      <motion.li
+        v-for="(alert, index) in alerts"
+        :key="alert.id"
+        v-bind="rowMotion"
+        :transition="{ ...rowMotion.transition, delay: index * 0.06 }"
+        class="trail-notice"
+        :class="modifierClass(alert.severity)"
+      >
+        <div class="trail-notice-head">
+          <p class="trail-notice-severity">{{ SEVERITY_LABELS[alert.severity] || 'Notice' }}</p>
+          <p class="trail-notice-title">{{ alert.title }}</p>
+          <p v-if="alert.route_name" class="cairn-fine">
+            <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
+              alert.route_name
+            }}</RouterLink>
+          </p>
+          <p v-if="alert.ends_at" class="cairn-fine">
+            Expected until {{ formatDate(alert.ends_at) }}
+          </p>
+        </div>
+        <div v-if="alert.message" class="trail-notice-message">
+          <p v-for="(line, lineIndex) in alertMessageLines(alert.message)" :key="lineIndex">
+            {{ line }}
+          </p>
+        </div>
+      </motion.li>
+    </ul>
+  </section>
 </template>
 
 <style scoped>

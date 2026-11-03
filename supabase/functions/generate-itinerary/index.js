@@ -3,11 +3,12 @@
 // Runs on Supabase (Deno), so the OpenAI key never reaches the browser.
 // Only signed-in users can call it (Supabase checks their login token).
 //
-// Request body: { route_id, start_date: 'YYYY-MM-DD', days: 1-14, pace }
+// Request body: { route_id, start_date: 'YYYY-MM-DD', days, pace, forecast }
 // Response:     { summary, days: [...], tips: [...] }  or  { error }
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.js'
+import { cleanForecast, tripForecastSection } from '../_shared/forecast.js'
 
 const MODEL = 'gpt-4.1-mini'
 const PACES = ['relaxed', 'moderate', 'fast']
@@ -56,7 +57,7 @@ function validate(body) {
 
 // Everything the model knows about the route comes from our database,
 // not from text the user typed.
-function buildPrompt(route, points, { start_date, days, pace }) {
+function buildPrompt(route, points, forecast, { start_date, days, pace }) {
   const stops = points.length
     ? points
         .map((p) => {
@@ -73,10 +74,13 @@ Distance: ${route.distance_km ?? 'unknown'} km
 Elevation gain: ${route.elevation_gain_m ?? 'unknown'} m
 Maximum altitude: ${route.altitude_m ?? 'unknown'} m
 Usual duration: ${route.duration_days ?? 'unknown'} days
-Difficulty: ${route.technical_rating ?? 'unknown'}
+Difficulty (1 easy to 4 strenuous): ${route.effective_difficulty ?? route.official_difficulty ?? 'unknown'}
 Safety status: ${route.safety_status ?? 'unknown'}
-Permit required: ${route.permit_required ? 'yes' : 'no'}
-Guide required: ${route.guide_required ? 'yes' : 'no'}
+Permit required: ${route.permit_required == null ? 'unknown' : route.permit_required ? 'yes' : 'no'}
+Permit hint: ${route.permit_hint ?? 'none'}
+Guide required: ${route.guide_required ? 'yes' : 'unknown'}
+
+${tripForecastSection(forecast, start_date, days)}
 
 Checkpoints in order:
 ${stops}
@@ -91,6 +95,9 @@ Plan this hike over ${days} day(s), starting on ${start_date}, at a ${pace} pace
 const SYSTEM_PROMPT = `You are an experienced hiking guide. Create a realistic day-by-day itinerary.
 Use the listed checkpoints as start/end points and camps where possible, in order.
 Split the distance and elevation sensibly across the days for the requested pace.
+Use the forecast where it is given: plan shorter or less exposed days around thunderstorm risk or strong gusts, start earlier when rain is likely after midday, and warn about mud and river crossings after heavy recent rain.
+In each forecast day's "notes", mention the weather that matters and say when it changed the plan.
+If the forecast is unavailable or missing for a day, do not mention specific weather for that day.
 Reply with JSON only, in exactly this shape:
 {
   "summary": "2-3 sentence overview",
@@ -110,7 +117,8 @@ Reply with JSON only, in exactly this shape:
   ],
   "tips": ["general tips for this route"]
 }
-The "days" array must have exactly one entry per day, with consecutive dates from the start date.`
+The "days" array must have exactly one entry per day, with consecutive dates from the start date.
+If a permit or guide is required or unknown, include this in "tips": "Check permit and guide requirements before you go".`
 
 Deno.serve(async (req) => {
   // Browser preflight request
@@ -166,6 +174,11 @@ Deno.serve(async (req) => {
     return json({ error: 'OPENAI_API_KEY is not set on the server.' }, 500)
   }
 
+  const forecast = cleanForecast(body.forecast)
+  const prompt = buildPrompt(route, points, forecast, body)
+  // Check this in the Supabase dashboard (Edge Functions > generate-itinerary > Logs)
+  console.log('Itinerary prompt:\n' + prompt)
+
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -180,7 +193,7 @@ Deno.serve(async (req) => {
         max_tokens: 16000,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildPrompt(route, points, body) },
+          { role: 'user', content: prompt },
         ],
       }),
     })

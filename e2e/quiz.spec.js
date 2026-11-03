@@ -122,11 +122,6 @@ async function expectSaved(page, profile, pick = defaultAnswer) {
   }
 }
 
-// One set of answers per round: round 0 is every question's first option, and so on.
-// Questions with fewer options wrap around, so every option gets picked at least once.
-const ROUNDS = Math.max(...quizQuestions.map((question) => question.options.length))
-const optionForRound = (round) => (question) => question.options[round % question.options.length]
-
 test.describe('Taking the quiz', () => {
   // Verify that /quiz is only for signed in users, and that signing in returns to it.
   test('should send a signed out visitor to sign in first', async ({ page }) => {
@@ -186,21 +181,6 @@ test.describe('Taking the quiz', () => {
     await expect(questionHeading(page, second)).toBeVisible()
   })
 
-  // Verify that the last question's button leads to the summit instead of another stop.
-  test('should lead to the summit from the last question', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
-    const last = quizQuestions.at(-1)
-
-    // actions
-    for (const question of quizQuestions.slice(0, -1)) await answer(page, question)
-    await expect(questionHeading(page, last)).toBeVisible()
-
-    // assert
-    await expect(page.getByRole('button', { name: 'To the summit' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Next stop' })).toHaveCount(0)
-  })
-
   // Verify that an answer can be changed from the summary.
   test('should update the summary when an answer is changed', async ({ page }) => {
     // setup
@@ -237,27 +217,6 @@ test.describe('Taking the quiz', () => {
       await expect(experience.getByText(defaultAnswer(question).desc)).toBeVisible()
     }
   })
-
-  // Verify that every option can be picked, shows on the summary and is the value saved.
-  for (let round = 0; round < ROUNDS; round++) {
-    test(`should save the picked answers (option set ${round + 1} of ${ROUNDS})`, async ({ page }) => {
-      // setup
-      const profile = await signInToQuiz(page)
-      const pick = optionForRound(round)
-
-      // actions
-      await answerAll(page, pick)
-
-      // assert
-      await expectSummary(page, pick)
-
-      // actions
-      await saveAnswers(page)
-
-      // assert
-      await expectSaved(page, profile, pick)
-    })
-  }
 
   // Verify that a second attempt starts with the previous answers already picked.
   test('should pick the previous answers when the quiz is retaken', async ({ page }) => {

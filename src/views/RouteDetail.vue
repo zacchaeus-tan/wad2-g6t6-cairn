@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useScroll } from 'motion-v'
 import { fetchRouteById, fetchRouteAlerts, takePreloadedRoute } from '../controller/routesController'
 import { useReviewsStore } from '../controller/reviewsStore'
 import { useAuthStore } from '@/controller/authStore'
@@ -18,6 +19,7 @@ import RouteNumbers from '@/components/routes/RouteNumbers.vue'
 import TrailNotices from '@/components/routes/TrailNotices.vue'
 import RouteSuitability from '@/components/routes/RouteSuitability.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
+import TrailAnimation from '@/components/routes/TrailAnimation.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -41,11 +43,12 @@ async function onGenerate(form) {
   itineraryLoading.value = true
   itineraryError.value = ''
   try {
-    itinerary.value = await generateItinerary(route.value, form)
+    itinerary.value = await generateItinerary(route.value, weather.value, form)
     itineraryInputs.value = form
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    itineraryError.value = `Unable to generate an itinerary: ${message}`
+    console.error('Could not generate an itinerary:', err)
+    // The controller's messages are written for the user, like "Please choose a pace."
+    itineraryError.value = `Unable to generate an itinerary: ${err.message}`
   } finally {
     itineraryLoading.value = false
   }
@@ -71,8 +74,8 @@ onMounted(async () => {
   try {
     route.value ??= await fetchRouteById(routeParams.params.id)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    error.value = `Unable to load this route: ${message}`
+    console.error('Could not load this route:', err)
+    error.value = 'Unable to load this route. Please refresh the page to try again.'
   } finally {
     loading.value = false
   }
@@ -124,6 +127,14 @@ async function reloadRoute() {
     console.warn('Could not reload the route after a review change:', err)
   }
 }
+
+// How far the trail is drawn: it starts as the sections reach the middle of the screen
+// and finishes as they end at the bottom, so the page can't run out before it does
+const journey = ref(null)
+const { scrollYProgress: trailProgress } = useScroll({
+  target: journey,
+  offset: ['start 0.55', 'end end'],
+})
 </script>
 
 <template>
@@ -143,15 +154,18 @@ async function reloadRoute() {
       <RouteBanner :route="route" :isLoggedIn="auth.isLoggedIn" :alerts="alerts" />
       <RouteNumbers :route="route" />
 
+      <div ref="journey" class="route-journey">
+      <TrailAnimation :progress="trailProgress" />
+
       <div class="container route-detail-sections py-5">
         <TrailNotices :alerts="alerts" />
 
       <div class="row g-4">
-        <section class="col-12">
+        <section class="col-12 route-stop">
           <GradeDial :route="route" />
         </section>
 
-        <section class="col-12">
+        <section class="col-12 route-stop">
           <RouteSuitability
             :route="route"
             :isLoggedIn="auth.isLoggedIn"
@@ -160,11 +174,11 @@ async function reloadRoute() {
           />
         </section>
 
-        <section class="col-12">
+        <section class="col-12 route-stop">
           <WeatherForecast :weather="weather" :error="weatherError" />
         </section>
 
-          <section id="plan" class="col-12" aria-labelledby="plan-title">
+          <section id="plan" class="col-12 route-stop" aria-labelledby="plan-title">
             <article class="route-plan">
               <div class="route-plan-head">
                 <h2 id="plan-title" class="cairn-headline">Plan your itinerary</h2>
@@ -183,6 +197,8 @@ async function reloadRoute() {
               <ItineraryForm
                 v-if="auth.isLoggedIn"
                 :route="route"
+                :weather="weather"
+                :weather-ready="Boolean(weather) || Boolean(weatherError)"
                 :loading="itineraryLoading"
                 @generate="onGenerate"
               />
@@ -219,7 +235,7 @@ async function reloadRoute() {
           </section>
         </div>
 
-        <section id="gear" class="mt-4" aria-labelledby="gear-title">
+        <section id="gear" class="mt-4 route-stop" aria-labelledby="gear-title">
           <GearChecklist
             :route="route"
             :weather="weather"
@@ -231,7 +247,7 @@ async function reloadRoute() {
           />
         </section>
 
-        <section id="reviews" class="mt-4">
+        <section id="reviews" class="mt-4 route-stop">
           <TrailRegister
             :route="route"
             :user-id="auth.user?.id ?? null"
@@ -241,6 +257,7 @@ async function reloadRoute() {
             @deleted="reloadRoute"
           />
         </section>
+      </div>
       </div>
     </template>
   </div>
@@ -272,10 +289,30 @@ async function reloadRoute() {
   max-width: 1200px;
 }
 
+/* The sections sit along the walked trail, far enough apart for it to show between them */
+.route-journey {
+  position: relative;
+}
+
+.route-stop {
+  position: relative;
+  z-index: 1;
+  margin-bottom: clamp(96px, 12vw, 160px);
+  scroll-margin-top: 80px;
+}
+
+/* Solid behind the text, because the trail passes underneath */
+#reviews {
+  margin-bottom: 0;
+  padding: 24px;
+  background-color: #ebe7df;
+}
+
 .route-detail-section {
   border: 1px solid currentColor;
   border-radius: 0.75rem;
   padding: 1.5rem;
+  background: var(--ground);
 }
 
 /* Plan your itinerary */
