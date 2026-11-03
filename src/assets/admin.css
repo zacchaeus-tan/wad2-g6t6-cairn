@@ -139,34 +139,20 @@
   background-color: #fbfaf7;
 }
 
-.admin-numbers-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
 .admin-number {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 28px 12px 24px;
   border: 0;
-  border-right: 1px solid #e1e6e2;
   background-color: transparent;
   color: #17201c;
   text-align: left;
 }
 
-.admin-number:nth-child(odd) {
-  padding-left: 0;
-}
-
-.admin-number:nth-child(even) {
-  border-right: 0;
-}
-
-.admin-number:nth-child(1),
-.admin-number:nth-child(2) {
-  border-bottom: 1px solid #e1e6e2;
+/* Hairlines between the figures. Bootstrap's border-end draws the ones that never move,
+   in its #dee2e6; these two match it and change at lg. */
+.admin-number-top {
+  border-bottom: 1px solid #dee2e6;
 }
 
 .admin-number-label {
@@ -196,40 +182,19 @@
 }
 
 @media (min-width: 768px) {
-  .admin-number {
-    padding: 36px 20px 30px;
-  }
-
   .admin-number-figure {
     font-size: 48px;
   }
 }
 
-@media (min-width: 1000px) {
-  .admin-numbers-list {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .admin-number,
-  .admin-number:nth-child(odd) {
-    padding: 44px 20px 36px;
-  }
-
-  .admin-number:first-child {
-    padding-left: 0;
-  }
-
-  .admin-number:nth-child(even) {
-    border-right: 1px solid #e1e6e2;
-  }
-
-  .admin-number:last-child {
-    border-right: 0;
-  }
-
-  .admin-number:nth-child(1),
-  .admin-number:nth-child(2) {
+/* One row of four: the top row's bottom line goes, and the second figure gains one on its right */
+@media (min-width: 992px) {
+  .admin-number-top {
     border-bottom: 0;
+  }
+
+  .admin-number-mid {
+    border-right: 1px solid #dee2e6;
   }
 
   .admin-number-figure {
@@ -245,7 +210,6 @@
 
 /* Scrolls sideways on a phone rather than wrapping */
 .admin-tablist {
-  display: flex;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -253,11 +217,7 @@
 .admin-tab {
   position: relative;
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 52px;
-  padding: 0 14px;
+  min-height: 56px;
   border: 0;
   border-right: 1px solid #457661;
   background-color: transparent;
@@ -310,19 +270,7 @@
   background-color: #e4ded3;
 }
 
-@media (min-width: 768px) {
-  .admin-tab {
-    gap: 10px;
-    min-height: 56px;
-    padding: 0 22px;
-  }
-}
-
 /* ---------- One tab's content ---------- */
-
-.admin-panel {
-  padding: 56px 0 112px;
-}
 
 .cairn .admin-panel-lede {
   max-width: 52ch;
@@ -337,12 +285,6 @@
   font-size: 22px;
   font-weight: 900;
   letter-spacing: -0.01em;
-}
-
-@media (min-width: 992px) {
-  .admin-panel {
-    padding: 88px 0 140px;
-  }
 }
 
 /* Stands where the tabs will be while the page's data loads */
@@ -385,40 +327,8 @@
 }
 
 .admin-item {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  justify-content: space-between;
-  align-items: flex-start;
   padding: 20px 0;
   border-bottom: 1px solid #c9d0cb;
-}
-
-/* A row with a mark on its left: hazard, grade or the hiker's initial */
-.admin-item.has-mark {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 12px 16px;
-}
-
-.admin-item.has-mark .admin-actions {
-  grid-column: 2;
-}
-
-@media (min-width: 720px) {
-  .admin-item.has-mark {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
-  }
-
-  .admin-item.has-mark .admin-actions {
-    grid-column: auto;
-    justify-content: flex-end;
-  }
-}
-
-.admin-item-body {
-  flex: 1 1 18rem;
-  min-width: 0;
 }
 
 .admin-item-body p + p {
@@ -613,14 +523,7 @@
 
 /* The alert and status forms sit on sand, like the grade dial card */
 .admin-form {
-  padding: 20px;
   background-color: #e4ded3;
-}
-
-@media (min-width: 768px) {
-  .admin-form {
-    padding: 32px;
-  }
 }
 
 .admin-form .admin-hint {

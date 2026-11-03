@@ -51,10 +51,10 @@ async function save() {
 </script>
 
 <template>
-  <div class="row g-5">
+  <div class="row g-4 g-lg-5">
     <div class="col-12 col-lg-7">
       <h3 class="admin-subhead">Set a status</h3>
-      <div class="admin-form">
+      <div class="admin-form p-3 p-md-4">
         <div class="admin-field">
           <label for="status-search" class="cairn-label">Find a route</label>
           <input

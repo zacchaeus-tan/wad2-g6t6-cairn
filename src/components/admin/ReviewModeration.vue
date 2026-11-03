@@ -6,6 +6,7 @@ import { useAdminStore } from '@/controller/adminStore'
 import { formatDate } from '@/lib/format'
 import { rowMotion } from '@/lib/motion'
 import AdminNote from '@/components/admin/AdminNote.vue'
+import AdminRow from '@/components/admin/AdminRow.vue'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
 
@@ -45,51 +46,64 @@ async function remove(review) {
         :key="review.id"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item has-mark"
+        class="admin-item"
         :class="{ 'is-confirming': confirmingId === review.id }"
       >
-        <span class="admin-mark is-avatar">{{ nameOf(review).charAt(0).toUpperCase() }}</span>
-        <div class="admin-item-body">
-          <p class="admin-review-top">
-            <strong>{{ nameOf(review) }}</strong>
-            <span class="admin-review-stars" :aria-label="`${review.rating} out of 5`">
-              <StarIcon v-for="n in 5" :key="n" :fill="n <= review.rating ? 1 : 0" />
-            </span>
-            <time :datetime="review.created_at">{{ formatDate(review.created_at) }}</time>
-          </p>
-          <p class="cairn-fine">
-            on
-            <RouterLink :to="{ name: 'route-detail', params: { id: review.route_id } }">{{
-              review.routes?.name || 'a route'
-            }}</RouterLink>
-            <template v-if="review.perceived_difficulty">
-              · felt <DifficultyMark :grade="review.perceived_difficulty" />
-            </template>
-            · {{ review.completed ? 'finished' : 'did not finish' }}
-          </p>
-          <p v-if="review.review_text" class="admin-review-text">{{ review.review_text }}</p>
-          <p v-for="incident in review.review_incidents" :key="incident.id" class="cairn-fine">
-            <span class="admin-tag is-caution">Incident</span>
-            {{ incident.incident_categories?.label
-            }}<template v-if="incident.note">: “{{ incident.note }}”</template>
-          </p>
-        </div>
-        <div class="admin-actions">
-          <template v-if="confirmingId === review.id">
-            <button
-              type="button"
-              class="cairn-btn is-blaze is-small"
-              :disabled="removing"
-              @click="remove(review)"
-            >
-              {{ removing ? 'Removing…' : 'Confirm remove' }}
-            </button>
-            <button type="button" class="cairn-link" @click="confirmingId = null">Cancel</button>
+        <AdminRow>
+          <template #mark>
+            <span class="admin-mark is-avatar">{{ nameOf(review).charAt(0).toUpperCase() }}</span>
           </template>
-          <button v-else type="button" class="cairn-link is-danger" @click="askToRemove(review)">
-            Remove
-          </button>
-        </div>
+          <div class="admin-item-body">
+            <p class="admin-review-top">
+              <strong>{{ nameOf(review) }}</strong>
+              <span class="admin-review-stars" :aria-label="`${review.rating} out of 5`">
+                <StarIcon v-for="n in 5" :key="n" :fill="n <= review.rating ? 1 : 0" />
+              </span>
+              <time :datetime="review.created_at">{{ formatDate(review.created_at) }}</time>
+            </p>
+            <p class="cairn-fine">
+              on
+              <RouterLink :to="{ name: 'route-detail', params: { id: review.route_id } }">{{
+                review.routes?.name || 'a route'
+              }}</RouterLink>
+              <template v-if="review.perceived_difficulty">
+                · felt <DifficultyMark :grade="review.perceived_difficulty" />
+              </template>
+              · {{ review.completed ? 'finished' : 'did not finish' }}
+            </p>
+            <p v-if="review.review_text" class="admin-review-text">{{ review.review_text }}</p>
+            <p v-for="incident in review.review_incidents" :key="incident.id" class="cairn-fine">
+              <span class="admin-tag is-caution">Incident</span>
+              {{ incident.incident_categories?.label
+              }}<template v-if="incident.note">: “{{ incident.note }}”</template>
+            </p>
+          </div>
+          <template #actions>
+            <div class="admin-actions">
+              <template v-if="confirmingId === review.id">
+                <button
+                  type="button"
+                  class="cairn-btn is-blaze is-small"
+                  :disabled="removing"
+                  @click="remove(review)"
+                >
+                  {{ removing ? 'Removing…' : 'Confirm remove' }}
+                </button>
+                <button type="button" class="cairn-link" @click="confirmingId = null">
+                  Cancel
+                </button>
+              </template>
+              <button
+                v-else
+                type="button"
+                class="cairn-link is-danger"
+                @click="askToRemove(review)"
+              >
+                Remove
+              </button>
+            </div>
+          </template>
+        </AdminRow>
       </motion.li>
     </AnimatePresence>
   </div>

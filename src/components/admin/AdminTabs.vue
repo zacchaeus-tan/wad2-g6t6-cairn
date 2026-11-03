@@ -30,7 +30,7 @@ function move(step) {
 <template>
   <nav class="admin-tabs sticky-top" aria-label="Admin sections">
     <div class="cairn-wrap">
-      <div class="admin-tablist" role="tablist">
+      <div class="admin-tablist d-flex" role="tablist">
         <button
           v-for="tab in tabs"
           :id="`admin-tab-${tab.key}`"
@@ -38,7 +38,7 @@ function move(step) {
           ref="buttons"
           type="button"
           role="tab"
-          class="admin-tab"
+          class="admin-tab d-inline-flex align-items-center gap-2 px-3 px-md-4"
           :class="{ 'is-active': tab.key === active }"
           :aria-selected="tab.key === active ? 'true' : 'false'"
           :aria-controls="`admin-panel-${tab.key}`"
