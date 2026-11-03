@@ -34,6 +34,10 @@ const form = ref(emptyForm())
 
 const selectedRoute = computed(() => adminStore.routes.find((r) => r.id === form.value.routeId))
 
+// A closed route's status already shows on its banner, so an alert about the same
+// closure would show there twice. Alerts are for short-lived problems.
+const routeClosed = computed(() => selectedRoute.value?.safety_status === 'closed')
+
 // The box shows the chosen route's name, so don't list it as a search.
 const routeMatches = computed(() =>
   routeSearch.value === selectedRoute.value?.name ? [] : adminStore.searchRoutes(routeSearch.value),
@@ -158,6 +162,14 @@ async function submit() {
           <option value="warning">Warning</option>
           <option value="danger">Danger</option>
         </select>
+      </div>
+
+      <div v-if="routeClosed" class="col-12">
+        <AdminNote type="info" class="my-0">
+          This route is already marked Closed<template v-if="selectedRoute.safety_status_note"
+            >: "{{ selectedRoute.safety_status_note }}"</template
+          >. Hikers see that on the route page, so only publish an alert about something else.
+        </AdminNote>
       </div>
 
       <div class="col-12 admin-field">
