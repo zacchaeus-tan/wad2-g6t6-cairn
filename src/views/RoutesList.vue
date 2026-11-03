@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { fetchRouteTiles, preloadRoute } from '../controller/routesController'
 import { tripType } from '@/lib/matching'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
+import { EASE_OUT } from '@/lib/motion'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import FilterDropdown from '@/components/routes/FilterDropdown.vue'
 import RangeFilter from '@/components/routes/RangeFilter.vue'
@@ -67,6 +68,11 @@ function closeFilter(key) {
   }
 }
 
+function chooseSort(key) {
+  sortBy.value = key
+  closeFilter('sort')
+}
+
 function kmFromPosition(position) {
   return KM_MIN * Math.pow(KM_MAX / KM_MIN, position / 100)
 }
@@ -77,10 +83,7 @@ function climbFromPosition(position) {
 
 // 0 means no minimum and 100 means no maximum
 function bounds(range, toValue) {
-  return [
-    range[0] === 0 ? 0 : toValue(range[0]),
-    range[1] === 100 ? Infinity : toValue(range[1]),
-  ]
+  return [range[0] === 0 ? 0 : toValue(range[0]), range[1] === 100 ? Infinity : toValue(range[1])]
 }
 
 function toNumber(value) {
@@ -132,11 +135,19 @@ function matchesFilters(route, skip = '') {
     return false
   }
 
-  if (skip !== 'grade' && selectedGrades.value.length && !selectedGrades.value.includes(gradeOf(route))) {
+  if (
+    skip !== 'grade' &&
+    selectedGrades.value.length &&
+    !selectedGrades.value.includes(gradeOf(route))
+  ) {
     return false
   }
 
-  if (skip !== 'trip' && selectedTrips.value.length && !selectedTrips.value.includes(tripType(route))) {
+  if (
+    skip !== 'trip' &&
+    selectedTrips.value.length &&
+    !selectedTrips.value.includes(tripType(route))
+  ) {
     return false
   }
 
@@ -183,7 +194,11 @@ const filteredRoutes = computed(() => {
     }
     if (sortBy.value === 'climb-asc' || sortBy.value === 'climb-desc') {
       const direction = sortBy.value === 'climb-asc' ? 1 : -1
-      return compareNumbers(toNumber(routeA.elevation_gain_m), toNumber(routeB.elevation_gain_m), direction)
+      return compareNumbers(
+        toNumber(routeA.elevation_gain_m),
+        toNumber(routeB.elevation_gain_m),
+        direction,
+      )
     }
     return (routeA.name ?? '').localeCompare(routeB.name ?? '')
   })
@@ -202,7 +217,7 @@ function scrollToResults(upOnly = false) {
   if (!results.value) {
     return
   }
-  const barHeight = wideScreen.matches && filterBar.value ? filterBar.value.offsetHeight : 0
+  const barHeight = filterBar.value ? filterBar.value.offsetHeight : 0
   // One pixel past the bar's resting point, so it counts as stuck and shows its own search
   const offset = results.value.getBoundingClientRect().top - barHeight + 1
   if (upOnly && offset >= 0) {
@@ -231,7 +246,9 @@ function formatKm(value) {
 }
 
 function formatClimb(value) {
-  return value >= 1000 ? (Math.round(value / 100) * 100).toLocaleString('en') : Math.round(value / 50) * 50
+  return value >= 1000
+    ? (Math.round(value / 100) * 100).toLocaleString('en')
+    : Math.round(value / 50) * 50
 }
 
 function rangeSummary(range, toValue, format, unit, prefix = '') {
@@ -249,8 +266,12 @@ function rangeSummary(range, toValue, format, unit, prefix = '') {
   return `${low}–${high} ${unit}`
 }
 
-const distanceSummary = computed(() => rangeSummary(distanceRange.value, kmFromPosition, formatKm, 'km'))
-const climbSummary = computed(() => rangeSummary(climbRange.value, climbFromPosition, formatClimb, 'm', '+'))
+const distanceSummary = computed(() =>
+  rangeSummary(distanceRange.value, kmFromPosition, formatKm, 'km'),
+)
+const climbSummary = computed(() =>
+  rangeSummary(climbRange.value, climbFromPosition, formatClimb, 'm', '+'),
+)
 
 const gradeSummary = computed(() =>
   selectedGrades.value.length
@@ -263,17 +284,27 @@ const gradeSummary = computed(() =>
 )
 
 const tripSummary = computed(() =>
-  selectedTrips.value.length ? selectedTrips.value.map((trip) => TRIP_LABELS[trip]).join(', ') : 'Any',
+  selectedTrips.value.length
+    ? selectedTrips.value.map((trip) => TRIP_LABELS[trip]).join(', ')
+    : 'Any',
 )
 
 // One pill per applied filter, each with its own way to remove it
 const activeFilters = computed(() => {
   const pills = []
   if (searchTerm.value.trim()) {
-    pills.push({ key: 'search', label: `“${searchTerm.value.trim()}”`, remove: () => (searchTerm.value = '') })
+    pills.push({
+      key: 'search',
+      label: `“${searchTerm.value.trim()}”`,
+      remove: () => (searchTerm.value = ''),
+    })
   }
   if (selectedCountry.value) {
-    pills.push({ key: 'country', label: selectedCountry.value, remove: () => (selectedCountry.value = '') })
+    pills.push({
+      key: 'country',
+      label: selectedCountry.value,
+      remove: () => (selectedCountry.value = ''),
+    })
   }
   for (const grade of selectedGrades.value) {
     pills.push({
@@ -290,10 +321,18 @@ const activeFilters = computed(() => {
     })
   }
   if (distanceSummary.value !== 'Any') {
-    pills.push({ key: 'distance', label: distanceSummary.value, remove: () => (distanceRange.value = [0, 100]) })
+    pills.push({
+      key: 'distance',
+      label: distanceSummary.value,
+      remove: () => (distanceRange.value = [0, 100]),
+    })
   }
   if (climbSummary.value !== 'Any') {
-    pills.push({ key: 'climb', label: `Climb ${climbSummary.value}`, remove: () => (climbRange.value = [0, 100]) })
+    pills.push({
+      key: 'climb',
+      label: `Climb ${climbSummary.value}`,
+      remove: () => (climbRange.value = [0, 100]),
+    })
   }
   return pills
 })
@@ -333,15 +372,49 @@ function openRoute(route) {
   }
 }
 
-// Once the filter bar sticks to the top of a wide screen, a search field slides into it
+// Once the filter bar sticks to the top of the screen, a search field slides into it
 const barSentinel = ref(null)
 const barIsStuck = ref(false)
 let stickObserver = null
-const wideScreen = window.matchMedia('(min-width: 961px)')
+
+// At md and below (under 992px) the filters fold into a menu behind a filter button.
+// Only needed in the script so the menu can animate in and out as it is added and removed.
+const mdOrBelowQuery = window.matchMedia('(width < 992px)')
+const isMdOrBelow = ref(mdOrBelowQuery.matches)
+const filtersOpen = ref(false)
+
+// The menu uncovers downwards from under the bar, like the navbar's phone menu
+const MENU_CLOSED = { clipPath: 'inset(0 0 100% 0)' }
+const MENU_MOTION = {
+  initial: MENU_CLOSED,
+  animate: { clipPath: 'inset(0 0 0% 0)' },
+  exit: MENU_CLOSED,
+  transition: { duration: 0.35, ease: EASE_OUT },
+}
+
+function onScreenChange() {
+  isMdOrBelow.value = mdOrBelowQuery.matches
+  filtersOpen.value = false
+}
+
+function onDocumentClick(event) {
+  if (filtersOpen.value && !filterBar.value?.contains(event.target)) {
+    filtersOpen.value = false
+  }
+}
+
+function onKeydown(event) {
+  if (filtersOpen.value && event.key === 'Escape') {
+    filtersOpen.value = false
+  }
+}
 
 onMounted(async () => {
+  mdOrBelowQuery.addEventListener('change', onScreenChange)
+  document.addEventListener('click', onDocumentClick)
+  document.addEventListener('keydown', onKeydown)
   stickObserver = new IntersectionObserver(([entry]) => {
-    barIsStuck.value = wideScreen.matches && !entry.isIntersecting && entry.boundingClientRect.top < 0
+    barIsStuck.value = !entry.isIntersecting && entry.boundingClientRect.top < 0
   })
 
   try {
@@ -361,7 +434,12 @@ watch(barSentinel, (element) => {
   }
 })
 
-onBeforeUnmount(() => stickObserver?.disconnect())
+onBeforeUnmount(() => {
+  stickObserver?.disconnect()
+  mdOrBelowQuery.removeEventListener('change', onScreenChange)
+  document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
@@ -378,15 +456,25 @@ onBeforeUnmount(() => stickObserver?.disconnect())
       </motion.div>
       <motion.div
         class="routes-banner-layer routes-banner-front"
-        :style="{ y: frontY, backgroundImage: bannerPhoto, maskImage: bannerMask, webkitMaskImage: bannerMask }"
+        :style="{
+          y: frontY,
+          backgroundImage: bannerPhoto,
+          maskImage: bannerMask,
+          webkitMaskImage: bannerMask,
+        }"
         aria-hidden="true"
       />
       <div class="routes-banner-shade" aria-hidden="true"></div>
       <motion.div class="routes-banner-intro cairn-wrap" :style="{ opacity: introOpacity }">
-        <p>Every route here is drawn from the path people actually walked, mapped in OpenStreetMap.</p>
+        <p>
+          Every route here is drawn from the path people actually walked, mapped in OpenStreetMap.
+        </p>
         <label class="routes-banner-search">
           <span class="cairn-visually-hidden">Search routes by name</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m20 20-4.4-4.4" />
+          </svg>
           <!-- Enter takes you down to what the search found -->
           <input
             v-model="searchTerm"
@@ -401,7 +489,9 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 
     <CairnLoader v-if="loading" class="routes-message" message="Loading routes" on-light />
     <p v-else-if="error" class="cairn-wrap routes-message" role="alert">{{ error }}</p>
-    <p v-else-if="routes.length === 0" class="cairn-wrap routes-message">No routes are available right now.</p>
+    <p v-else-if="routes.length === 0" class="cairn-wrap routes-message">
+      No routes are available right now.
+    </p>
 
     <template v-else>
       <div ref="barSentinel" aria-hidden="true"></div>
@@ -413,154 +503,207 @@ onBeforeUnmount(() => stickObserver?.disconnect())
         aria-label="Filter routes"
       >
         <div class="cairn-wrap routes-bar-inner">
-          <FilterDropdown
-            label="Country"
-            :summary="selectedCountry || 'All countries'"
-            :is-set="Boolean(selectedCountry)"
-            :open="openFilter === 'country'"
-            @toggle="toggleFilter('country')"
-            @close="closeFilter('country')"
-          >
-            <label class="routes-field">
-              <span class="cairn-label">Country</span>
-              <select v-model="selectedCountry" class="cairn-input">
-                <option value="">All countries</option>
-                <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
-              </select>
-            </label>
-          </FilterDropdown>
+          <!-- From md up the filters sit in the bar; below md they drop down as a menu under it -->
+          <AnimatePresence>
+            <motion.div
+              v-if="!isMdOrBelow || filtersOpen"
+              id="routes-filters"
+              class="routes-filters"
+              v-bind="isMdOrBelow ? MENU_MOTION : {}"
+            >
+              <FilterDropdown
+                label="Country"
+                :summary="selectedCountry || 'All countries'"
+                :is-set="Boolean(selectedCountry)"
+                :open="openFilter === 'country'"
+                @toggle="toggleFilter('country')"
+                @close="closeFilter('country')"
+              >
+                <label class="routes-field">
+                  <span class="cairn-label">Country</span>
+                  <select v-model="selectedCountry" class="cairn-input">
+                    <option value="">All countries</option>
+                    <option v-for="country in countries" :key="country" :value="country">
+                      {{ country }}
+                    </option>
+                  </select>
+                </label>
+              </FilterDropdown>
 
-          <FilterDropdown
-            label="Difficulty"
-            :summary="gradeSummary"
-            :is-set="selectedGrades.length > 0"
-            :open="openFilter === 'grade'"
-            @toggle="toggleFilter('grade')"
-            @close="closeFilter('grade')"
-          >
-            <fieldset class="routes-options">
-              <legend class="cairn-visually-hidden">Difficulty</legend>
-              <label v-for="grade in [1, 2, 3, 4]" :key="grade" class="routes-option">
-                <input v-model="selectedGrades" type="checkbox" :value="grade" />
-                <span>
-                  <DifficultyMark :grade="grade" />
-                  <span class="routes-option-count cairn-data">{{ countFor('grade', (r) => gradeOf(r) === grade) }}</span>
-                </span>
-              </label>
-            </fieldset>
-            <div class="routes-panel-foot">
-              <span>Community-adjusted grade</span>
-              <button type="button" @click="selectedGrades = []">Reset</button>
-            </div>
-          </FilterDropdown>
+              <FilterDropdown
+                label="Difficulty"
+                :summary="gradeSummary"
+                :is-set="selectedGrades.length > 0"
+                :open="openFilter === 'grade'"
+                @toggle="toggleFilter('grade')"
+                @close="closeFilter('grade')"
+              >
+                <fieldset class="routes-options">
+                  <legend class="cairn-visually-hidden">Difficulty</legend>
+                  <label v-for="grade in [1, 2, 3, 4]" :key="grade" class="routes-option">
+                    <input v-model="selectedGrades" type="checkbox" :value="grade" />
+                    <span>
+                      <DifficultyMark :grade="grade" />
+                      <span class="routes-option-count cairn-data">{{
+                        countFor('grade', (r) => gradeOf(r) === grade)
+                      }}</span>
+                    </span>
+                  </label>
+                </fieldset>
+                <div class="routes-panel-foot d-flex justify-content-between align-items-center gap-3 pt-3">
+                  <span>Community-adjusted grade</span>
+                  <button type="button" @click="selectedGrades = []">Reset</button>
+                </div>
+              </FilterDropdown>
 
-          <FilterDropdown
-            label="Trip length"
-            :summary="tripSummary"
-            :is-set="selectedTrips.length > 0"
-            :open="openFilter === 'trip'"
-            @toggle="toggleFilter('trip')"
-            @close="closeFilter('trip')"
-          >
-            <fieldset class="routes-options">
-              <legend class="cairn-visually-hidden">Trip length</legend>
-              <label v-for="(label, trip) in TRIP_LABELS" :key="trip" class="routes-option">
-                <input v-model="selectedTrips" type="checkbox" :value="trip" />
-                <span>
-                  {{ label }}
-                  <span class="routes-option-count cairn-data">{{ countFor('trip', (r) => tripType(r) === trip) }}</span>
-                </span>
-              </label>
-            </fieldset>
-            <div class="routes-panel-foot">
-              <span>Overnight = 2 days</span>
-              <button type="button" @click="selectedTrips = []">Reset</button>
-            </div>
-          </FilterDropdown>
+              <FilterDropdown
+                label="Trip length"
+                :summary="tripSummary"
+                :is-set="selectedTrips.length > 0"
+                :open="openFilter === 'trip'"
+                @toggle="toggleFilter('trip')"
+                @close="closeFilter('trip')"
+              >
+                <fieldset class="routes-options">
+                  <legend class="cairn-visually-hidden">Trip length</legend>
+                  <label v-for="(label, trip) in TRIP_LABELS" :key="trip" class="routes-option">
+                    <input v-model="selectedTrips" type="checkbox" :value="trip" />
+                    <span>
+                      {{ label }}
+                      <span class="routes-option-count cairn-data">{{
+                        countFor('trip', (r) => tripType(r) === trip)
+                      }}</span>
+                    </span>
+                  </label>
+                </fieldset>
+                <div class="routes-panel-foot d-flex justify-content-between align-items-center gap-3 pt-3">
+                  <span>Overnight = 2 days</span>
+                  <button type="button" @click="selectedTrips = []">Reset</button>
+                </div>
+              </FilterDropdown>
 
-          <FilterDropdown
-            label="Distance"
-            :summary="distanceSummary"
-            :is-set="distanceSummary !== 'Any'"
-            :open="openFilter === 'distance'"
-            @toggle="toggleFilter('distance')"
-            @close="closeFilter('distance')"
-          >
-            <RangeFilter
-              v-model="distanceRange"
-              label="Distance"
-              :value-text="distanceSummary"
-              :low-text="distanceRange[0] === 0 ? 'No minimum' : `${formatKm(kmFromPosition(distanceRange[0]))} km`"
-              :high-text="distanceRange[1] === 100 ? 'No maximum' : `${formatKm(kmFromPosition(distanceRange[1]))} km`"
-            />
-            <div class="routes-panel-foot">
-              <span>Total route length</span>
-              <button type="button" @click="distanceRange = [0, 100]">Reset</button>
-            </div>
-          </FilterDropdown>
+              <FilterDropdown
+                label="Distance"
+                :summary="distanceSummary"
+                :is-set="distanceSummary !== 'Any'"
+                :open="openFilter === 'distance'"
+                @toggle="toggleFilter('distance')"
+                @close="closeFilter('distance')"
+              >
+                <RangeFilter
+                  v-model="distanceRange"
+                  label="Distance"
+                  :value-text="distanceSummary"
+                  :low-text="
+                    distanceRange[0] === 0
+                      ? 'No minimum'
+                      : `${formatKm(kmFromPosition(distanceRange[0]))} km`
+                  "
+                  :high-text="
+                    distanceRange[1] === 100
+                      ? 'No maximum'
+                      : `${formatKm(kmFromPosition(distanceRange[1]))} km`
+                  "
+                />
+                <div class="routes-panel-foot d-flex justify-content-between align-items-center gap-3 pt-3">
+                  <span>Total route length</span>
+                  <button type="button" @click="distanceRange = [0, 100]">Reset</button>
+                </div>
+              </FilterDropdown>
 
-          <FilterDropdown
-            label="Climb"
-            :summary="climbSummary"
-            :is-set="climbSummary !== 'Any'"
-            :open="openFilter === 'climb'"
-            @toggle="toggleFilter('climb')"
-            @close="closeFilter('climb')"
-          >
-            <RangeFilter
-              v-model="climbRange"
-              label="Elevation gain"
-              :value-text="climbSummary"
-              :low-text="climbRange[0] === 0 ? 'No minimum' : `${formatClimb(climbFromPosition(climbRange[0]))} m`"
-              :high-text="climbRange[1] === 100 ? 'No maximum' : `${formatClimb(climbFromPosition(climbRange[1]))} m`"
-            />
-            <div class="routes-panel-foot">
-              <span>Total elevation gain</span>
-              <button type="button" @click="climbRange = [0, 100]">Reset</button>
-            </div>
-          </FilterDropdown>
+              <FilterDropdown
+                label="Climb"
+                :summary="climbSummary"
+                :is-set="climbSummary !== 'Any'"
+                :open="openFilter === 'climb'"
+                @toggle="toggleFilter('climb')"
+                @close="closeFilter('climb')"
+              >
+                <RangeFilter
+                  v-model="climbRange"
+                  label="Elevation gain"
+                  :value-text="climbSummary"
+                  :low-text="
+                    climbRange[0] === 0
+                      ? 'No minimum'
+                      : `${formatClimb(climbFromPosition(climbRange[0]))} m`
+                  "
+                  :high-text="
+                    climbRange[1] === 100
+                      ? 'No maximum'
+                      : `${formatClimb(climbFromPosition(climbRange[1]))} m`
+                  "
+                />
+                <div class="routes-panel-foot d-flex justify-content-between align-items-center gap-3 pt-3">
+                  <span>Total elevation gain</span>
+                  <button type="button" @click="climbRange = [0, 100]">Reset</button>
+                </div>
+              </FilterDropdown>
 
-          <span class="routes-bar-spacer"></span>
+              <span class="routes-bar-spacer d-none d-lg-block"></span>
 
-          <label class="routes-bar-search" :aria-hidden="barIsStuck ? null : 'true'">
+              <FilterDropdown
+                class="order-lg-last"
+                label="Sort"
+                :summary="SORTS[sortBy]"
+                :open="openFilter === 'sort'"
+                align-right
+                @toggle="toggleFilter('sort')"
+                @close="closeFilter('sort')"
+              >
+                <div class="routes-sort" role="group" aria-label="Sort routes">
+                  <button
+                    v-for="(label, key) in SORTS"
+                    :key="key"
+                    type="button"
+                    :aria-pressed="sortBy === key ? 'true' : 'false'"
+                    @click="chooseSort(key)"
+                  >
+                    {{ label }}
+                    <svg v-if="sortBy === key" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m5 12 5 5 9-10" />
+                    </svg>
+                  </button>
+                </div>
+              </FilterDropdown>
+            </motion.div>
+          </AnimatePresence>
+
+          <!-- Slides in once the bar sticks, at every screen width -->
+          <label class="routes-bar-search">
             <span class="cairn-visually-hidden">Search routes by name</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m20 20-4.4-4.4" />
+            </svg>
             <input
               v-model="searchTerm"
               type="search"
               placeholder="Search a route, like Kinabalu"
-              :tabindex="barIsStuck ? 0 : -1"
               @keydown.enter="scrollToResults()"
             />
           </label>
 
-          <FilterDropdown
-            label="Sort"
-            :summary="SORTS[sortBy]"
-            :open="openFilter === 'sort'"
-            align-right
-            @toggle="toggleFilter('sort')"
-            @close="closeFilter('sort')"
+          <button
+            type="button"
+            class="routes-filter-toggle d-lg-none"
+            :aria-expanded="filtersOpen ? 'true' : 'false'"
+            @click="filtersOpen = !filtersOpen"
           >
-            <div class="routes-sort" role="group" aria-label="Sort routes">
-              <button
-                v-for="(label, key) in SORTS"
-                :key="key"
-                type="button"
-                :aria-pressed="sortBy === key ? 'true' : 'false'"
-                @click="sortBy = key; closeFilter('sort')"
-              >
-                {{ label }}
-                <svg v-if="sortBy === key" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
-              </button>
-            </div>
-          </FilterDropdown>
+            <span class="cairn-visually-hidden">Filters</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+              <circle cx="15" cy="7" r="2" />
+              <circle cx="9" cy="17" r="2" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <section ref="results" class="cairn-wrap routes-results" aria-label="Route results">
-        <div class="routes-results-top">
-          <div class="routes-active">
+        <!-- Bootstrap grid: the pills and the key share a row from md (768px) up, the key below them on phones -->
+        <div class="row align-items-center gy-3 py-4">
+          <div class="col-12 col-md d-flex flex-wrap align-items-center gap-2">
             <button
               v-for="pill in activeFilters"
               :key="pill.key"
@@ -572,22 +715,44 @@ onBeforeUnmount(() => stickObserver?.disconnect())
               <span class="cairn-visually-hidden">(remove filter)</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
-            <button v-if="activeFilters.length" type="button" class="cairn-link routes-clear" @click="clearFilters">
+            <button
+              v-if="activeFilters.length"
+              type="button"
+              class="cairn-link routes-clear ms-2"
+              @click="clearFilters"
+            >
               Clear all filters
             </button>
           </div>
-          <ul class="routes-key" aria-label="Difficulty key: line colour and label shape">
-            <li v-for="grade in [1, 2, 3, 4]" :key="grade"><DifficultyMark :grade="grade" /></li>
-          </ul>
+          <div class="col-12 col-md-auto">
+            <ul
+              class="routes-key d-flex flex-wrap row-gap-2 column-gap-4 m-0 list-unstyled"
+              aria-label="Difficulty key: line colour and label shape"
+            >
+              <li v-for="grade in [1, 2, 3, 4]" :key="grade"><DifficultyMark :grade="grade" /></li>
+            </ul>
+          </div>
         </div>
 
-        <div v-if="filteredRoutes.length === 0" class="routes-empty" role="status" data-testid="routes-empty">
+        <div
+          v-if="filteredRoutes.length === 0"
+          class="routes-empty"
+          role="status"
+          data-testid="routes-empty"
+        >
           <h2>No routes match these filters</h2>
           <p>Try a wider distance or climb range, or include more difficulty grades.</p>
-          <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">Clear all filters</button>
+          <button type="button" class="cairn-btn is-ghost is-small" @click="clearFilters">
+            Clear all filters
+          </button>
         </div>
 
-        <AnimatePresence v-else as="div" class="routes-tiles">
+        <!-- Bootstrap grid: 2 per row on phones, 3 from md (768px), 4 from lg (992px) -->
+        <AnimatePresence
+          v-else
+          as="div"
+          class="row row-cols-2 row-cols-md-3 row-cols-lg-4 gx-3 gx-lg-4 gy-5"
+        >
           <motion.div
             v-for="(route, index) in displayedRoutes"
             :key="route.id"
@@ -606,8 +771,10 @@ onBeforeUnmount(() => stickObserver?.disconnect())
           </motion.div>
         </AnimatePresence>
 
-        <div v-if="displayedRoutes.length < filteredRoutes.length" class="routes-more">
-          <button type="button" class="cairn-btn is-ghost" @click="visibleCount += PAGE_SIZE">Show more</button>
+        <div v-if="displayedRoutes.length < filteredRoutes.length" class="d-flex justify-content-center mt-5">
+          <button type="button" class="cairn-btn is-ghost" @click="visibleCount += PAGE_SIZE">
+            Show more
+          </button>
         </div>
       </section>
     </template>
@@ -683,7 +850,12 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 45%, rgb(14 28 22 / 0.55) 82%, var(--pine) 100%);
+  background: linear-gradient(
+    to bottom,
+    transparent 45%,
+    rgb(14 28 22 / 0.55) 82%,
+    var(--pine) 100%
+  );
 }
 
 .routes-banner-intro {
@@ -770,12 +942,23 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   align-items: stretch;
 }
 
-.routes-bar-inner > :first-child {
+/* From lg up the wrapper steps aside, so each filter is laid out in the bar itself */
+.routes-filters {
+  display: contents;
+}
+
+.routes-filters > :first-child {
   border-left: 1px solid rgb(242 239 234 / 0.18);
 }
 
+/* Holds Sort at the right edge, then gives its room to the search once the bar sticks */
 .routes-bar-spacer {
-  flex: 1;
+  flex-grow: 1;
+  transition: flex-grow 0.45s var(--ease);
+}
+
+.routes-bar.is-stuck .routes-bar-spacer {
+  flex-grow: 0;
 }
 
 .routes-bar-search {
@@ -786,17 +969,20 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   margin: 10px 0;
   overflow: hidden;
   opacity: 0;
+  visibility: hidden;
   transition:
-    width 0.45s var(--ease),
+    flex-grow 0.45s var(--ease),
     opacity 0.3s var(--ease),
+    visibility 0.3s,
     margin 0.45s var(--ease);
 }
 
 .routes-bar.is-stuck .routes-bar-search {
-  width: min(300px, 22vw);
+  flex-grow: 1;
   margin-left: 16px;
   margin-right: 16px;
   opacity: 1;
+  visibility: visible;
 }
 
 /* Tighter buttons while the search shares the bar, so the values still fit */
@@ -830,6 +1016,38 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 .routes-bar-search input:focus {
   outline: none;
   box-shadow: 0 0 0 3px var(--glacier);
+}
+
+.routes-filter-toggle {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  border: 1px solid rgb(242 239 234 / 0.4);
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.routes-filter-toggle:hover,
+.routes-filter-toggle[aria-expanded='true'] {
+  background: var(--pine-deep);
+}
+
+.routes-filter-toggle:focus-visible {
+  outline: 3px solid var(--glacier);
+  outline-offset: 2px;
+}
+
+.routes-filter-toggle svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 /* Inside the filter panels */
@@ -893,11 +1111,6 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 }
 
 .routes-panel-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
   border-top: 1px solid var(--granite-200);
   color: var(--granite-700);
   font-size: 13px;
@@ -959,23 +1172,6 @@ onBeforeUnmount(() => stickObserver?.disconnect())
   padding-bottom: 120px;
 }
 
-.routes-results-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  padding: 28px 0;
-}
-
-.routes-active {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
 .routes-pill {
   display: inline-flex;
   align-items: center;
@@ -1004,30 +1200,11 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 }
 
 .routes-clear {
-  margin-left: 8px;
   font-size: 13px;
 }
 
 .routes-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 0 0 0 auto;
-  padding: 0;
-  list-style: none;
   font-size: 13px;
-}
-
-.routes-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 56px 28px;
-}
-
-.routes-more {
-  display: flex;
-  justify-content: center;
-  margin-top: 64px;
 }
 
 .routes-empty {
@@ -1050,47 +1227,33 @@ onBeforeUnmount(() => stickObserver?.disconnect())
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .routes-bar-spacer,
   .routes-bar-search {
     transition: none;
   }
 }
 
-@media (max-width: 1100px) {
-  .routes-tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 960px) {
-  .routes-bar {
-    position: static;
+@media (width < 992px) {
+  .routes-bar.is-stuck .routes-bar-search {
+    margin-left: 0;
+    margin-right: 12px;
   }
 
-  .routes-bar-inner {
-    flex-wrap: wrap;
-  }
-
-  .routes-bar-inner > :first-child {
+  .routes-filters > :first-child {
     border-left: 0;
   }
 
-  .routes-bar-spacer,
-  .routes-bar-search {
-    display: none;
-  }
-}
-
-@media (max-width: 820px) {
-  .routes-tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 40px 16px;
-  }
-}
-
-@media (max-width: 700px) {
-  .routes-key {
-    width: 100%;
-    margin-left: 0;
+  .routes-filters {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: grid;
+    max-height: calc(100svh - 64px);
+    overflow-y: auto;
+    padding: 0 var(--gutter) 12px;
+    background: var(--pine);
+    box-shadow: var(--shadow-panel);
   }
 }
 
