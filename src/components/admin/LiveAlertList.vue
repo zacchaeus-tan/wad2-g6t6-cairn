@@ -34,7 +34,8 @@ function byline(alert) {
 
     <p v-if="!adminStore.liveAlerts.length" class="admin-empty">No alerts are published.</p>
 
-    <AnimatePresence v-else as="ul" class="admin-list">
+    <!-- Starts shown, as the tab may be hidden on load (see AttentionGroup) -->
+    <AnimatePresence v-else :initial="false" as="ul" class="admin-list">
       <motion.li
         v-for="alert in adminStore.liveAlerts"
         :key="alert.id"

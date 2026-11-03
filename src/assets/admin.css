@@ -1,64 +1,353 @@
-/* Admin page, built on the CAIRN tokens in cairn.css. Imported by AdminView. */
+/* Admin page, in the CAIRN look (see DESIGN.md). Imported by AdminView.
+   Like the route page: a dimmed photo banner, a band of big numbers, a pine bar
+   (here the tabs), then flat sections ruled in ink on the near-white page. */
 
-/* A darker page, so the white panels stand out from it */
 .cairn.admin-page {
   min-height: 100vh;
-  padding: 56px 0 96px;
-  background: var(--linen);
 }
 
-.admin-header {
+/* ---------- Banner: dimmed photo with the navbar on top ---------- */
+
+.admin-banner {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: space-between;
-  align-items: end;
-  margin-bottom: 32px;
+  align-items: flex-end;
+  min-height: 62vh;
+  overflow: hidden;
+  background-color: #0d1411;
+  color: #f2efea;
 }
 
-.admin-header h1 {
-  margin-top: 8px;
-}
-
-/* Stands where the panels will be while the page's data loads */
-.admin-loading {
-  padding: 96px 0;
-}
-
-/* The usual label grey is too faint on the darker page */
-.admin-header .cairn-label {
-  color: var(--granite-700);
-}
-
-/* A section of the page: white card with a heavy top rule */
-.admin-panel {
+.admin-banner-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  padding: clamp(20px, 2.4vw, 32px);
-  border-top: 4px solid var(--ink);
-  background: var(--white);
-  box-shadow: var(--shadow-panel);
+  object-fit: cover;
+  opacity: 0.32;
 }
 
-/* .cairn resets heading margins, so this needs the extra specificity */
-.cairn .admin-panel-title {
-  display: flex;
+/* Shows under the navbar only when hikers have confirmed a hazard, as on a route banner */
+.admin-banner-warning {
+  position: absolute;
+  top: 96px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.admin-banner-warning button {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: #f2efea;
+  text-align: left;
+}
+
+.admin-banner-warning svg {
+  width: 40px;
+  height: 36px;
+  flex: none;
+}
+
+.admin-banner-warning strong {
+  display: block;
+  color: #ffc94d;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-banner-warning-text {
+  color: #d4e3db;
+  font-size: 14px;
+}
+
+.admin-banner-warning button:hover .admin-banner-warning-text {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-banner-inner {
+  position: relative;
+  z-index: 2;
+  padding-top: 200px;
+  padding-bottom: 48px;
+}
+
+.admin-banner-crumb {
+  color: #b9d3c6;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cairn .admin-banner-title {
+  max-width: 14ch;
+  margin-top: 12px;
+  font-size: 48px;
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.cairn .admin-banner-lede {
+  max-width: 52ch;
+  margin-top: 22px;
+  color: #c9d6cf;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.cairn .admin-banner-refresh {
+  margin-top: 18px;
+  color: #f2efea;
+  font-size: 14px;
+}
+
+.cairn .admin-banner-refresh:hover {
+  color: #ffffff;
+}
+
+/* Focus rings on a dark photo are Glacier */
+.admin-banner button:focus-visible {
+  outline-color: #75c5d1;
+}
+
+@media (min-width: 768px) {
+  .cairn .admin-banner-title {
+    font-size: 80px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .cairn .admin-banner-title {
+    font-size: 104px;
+  }
+}
+
+/* ---------- Numbers band: as on a route page, each figure opens its tab ---------- */
+
+.admin-numbers {
+  padding-top: 18px;
+  background-color: #fbfaf7;
+}
+
+.admin-numbers-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-number {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 28px 12px 24px;
+  border: 0;
+  border-right: 1px solid #e1e6e2;
+  background-color: transparent;
+  color: #17201c;
+  text-align: left;
+}
+
+.admin-number:nth-child(odd) {
+  padding-left: 0;
+}
+
+.admin-number:nth-child(even) {
+  border-right: 0;
+}
+
+.admin-number:nth-child(1),
+.admin-number:nth-child(2) {
+  border-bottom: 1px solid #e1e6e2;
+}
+
+.admin-number-label {
+  color: #5f6b65;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-number:hover .admin-number-label {
+  color: #17201c;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.admin-number-figure {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.admin-number.is-urgent .admin-number-figure {
+  color: #9e3a14;
+}
+
+@media (min-width: 768px) {
+  .admin-number {
+    padding: 36px 20px 30px;
+  }
+
+  .admin-number-figure {
+    font-size: 48px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .admin-numbers-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .admin-number,
+  .admin-number:nth-child(odd) {
+    padding: 44px 20px 36px;
+  }
+
+  .admin-number:first-child {
+    padding-left: 0;
+  }
+
+  .admin-number:nth-child(even) {
+    border-right: 1px solid #e1e6e2;
+  }
+
+  .admin-number:last-child {
+    border-right: 0;
+  }
+
+  .admin-number:nth-child(1),
+  .admin-number:nth-child(2) {
+    border-bottom: 0;
+  }
+
+  .admin-number-figure {
+    font-size: 68px;
+  }
+}
+
+/* ---------- Pine tab bar, like the section bar on a route page ---------- */
+
+.admin-tabs {
+  background-color: #1f5b43;
+}
+
+/* Scrolls sideways on a phone rather than wrapping */
+.admin-tablist {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.admin-tab {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid #457661;
+  background-color: transparent;
+  color: #d4e3db;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-tab:first-child {
+  border-left: 1px solid #457661;
+}
+
+.admin-tab:hover {
+  background-color: #174633;
+  color: #ffffff;
+}
+
+.admin-tab.is-active {
+  color: #ffffff;
+}
+
+.admin-tab:focus-visible {
+  outline: 3px solid #75c5d1;
+  outline-offset: -3px;
+}
+
+.admin-tab-count {
+  display: inline-block;
+  min-width: 22px;
+  padding: 4px 5px;
+  background-color: #c2481a;
+  color: #ffffff;
+  font-family: 'Montserrat', 'Lato', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.admin-tab-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background-color: #e4ded3;
+}
+
+@media (min-width: 768px) {
+  .admin-tab {
+    gap: 10px;
+    min-height: 56px;
+    padding: 0 22px;
+  }
+}
+
+/* ---------- One tab's content ---------- */
+
+.admin-panel {
+  padding: 56px 0 112px;
+}
+
+.cairn .admin-panel-lede {
+  max-width: 52ch;
+  margin: 14px 0 36px;
+  color: #3a4540;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.cairn .admin-subhead {
+  margin-bottom: 14px;
   font-size: 22px;
   font-weight: 900;
   letter-spacing: -0.01em;
 }
 
-.admin-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 6px;
-  background: var(--blaze);
-  color: var(--white);
-  font: 700 13px/1 var(--font-data);
+@media (min-width: 992px) {
+  .admin-panel {
+    padding: 88px 0 140px;
+  }
+}
+
+/* Stands where the tabs will be while the page's data loads */
+.admin-loading {
+  padding: 96px 0;
 }
 
 .admin-group {
@@ -66,20 +355,33 @@
 }
 
 .admin-group + .admin-group {
-  margin-top: 28px;
+  margin-top: 48px;
 }
 
 .admin-group > .cairn-label {
   display: block;
   margin-bottom: 10px;
+  color: #3a4540;
 }
 
-/* Rows in a list of reports, alerts or routes */
+.admin-hint {
+  color: #5f6b65;
+  font-size: 13px;
+}
+
+.admin-empty {
+  padding: 20px 0;
+  border-top: 2px solid #17201c;
+  color: #5f6b65;
+}
+
+/* ---------- Rows: a list starts on a 2px ink rule, rows split by hairlines ---------- */
+
 .admin-list {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--granite-200);
+  border-top: 2px solid #17201c;
 }
 
 .admin-item {
@@ -88,8 +390,30 @@
   gap: 12px 20px;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--granite-200);
+  padding: 20px 0;
+  border-bottom: 1px solid #c9d0cb;
+}
+
+/* A row with a mark on its left: hazard, grade or the hiker's initial */
+.admin-item.has-mark {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px 16px;
+}
+
+.admin-item.has-mark .admin-actions {
+  grid-column: 2;
+}
+
+@media (min-width: 720px) {
+  .admin-item.has-mark {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .admin-item.has-mark .admin-actions {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
 }
 
 .admin-item-body {
@@ -101,40 +425,144 @@
   margin-top: 4px;
 }
 
+.admin-item-title {
+  font-size: 17px;
+  line-height: 26px;
+}
+
+/* A hiker's own words */
+.cairn .admin-quote {
+  margin-top: 6px;
+  padding-left: 12px;
+  border-left: 2px solid #c9d0cb;
+  color: #3a4540;
+  font-size: 15px;
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 12px 18px;
   align-items: center;
 }
 
-/* Severity marks the left edge of an alert */
+.admin-item.is-confirming {
+  background-color: #fff4db;
+}
+
+.admin-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #c9d0cb;
+  background-color: #ffffff;
+}
+
+.admin-mark svg {
+  width: 24px;
+  height: 22px;
+}
+
+.admin-mark.is-hazard {
+  border-color: #ffc94d;
+  background-color: #fff4db;
+}
+
+.admin-mark.is-avatar {
+  border: 0;
+  background-color: #1f5b43;
+  color: #f2efea;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+/* The grade shape in a mark is bigger than in a line of text */
+.admin-page .admin-mark .difficulty-mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-page .admin-mark .difficulty-mark svg.is-wide {
+  width: 26px;
+}
+
+/* Official grade -> the grade hikers give it */
+.cairn .admin-regrade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+
+/* Severity marks the left edge of a published alert */
 .admin-alert {
   padding-left: 14px;
-  border-left: 4px solid var(--granite-300);
+  border-left: 4px solid #c9d0cb;
 }
 
 .admin-alert.is-info {
-  border-left-color: var(--lake);
+  border-left-color: #1e5f8c;
 }
 
 .admin-alert.is-warning {
-  border-left-color: var(--hazard);
+  border-left-color: #ffc94d;
 }
 
 .admin-alert.is-danger {
-  border-left-color: var(--blaze);
+  border-left-color: #c2481a;
 }
 
-/* Small square tags: hazard level, route status, missing fields */
+/* Reviews, laid out like the trail register */
+.admin-review-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.admin-review-top time {
+  margin-left: auto;
+  color: #5f6b65;
+  font-size: 13px;
+}
+
+/* StarIcon takes its faded colour from --star-off */
+.admin-review-stars {
+  --star-off: #c9d0cb;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.admin-review-stars svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cairn .admin-review-text {
+  margin: 8px 0;
+  font-size: 17px;
+  line-height: 26px;
+}
+
+.admin-page .cairn-link.is-danger {
+  color: #9e3a14;
+}
+
+/* ---------- Small square tags: hazard level, route status, missing fields ---------- */
+
 .admin-tag {
   display: inline-block;
-  margin-right: 6px;
+  margin-right: 8px;
   padding: 2px 8px;
-  border: 1px solid var(--granite-300);
-  background: var(--granite-100);
-  color: var(--granite-700);
-  font: 700 11px/18px var(--font);
+  border: 1px solid #c9d0cb;
+  background-color: #eef1ee;
+  color: #3a4540;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -142,64 +570,63 @@
 .admin-tag.is-warning,
 .admin-tag.is-moderate,
 .admin-tag.is-caution {
-  border-color: var(--hazard);
-  background: var(--warning-mist);
-  color: var(--warning);
+  border-color: #ffc94d;
+  background-color: #fff4db;
+  color: #8a5a00;
 }
 
 .admin-tag.is-danger,
 .admin-tag.is-elevated,
 .admin-tag.is-closed {
-  border-color: var(--blaze);
-  background: var(--blaze);
-  color: var(--white);
+  border-color: #c2481a;
+  background-color: #c2481a;
+  color: #ffffff;
 }
 
 .admin-tag.is-open {
-  border-color: var(--sage);
-  background: var(--pine-mist);
-  color: var(--pine-deep);
+  border-color: #b9d3c6;
+  background-color: #e4efe8;
+  color: #174633;
 }
 
-/* Messages after an action */
+/* ---------- Messages after an action ---------- */
+
 .admin-note {
   margin: 16px 0 0;
   padding: 12px 14px;
-  border-left: 4px solid var(--pine);
-  background: var(--pine-mist);
+  border-left: 4px solid #1f5b43;
+  background-color: #e4efe8;
   font-size: 15px;
 }
 
 .admin-note.is-error {
-  border-left-color: var(--blaze);
-  background: #fbe9e2;
+  border-left-color: #c2481a;
+  background-color: #fbe9e2;
 }
 
 .admin-note.is-info {
-  border-left-color: var(--lake);
-  background: #e3eef6;
+  border-left-color: #1e5f8c;
+  background-color: #e3eef6;
 }
 
-/* Rows the admin is acting on */
-.admin-item.is-confirming {
-  background: var(--warning-mist);
+/* ---------- Forms ---------- */
+
+/* The alert and status forms sit on sand, like the grade dial card */
+.admin-form {
+  padding: 20px;
+  background-color: #e4ded3;
 }
 
-.admin-table tr.is-editing td {
-  border-bottom-color: transparent;
-  font-weight: 700;
+@media (min-width: 768px) {
+  .admin-form {
+    padding: 32px;
+  }
 }
 
-/* Clips the form while it opens */
-.admin-expand {
-  overflow: hidden;
+.admin-form .admin-hint {
+  color: #3a4540;
 }
 
-.admin-empty {
-  color: var(--granite-500);
-}
-
-/* Forms */
 .admin-field {
   display: grid;
   align-content: start;
@@ -207,7 +634,7 @@
 }
 
 .admin-field .cairn-label {
-  color: var(--granite-700);
+  color: #3a4540;
 }
 
 .admin-field textarea.cairn-input {
@@ -217,9 +644,12 @@
   resize: vertical;
 }
 
-.admin-hint {
-  font-size: 13px;
-  color: var(--granite-500);
+/* The route picked in the status form */
+.cairn .admin-chosen {
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 /* Square segmented choice, e.g. open / caution / closed */
@@ -236,10 +666,12 @@
 
 .admin-choice label {
   margin: 0 -1.5px 0 0;
-  padding: 10px 16px;
-  border: 1.5px solid var(--granite-300);
-  background: var(--white);
-  font: 700 13px/1 var(--font);
+  padding: 12px 18px;
+  border: 1.5px solid #c9d0cb;
+  background-color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -247,13 +679,13 @@
 
 .admin-choice label.is-active {
   position: relative;
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--ground);
+  border-color: #17201c;
+  background-color: #17201c;
+  color: #fbfaf7;
 }
 
 .admin-choice input:focus-visible + label {
-  outline: 3px solid var(--lake);
+  outline: 3px solid #1e5f8c;
   outline-offset: 2px;
 }
 
@@ -262,7 +694,7 @@
   margin: 6px 0 0;
   padding: 0;
   list-style: none;
-  border: 1.5px solid var(--granite-300);
+  border: 1.5px solid #c9d0cb;
   border-top: 0;
 }
 
@@ -273,18 +705,20 @@
   width: 100%;
   padding: 10px 12px;
   border: 0;
-  border-top: 1px solid var(--granite-200);
-  background: var(--white);
-  color: var(--ink);
+  border-top: 1px solid #e1e6e2;
+  background-color: #ffffff;
+  color: #17201c;
   text-align: left;
 }
 
 .admin-results button:hover {
-  background: var(--granite-100);
+  background-color: #eef1ee;
 }
 
+/* ---------- Missing route information table ---------- */
+
 .admin-scroll {
-  max-height: 32rem;
+  max-height: 40rem;
   overflow-y: auto;
 }
 
@@ -296,19 +730,34 @@
 
 .admin-table caption {
   caption-side: top;
-  padding: 0 0 10px;
-  color: var(--granite-500);
-  font-size: 14px;
+  padding: 0 0 12px;
+  color: #3a4540;
+  font-size: 15px;
 }
 
 .admin-table th {
-  padding: 8px 8px 8px 0;
-  border-bottom: 2px solid var(--ink);
+  padding: 10px 12px 10px 0;
+  border-top: 2px solid #17201c;
+  border-bottom: 1px solid #17201c;
+  color: #3a4540;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-align: left;
+  text-transform: uppercase;
 }
 
 .admin-table td {
-  padding: 10px 8px 10px 0;
-  border-bottom: 1px solid var(--granite-200);
-  vertical-align: top;
+  padding: 16px 12px 16px 0;
+  border-bottom: 1px solid #c9d0cb;
+  vertical-align: middle;
+}
+
+.admin-table tr.is-editing td {
+  border-bottom-color: transparent;
+  font-weight: 700;
+}
+
+/* Clips the form while it opens */
+.admin-expand {
+  overflow: hidden;
 }

@@ -7,6 +7,8 @@ import { difficultyLabel, formatDate, modifierClass } from '@/lib/format'
 import { rowMotion } from '@/lib/motion'
 import AttentionGroup from '@/components/admin/AttentionGroup.vue'
 import ReportActions from '@/components/admin/ReportActions.vue'
+import DifficultyMark from '@/components/common/DifficultyMark.vue'
+import WarningIcon from '@/components/common/WarningIcon.vue'
 import {
   DIFFICULTY_REF,
   HAZARD_ROUTE_REF,
@@ -47,10 +49,11 @@ function gradeFor(route) {
         :key="`${warning.point_id}-${warning.category}`"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item"
+        class="admin-item has-mark"
       >
+        <span class="admin-mark is-hazard"><WarningIcon /></span>
         <div class="admin-item-body">
-          <p>
+          <p class="admin-item-title">
             <strong>{{ warning.label }}</strong>
             at {{ warning.point_name
             }}<template v-if="warning.day_number"> (day {{ warning.day_number }})</template>
@@ -60,9 +63,10 @@ function gradeFor(route) {
             }}</RouterLink>
           </p>
           <p class="cairn-fine">
-            {{ warning.reporter_count }} hikers, last on {{ formatDate(warning.last_reported_at)
-            }}<template v-if="warning.latest_note">: “{{ warning.latest_note }}”</template>
+            {{ warning.reporter_count }} hikers, last on
+            {{ formatDate(warning.last_reported_at) }}
           </p>
+          <p v-if="warning.latest_note" class="admin-quote">“{{ warning.latest_note }}”</p>
         </div>
         <ReportActions
           @raise="emit('raise-alert', draftFromPointWarning(warning))"
@@ -81,10 +85,11 @@ function gradeFor(route) {
         :key="`${report.route_id}-${report.point_id}-${report.category}`"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item"
+        class="admin-item has-mark"
       >
+        <span class="admin-mark is-hazard"><WarningIcon /></span>
         <div class="admin-item-body">
-          <p>
+          <p class="admin-item-title">
             <strong>{{ report.label }}</strong>
             <template v-if="report.point_name">
               at {{ report.point_name
@@ -96,9 +101,9 @@ function gradeFor(route) {
             }}</RouterLink>
           </p>
           <p class="cairn-fine">
-            {{ report.reporter_count }} hikers, last on {{ formatDate(report.created_at)
-            }}<template v-if="report.note">: “{{ report.note }}”</template>
+            {{ report.reporter_count }} hikers, last on {{ formatDate(report.created_at) }}
           </p>
+          <p v-if="report.note" class="admin-quote">“{{ report.note }}”</p>
         </div>
         <ReportActions
           @raise="emit('raise-alert', draftFromRepeatedReport(report))"
@@ -117,10 +122,13 @@ function gradeFor(route) {
         :key="`${report.route_id}-${report.point_id}-${report.category}`"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item"
+        class="admin-item has-mark"
       >
+        <span class="admin-mark is-avatar">{{
+          (report.reporter || 'A hiker').charAt(0).toUpperCase()
+        }}</span>
         <div class="admin-item-body">
-          <p>
+          <p class="admin-item-title">
             <span class="admin-tag">Unconfirmed</span>
             <strong>{{ report.label }}</strong>
             <template v-if="report.point_name">
@@ -133,9 +141,9 @@ function gradeFor(route) {
             }}</RouterLink>
           </p>
           <p class="cairn-fine">
-            {{ report.reporter || 'A hiker' }}, {{ formatDate(report.created_at)
-            }}<template v-if="report.note">: “{{ report.note }}”</template>
+            {{ report.reporter || 'A hiker' }}, {{ formatDate(report.created_at) }}
           </p>
+          <p v-if="report.note" class="admin-quote">“{{ report.note }}”</p>
         </div>
         <ReportActions
           @raise="emit('raise-alert', draftFromUnconfirmedReport(report))"
@@ -150,10 +158,11 @@ function gradeFor(route) {
         :key="route.id"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item"
+        class="admin-item has-mark"
       >
+        <span class="admin-mark is-hazard"><WarningIcon /></span>
         <div class="admin-item-body">
-          <p>
+          <p class="admin-item-title">
             <span class="admin-tag" :class="modifierClass(route.community_hazard_level)">{{
               route.community_hazard_level
             }}</span>
@@ -181,20 +190,27 @@ function gradeFor(route) {
         :key="route.id"
         v-bind="rowMotion"
         layout="position"
-        class="admin-item"
+        class="admin-item has-mark"
       >
+        <span class="admin-mark">
+          <DifficultyMark :grade="Math.round(route.effective_difficulty)" :show-label="false" />
+        </span>
         <div class="admin-item-body">
-          <p>
+          <p class="admin-item-title">
             <RouterLink :to="{ name: 'route-detail', params: { id: route.id } }">{{
               route.name
             }}</RouterLink>
-            is graded <strong>{{ difficultyLabel(route.official_difficulty) }}</strong>
           </p>
-          <p class="cairn-fine">
-            {{ route.review_count }}
-            {{ route.review_count === 1 ? 'hiker rates' : 'hikers rate' }} it closer to
-            {{ difficultyLabel(route.effective_difficulty) }}
-            ({{ route.gap > 0 ? 'harder' : 'easier' }}).
+          <p class="cairn-fine admin-regrade">
+            <DifficultyMark :grade="route.official_difficulty" />
+            <span aria-hidden="true">→</span>
+            <span class="cairn-visually-hidden">hikers rate it</span>
+            <DifficultyMark :grade="Math.round(route.effective_difficulty)" />
+            <span>
+              · {{ route.review_count }}
+              {{ route.review_count === 1 ? 'hiker rates' : 'hikers rate' }} it
+              {{ route.gap > 0 ? 'harder' : 'easier' }}
+            </span>
           </p>
         </div>
         <div class="admin-actions">
