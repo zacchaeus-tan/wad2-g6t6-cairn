@@ -46,8 +46,9 @@ async function onGenerate(form) {
     itinerary.value = await generateItinerary(route.value, weather.value, form)
     itineraryInputs.value = form
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    itineraryError.value = `Unable to generate an itinerary: ${message}`
+    console.error('Could not generate an itinerary:', err)
+    // The controller's messages are written for the user, like "Please choose a pace."
+    itineraryError.value = `Unable to generate an itinerary: ${err.message}`
   } finally {
     itineraryLoading.value = false
   }
@@ -73,8 +74,8 @@ onMounted(async () => {
   try {
     route.value ??= await fetchRouteById(routeParams.params.id)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    error.value = `Unable to load this route: ${message}`
+    console.error('Could not load this route:', err)
+    error.value = 'Unable to load this route. Please refresh the page to try again.'
   } finally {
     loading.value = false
   }

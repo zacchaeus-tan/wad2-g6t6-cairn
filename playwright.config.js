@@ -39,8 +39,9 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    /* Always headless: Firefox can stop drawing the globe when its window is behind another one.
+       Add --headed to the command to watch a run. */
+    headless: true,
   },
 
   /* Configure projects for major browsers */

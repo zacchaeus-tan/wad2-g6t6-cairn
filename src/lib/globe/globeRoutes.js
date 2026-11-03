@@ -76,6 +76,11 @@ export function routePosition(route) {
 export function difficultyLevel(route) {
   const value =
     route.effective_difficulty ?? route.official_difficulty ?? route.technical_rating
+  // Number(null) and Number('') are 0, which would otherwise show an unrated route as easy
+  if (value == null || value === '') {
+    return null
+  }
+
   const labels = {
     easy: 1,
     moderate: 2,
