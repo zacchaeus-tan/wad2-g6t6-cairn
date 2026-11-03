@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { motion, useReducedMotion } from 'motion-v'
+import { motion } from 'motion-v'
 import { EASE_OUT } from '@/lib/motion'
 
 // Asks the user to confirm something, in place of the browser's confirm() popup. The native
@@ -15,7 +15,6 @@ const props = defineProps({
 const emit = defineEmits(['confirm', 'cancel'])
 
 const dialog = ref(null)
-const reduceMotion = useReducedMotion()
 
 watch(dialog, (element) => element?.showModal())
 watch(
@@ -43,7 +42,7 @@ function onClick(event) {
     >
       <motion.div
         class="confirm-dialog-sheet"
-        :initial="reduceMotion ? false : { opacity: 0, y: 12 }"
+        :initial="{ opacity: 0, y: 12 }"
         :animate="{ opacity: 1, y: 0 }"
         :transition="{ duration: 0.25, ease: EASE_OUT }"
       >
