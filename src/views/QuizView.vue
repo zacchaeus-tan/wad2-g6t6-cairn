@@ -134,6 +134,7 @@ async function submit() {
     left: var(--gutter);
     z-index: 1;
     width: min(40%, 620px);
+    pointer-events: none;
   }
 
   .quiz-title {
