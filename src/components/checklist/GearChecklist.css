@@ -16,17 +16,9 @@
   font-size: 17px;
 }
 
-.gear-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  align-items: start;
-  gap: 32px;
-}
-
 /* A ring-bound sheet with a red margin and blue ruling, tilted slightly */
 .gear-pad {
   position: relative;
-  min-width: 0;
   filter: drop-shadow(0 16px 24px rgb(23 32 28 / 0.18));
   transform: rotate(-0.6deg);
 }
@@ -109,10 +101,6 @@
 }
 
 .gear-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 12px;
   min-height: 48px;
 }
 
@@ -121,15 +109,11 @@
 }
 
 .gear-item-form-wrapper {
-  grid-column: 1 / -1;
   min-height: 0;
   overflow: hidden;
 }
 
 .gear-item-label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 12px;
   row-gap: 6px;
   cursor: pointer;
@@ -170,20 +154,6 @@
   min-width: 0;
 }
 
-/* A strike that draws across once the item is ticked */
-/* .gear-item-text::after {
-  content: '';
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  top: 55%;
-  height: 2px;
-  background: var(--gear-granite);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-  transition: transform 0.35s var(--ease, ease);
-} */
-
 .gear-item-text.is-checked {
   color: var(--granite-500, #7a867d);
   text-decoration: line-through;
@@ -192,27 +162,22 @@
   text-decoration-skip-ink: none;
 }
 
-/* .gear-item-text.is-checked::after {
-  transform: scaleX(1);
-} */
-
 .gear-item-quantity {
   color: var(--gear-granite);
 }
 
 .gear-item-reason {
-  grid-column: 1;
-  padding: 0 0 10px 32px;
+  padding-left: 32px;
   color: var(--gear-granite);
   font-size: 14px;
   line-height: 20px;
 }
 
+/* Indented under the item text on phones; ps-sm-0 takes the indent off from sm */
 .gear-item-tools {
-  grid-column: 2;
-  grid-row: 1;
   display: flex;
   gap: 4px;
+  padding-left: 24px;
 }
 
 .gear-item-tools button {
@@ -292,7 +257,6 @@
 }
 
 .gear-category-tag {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 22px;
@@ -450,77 +414,9 @@
 }
 
 @media (max-width: 900px) {
-  .gear-grid {
-    grid-template-columns: 1fr;
-  }
-
   /* The ruling above reads --gear-margin, so only the values change here */
   .gear-sheet {
     --gear-margin: 44px;
     padding-left: 62px;
-  }
-}
-
-/* mobile layout, applies only to screens 639px and below */
-@media (max-width: 639px) {
-  /* Align checkbox and item text */
-  .gear-item-label {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr);
-    align-items: start;
-    column-gap: 10px;
-    row-gap: 6px;
-  }
-
-  .gear-item-label input {
-    grid-column: 1;
-    grid-row: 1;
-    margin-top: 2px;
-  }
-
-  .gear-item-text {
-    grid-column: 2;
-    min-width: 0;
-    line-height: 1.4;
-  }
-
-  .gear-category-tag {
-    grid-column: 2;
-    justify-self: start;
-  }
-
-  /* Move item controls below the checklist item */
-  /* Stack item description, reason and buttons on mobile */
-  .gear-item {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 0;
-    align-items: start;
-    padding-bottom: 16px;
-  }
-
-  .gear-item-tools {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: start;
-    margin-top: 0;
-    margin-left: 30px;
-  }
-
-  .gear-item-label {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .gear-item-reason {
-    grid-column: 1;
-    grid-row: 2;
-    padding-bottom: 0;
-  }
-}
-
-/* Hide category tags on very narrow screens */
-@media (max-width: 639px) {
-  .gear-category-tag {
-    display: none;
   }
 }

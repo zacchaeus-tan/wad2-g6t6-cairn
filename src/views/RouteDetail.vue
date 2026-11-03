@@ -294,8 +294,11 @@ const { scrollYProgress: trailProgress } = useScroll({
   gap: 24px;
 }
 
+/* Long gear lists tilt their corners past the screen edge on phones, so trim the sides.
+   clip, not hidden: hidden makes a scroll container and stops the reviews' sticky column sticking */
 .route-detail-sections {
   max-width: 1200px;
+  overflow-x: clip;
 }
 
 /* The sections sit along the walked trail, far enough apart for it to show between them */
