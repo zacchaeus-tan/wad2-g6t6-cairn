@@ -47,7 +47,7 @@ const tabs = computed(() => [
   {
     name: 'Profile',
     value: 'profile',
-    colour: '#f4c6c6',
+    colour: '#c9d0cb',
     views: [
       {
         component: ProfileSummary,
@@ -72,19 +72,19 @@ const tabs = computed(() => [
   {
     name: 'Saved routes',
     value: 'routes',
-    colour: '#bfddbf',
+    colour: '#bfdeb1',
     views: [{ component: ProfileSavedRoutes, props: {} }],
   },
   {
     name: 'Checklists',
     value: 'checklists',
-    colour: '#f6e29b',
+    colour: '#fff4db',
     views: [{ component: ProfileChecklists, props: {} }],
   },
   {
     name: 'Reviews',
     value: 'reviews',
-    colour: '#b6d9f0',
+    colour: '#a3cbd1',
     views: [{ component: ProfileReviews, props: {} }],
   },
 ])
@@ -328,7 +328,7 @@ onMounted(async () => {
   height: 60px;
   padding: 6px 18px 0;
   border: 0;
-  border-radius: 10px 10px 0 0;
+  border-radius: 2px 5px 0 0;
   color: var(--ink);
   font: 700 15px / 14px var(--font);
   letter-spacing: 0.12em;
