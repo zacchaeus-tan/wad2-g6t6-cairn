@@ -167,10 +167,11 @@
 .gear-item-text {
   position: relative;
   font-size: 17px;
+  min-width: 0;
 }
 
 /* A strike that draws across once the item is ticked */
-.gear-item-text::after {
+/* .gear-item-text::after {
   content: '';
   position: absolute;
   left: -4px;
@@ -181,15 +182,19 @@
   transform: scaleX(0);
   transform-origin: 0 50%;
   transition: transform 0.35s var(--ease, ease);
-}
+} */
 
 .gear-item-text.is-checked {
   color: var(--granite-500, #7a867d);
+  text-decoration: line-through;
+  text-decoration-color: var(--gear-granite);
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
 }
 
-.gear-item-text.is-checked::after {
+/* .gear-item-text.is-checked::after {
   transform: scaleX(1);
-}
+} */
 
 .gear-item-quantity {
   color: var(--gear-granite);
@@ -453,5 +458,69 @@
   .gear-sheet {
     --gear-margin: 44px;
     padding-left: 62px;
+  }
+}
+
+/* mobile layout, applies only to screens 639px and below */
+@media (max-width: 639px) {
+  /* Align checkbox and item text */
+  .gear-item-label {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 6px;
+  }
+
+  .gear-item-label input {
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 2px;
+  }
+
+  .gear-item-text {
+    grid-column: 2;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  .gear-category-tag {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  /* Move item controls below the checklist item */
+  /* Stack item description, reason and buttons on mobile */
+  .gear-item {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+    align-items: start;
+    padding-bottom: 16px;
+  }
+
+  .gear-item-tools {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: 0;
+    margin-left: 30px;
+  }
+
+  .gear-item-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .gear-item-reason {
+    grid-column: 1;
+    grid-row: 2;
+    padding-bottom: 0;
+  }
+}
+
+/* Hide category tags on very narrow screens */
+@media (max-width: 639px) {
+  .gear-category-tag {
+    display: none;
   }
 }
