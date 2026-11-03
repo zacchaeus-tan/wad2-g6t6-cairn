@@ -5,23 +5,24 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
 </script>
 
 <template>
-  <section id="intro" class="statement">
-    <figure class="statement-frame is-left">
+  <section id="intro" class="statement text-center">
+    <!-- The framed photos only show from lg (992px) up -->
+    <figure class="statement-frame is-left d-none d-lg-block">
       <img :src="photoValley" alt="" />
     </figure>
-    <figure class="statement-frame is-right">
+    <figure class="statement-frame is-right d-none d-lg-block">
       <img :src="photoAlpinePath" alt="" />
     </figure>
 
     <RiseIn class="cairn-wrap">
-      <h2 class="cairn-display">Every summit starts with an honest answer.</h2>
-      <p>
+      <h2 class="cairn-display mx-auto">Every summit starts with an honest answer.</h2>
+      <p class="mx-auto mt-4">
         CAIRN is a trek planner for hikers in Southeast Asia. Take a short quiz about the walks
         you've done, and every route shows whether it suits you and where it will stretch you.
         Grades shift with real hiker reviews, and AI helps you plan the days and pack the right
         gear.
       </p>
-      <svg class="statement-glyph" viewBox="0 0 24 24">
+      <svg class="statement-glyph d-block mx-auto mt-5" viewBox="0 0 24 24">
         <ellipse cx="12" cy="20" rx="8" ry="2.4" />
         <ellipse cx="12" cy="15.2" rx="6" ry="2.2" />
         <ellipse cx="12" cy="10.6" rx="4.4" ry="2" />
@@ -41,17 +42,14 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
   min-height: 100svh;
   padding-block: clamp(40px, 7vh, 80px);
   overflow: hidden;
-  text-align: center;
 }
 
 .statement h2 {
   max-width: 14ch;
-  margin: 0 auto;
 }
 
 .statement p {
   max-width: 52ch;
-  margin: 28px auto 0;
   color: var(--granite-700);
   font-size: 18px;
   line-height: 28px;
@@ -59,10 +57,8 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
 }
 
 .statement-glyph {
-  display: block;
   width: 28px;
   height: 28px;
-  margin: 36px auto 0;
   fill: var(--pine);
 }
 
@@ -90,11 +86,5 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
 .statement-frame.is-right {
   right: max(16px, calc(50vw - 640px));
   bottom: 40px;
-}
-
-@media (max-width: 900px) {
-  .statement-frame {
-    display: none;
-  }
 }
 </style>

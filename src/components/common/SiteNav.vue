@@ -1,7 +1,12 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { AnimatePresence, motion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
+import { EASE_OUT } from '@/lib/motion'
+
+const PANEL_CLOSED = { clipPath: 'inset(0 0 100% 0)', y: -8 }
+const PANEL_OPEN = { clipPath: 'inset(0 0 0% 0)', y: 0 }
 
 // overlay: sits on top of a dark banner (route detail) with light text.
 defineProps({
@@ -14,7 +19,10 @@ const currentRoute = useRoute()
 
 // Phone menu
 const menuOpen = ref(false)
-watch(() => currentRoute.fullPath, () => (menuOpen.value = false))
+watch(
+  () => currentRoute.fullPath,
+  () => (menuOpen.value = false),
+)
 
 async function logout() {
   await auth.logout()
@@ -27,7 +35,9 @@ async function logout() {
     <div class="cairn-wrap site-nav-inner">
       <nav class="site-nav-group is-left" aria-label="Explore">
         <RouterLink class="site-nav-link" to="/" exact-active-class="is-current">Home</RouterLink>
-        <RouterLink class="site-nav-link" to="/routes" active-class="is-current">Browse routes</RouterLink>
+        <RouterLink class="site-nav-link" to="/routes" active-class="is-current"
+          >Browse routes</RouterLink
+        >
         <RouterLink class="site-nav-link" to="/globe" active-class="is-current">Globe</RouterLink>
       </nav>
 
@@ -48,8 +58,16 @@ async function logout() {
 
       <nav class="site-nav-group is-right" aria-label="Account">
         <template v-if="auth.isLoggedIn">
-          <RouterLink class="site-nav-link" to="/profile" active-class="is-current">Profile</RouterLink>
-          <RouterLink v-if="auth.isAdmin" class="site-nav-link" to="/admin" active-class="is-current">Admin</RouterLink>
+          <RouterLink class="site-nav-link" to="/profile" active-class="is-current"
+            >Profile</RouterLink
+          >
+          <RouterLink
+            v-if="auth.isAdmin"
+            class="site-nav-link"
+            to="/admin"
+            active-class="is-current"
+            >Admin</RouterLink
+          >
           <button type="button" class="site-nav-link" @click="logout">Log out</button>
         </template>
         <RouterLink v-else class="site-nav-link is-solid" to="/auth">Sign in</RouterLink>
@@ -71,18 +89,29 @@ async function logout() {
       </button>
     </div>
 
-    <nav v-if="menuOpen" id="site-nav-panel" class="site-nav-panel" aria-label="Menu">
-      <RouterLink class="site-nav-panel-link" to="/">Home</RouterLink>
-      <RouterLink class="site-nav-panel-link" to="/routes">Browse routes</RouterLink>
-      <RouterLink class="site-nav-panel-link" to="/globe">Globe</RouterLink>
-      <template v-if="auth.isLoggedIn">
-        <RouterLink class="site-nav-panel-link" to="/profile">Profile</RouterLink>
-        <RouterLink v-if="auth.isAdmin" class="site-nav-panel-link" to="/admin">Admin</RouterLink>
-        <button type="button" class="site-nav-panel-link" @click="logout">Log out</button>
-      </template>
-      <RouterLink v-else class="site-nav-panel-link" to="/auth">Sign in</RouterLink>
-      <RouterLink class="cairn-btn site-nav-panel-cta" to="/quiz">Take the quiz</RouterLink>
-    </nav>
+    <AnimatePresence>
+      <motion.nav
+        v-if="menuOpen"
+        id="site-nav-panel"
+        class="site-nav-panel"
+        aria-label="Menu"
+        :initial="PANEL_CLOSED"
+        :animate="PANEL_OPEN"
+        :exit="PANEL_CLOSED"
+        :transition="{ duration: 0.35, ease: EASE_OUT }"
+      >
+        <RouterLink class="site-nav-panel-link" to="/">Home</RouterLink>
+        <RouterLink class="site-nav-panel-link" to="/routes">Browse routes</RouterLink>
+        <RouterLink class="site-nav-panel-link" to="/globe">Globe</RouterLink>
+        <template v-if="auth.isLoggedIn">
+          <RouterLink class="site-nav-panel-link" to="/profile">Profile</RouterLink>
+          <RouterLink v-if="auth.isAdmin" class="site-nav-panel-link" to="/admin">Admin</RouterLink>
+          <button type="button" class="site-nav-panel-link" @click="logout">Log out</button>
+        </template>
+        <RouterLink v-else class="site-nav-panel-link" to="/auth">Sign in</RouterLink>
+        <RouterLink class="cairn-btn site-nav-panel-cta" to="/quiz">Take the quiz</RouterLink>
+      </motion.nav>
+    </AnimatePresence>
   </header>
 </template>
 

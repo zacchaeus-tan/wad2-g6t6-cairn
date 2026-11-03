@@ -9,11 +9,13 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
 import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
 import photoMistyLake from '@/assets/img/card-misty-lake.jpg'
 
+// One route per grade (Easy, Moderate, Hard, Strenuous), each with complete
+// distance/climb/duration and a single, unbroken trail line
 const PHOTOS = {
-  'Mount Pulag Lusod Trail': photoLakePeaks,
-  'Mount Rinjani via Senaru': photoAlpinePath,
-  'Mount Kinabalu Trail': photoRidgeHikers,
-  'Trans-Tahan': photoMistyLake,
+  'Ao Ech (Frog Lake) Trail': photoLakePeaks,
+  'Bukit Kutu (via Old Colonial Route)': photoAlpinePath,
+  'Mount Pulag Lusod Trail': photoRidgeHikers,
+  'Mount Rinjani via Senaru': photoMistyLake,
 }
 
 const NAMES = Object.keys(PHOTOS)
@@ -40,16 +42,23 @@ onMounted(async () => {
 <template>
   <section class="featured">
     <div class="cairn-wrap">
-      <div class="featured-top">
+      <div
+        class="d-flex flex-wrap justify-content-between align-items-end row-gap-3 column-gap-4 mb-4"
+      >
         <h2 class="cairn-headline">Routes to explore</h2>
-        <div class="featured-key">
-          <span v-for="grade in GRADES" :key="grade.key">
+        <div class="featured-key d-flex flex-wrap row-gap-2 column-gap-3">
+          <span
+            v-for="grade in GRADES"
+            :key="grade.key"
+            class="d-inline-flex align-items-center gap-2"
+          >
             <i :style="{ background: grade.line }"></i>{{ grade.label }}
           </span>
         </div>
       </div>
 
-      <div class="featured-tiles">
+      <!-- Bootstrap grid: 2 per row on phones, 4 per row from md (768px) up -->
+      <div class="row row-cols-2 row-cols-md-4 gx-3 gx-lg-4 gy-4">
         <RouteTile
           v-for="route in tiles"
           :key="route.id"
@@ -76,27 +85,9 @@ onMounted(async () => {
   padding-block: clamp(40px, 7vh, 80px);
 }
 
-.featured-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  margin-bottom: clamp(20px, 4vh, 40px);
-}
-
 .featured-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
   color: var(--granite-700);
   font-size: 13px;
-}
-
-.featured-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .featured-key i {
@@ -105,26 +96,9 @@ onMounted(async () => {
   height: 3px;
 }
 
-.featured-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 40px 24px;
-}
-
 .featured-more {
   display: flex;
   justify-content: center;
   margin-top: clamp(20px, 4vh, 48px);
-}
-
-@media (max-width: 1000px) {
-  .featured-tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 12px;
-  }
-
-  .featured-tiles :deep(.route-tile-field) {
-    aspect-ratio: 16 / 10;
-  }
 }
 </style>
