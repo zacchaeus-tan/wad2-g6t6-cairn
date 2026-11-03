@@ -15,6 +15,8 @@ import NoticeBox from '@/components/common/NoticeBox.vue'
 
 const props = defineProps({
   profile: { type: Object, required: true },
+  submitLabel: { type: String, default: 'Save changes' },
+  cancellable: { type: Boolean, default: true },
 })
 const emit = defineEmits(['done']) // true when something was saved
 
@@ -155,9 +157,10 @@ async function submit() {
 
     <div class="profile-form-actions">
       <button type="submit" class="cairn-btn is-small" :disabled="saving">
-        {{ saving ? 'Saving...' : 'Save changes' }}
+        {{ saving ? 'Saving...' : submitLabel }}
       </button>
       <button
+        v-if="cancellable"
         type="button"
         class="cairn-btn is-ghost is-small"
         :disabled="saving"

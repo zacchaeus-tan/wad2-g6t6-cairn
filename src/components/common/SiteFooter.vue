@@ -23,6 +23,8 @@ const auth = useAuthStore()
           <p class="site-footer-label">Account</p>
           <p v-if="auth.isLoggedIn"><RouterLink to="/profile">Profile</RouterLink></p>
           <p v-else><RouterLink to="/auth">Sign in</RouterLink></p>
+          <p><RouterLink to="/privacy">Privacy</RouterLink></p>
+          <p><RouterLink to="/terms">Terms</RouterLink></p>
         </nav>
         <div>
           <p class="site-footer-label">Data</p>
