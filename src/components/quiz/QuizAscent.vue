@@ -58,6 +58,13 @@ const hiker = computed(() => {
 })
 
 let advanceTimer = null
+
+// Clicking a stop's label on the mountain jumps straight to that question (or the summit)
+function goTo(i) {
+  clearTimeout(advanceTimer)
+  index.value = i
+}
+
 function pick(value) {
   answers.value = { ...answers.value, [question.value.key]: value }
   const next = index.value + 1
@@ -104,8 +111,8 @@ const STONE_VARIANTS = {
 
 <template>
   <section class="quiz-ascent" aria-label="Quiz questions">
-    <div class="quiz-ascent-mountain" aria-hidden="true">
-      <svg viewBox="0 0 520 480">
+    <div class="quiz-ascent-mountain">
+      <svg viewBox="0 0 520 480" role="group" aria-label="Quiz stops">
         <defs>
           <!-- The mountain's fill fades out downwards, so it has no hard box edges -->
           <linearGradient id="ascent-ridge-fade" x1="0" y1="0" x2="0" y2="1">
@@ -157,7 +164,21 @@ const STONE_VARIANTS = {
             </motion.g>
           </AnimatePresence>
 
-          <text class="ascent-label" x="18" y="-2">{{ stop.label }}</text>
+          <text
+            class="ascent-label"
+            :class="{ 'is-current': i === index }"
+            x="18"
+            y="-2"
+            role="button"
+            tabindex="0"
+            :aria-label="`Go to ${stop.label}`"
+            :aria-current="i === index ? 'step' : undefined"
+            @click="goTo(i)"
+            @keydown.enter.prevent="goTo(i)"
+            @keydown.space.prevent="goTo(i)"
+          >
+            {{ stop.label }}
+          </text>
         </g>
 
         <motion.g :initial="false" :animate="hiker" :transition="CLIMB">
@@ -325,6 +346,21 @@ const STONE_VARIANTS = {
   font: 700 11px var(--font);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ascent-label:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ascent-label:hover {
+  fill: var(--paper);
+}
+
+.ascent-label:focus-visible {
+  outline: 2px solid var(--glacier);
+  outline-offset: 2px;
 }
 
 .ascent-hiker {
