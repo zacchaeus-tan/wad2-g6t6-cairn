@@ -2,6 +2,7 @@ import { defineStore, acceptHMRUpdate } from 'pinia'
 import {
   signUp,
   signIn,
+  signInWithGoogle,
   signOut,
   getSession,
   onAuthStateChange,
@@ -30,6 +31,13 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isLoggedIn: (state) => !!state.user,
     isAdmin: (state) => !!state.profile?.is_admin,
+    // Google doesn't share age, gender or country, so those sign-ups still need to fill them in.
+    // Email sign-ups give them on the register form.
+    needsProfile: (state) => {
+      const provider = state.user?.app_metadata?.provider
+      if (!provider || provider === 'email' || !state.profile) return false
+      return ['age', 'gender', 'country'].some((column) => state.profile[column] == null)
+    },
   },
 
   actions: {
@@ -76,6 +84,14 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user
       await this.fetchProfile()
       this.loading = false
+      return { success: true }
+    },
+
+    // On success the browser leaves for Google, so there's nothing to do after
+    async loginWithGoogle(returnPath) {
+      this.error = null
+      const { error } = await signInWithGoogle(returnPath)
+      if (error) return this.failAccountChange(error.message)
       return { success: true }
     },
 

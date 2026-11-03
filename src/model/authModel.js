@@ -13,6 +13,15 @@ export function signIn(email, password) {
   return supabase.auth.signInWithPassword({ email, password })
 }
 
+// Leaves the site for Google, which sends them back to returnPath signed in.
+// That URL has to be in the project's allowed redirect URLs.
+export function signInWithGoogle(returnPath) {
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${window.location.origin}${returnPath}` },
+  })
+}
+
 export function signOut() {
   return supabase.auth.signOut()
 }

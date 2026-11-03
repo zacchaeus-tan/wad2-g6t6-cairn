@@ -11,6 +11,8 @@ const router = createRouter({
     if (to.name === 'route-detail' && to.params.id !== from.params.id) {
       return savedPosition ?? { top: 0 }
     }
+    // Reached from the footer, so they'd otherwise open scrolled to the bottom
+    if (['privacy', 'terms'].includes(to.name)) return savedPosition ?? { top: 0 }
     return false
   },
   routes: [
@@ -19,8 +21,11 @@ const router = createRouter({
     { path: '/globe', name: 'routes-globe', component: () => import('@/views/RoutesGlobe.vue') },
     { path: '/routes/:id', name: 'route-detail', component: () => import('@/views/RouteDetail.vue') },
     { path: '/auth', name: 'auth', component: () => import('@/views/AuthView.vue') },
+    { path: '/welcome', name: 'complete-profile', component: () => import('@/views/CompleteProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/quiz', name: 'quiz', component: () => import('@/views/QuizView.vue'), meta: { requiresAuth: true } },
+    { path: '/privacy', name: 'privacy', component: () => import('@/views/PrivacyView.vue') },
+    { path: '/terms', name: 'terms', component: () => import('@/views/TermsView.vue') },
     { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   ],
 })
@@ -31,6 +36,13 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return { name: 'auth', query: { redirect: to.fullPath } }
+  }
+  // New Google sign-ups fill in the rest of their profile before going anywhere else
+  if (auth.needsProfile && !['complete-profile', 'privacy', 'terms'].includes(to.name)) {
+    return { name: 'complete-profile', query: { redirect: to.fullPath } }
+  }
+  if (to.name === 'complete-profile' && !auth.needsProfile) {
+    return { name: 'profile' }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'home' }
