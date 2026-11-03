@@ -166,9 +166,11 @@ async function submit() {
 
       <div v-if="routeClosed" class="col-12">
         <AdminNote type="info" class="my-0">
-          This route is already marked Closed<template v-if="selectedRoute.safety_status_note"
-            >: "{{ selectedRoute.safety_status_note }}"</template
-          >. Hikers see that on the route page, so only publish an alert about something else.
+          This route is already marked Closed, and hikers see that on the route page. Only publish
+          an alert about something else.
+          <template v-if="selectedRoute.safety_status_note">
+            Its note: "{{ selectedRoute.safety_status_note }}"
+          </template>
         </AdminNote>
       </div>
 
