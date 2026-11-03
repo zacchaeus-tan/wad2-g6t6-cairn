@@ -9,11 +9,13 @@ import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
 import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
 import photoMistyLake from '@/assets/img/card-misty-lake.jpg'
 
+// One route per grade (Easy, Moderate, Hard, Strenuous), each with complete
+// distance/climb/duration and a single, unbroken trail line
 const PHOTOS = {
-  'Mount Pulag Lusod Trail': photoLakePeaks,
-  'Mount Rinjani via Senaru': photoAlpinePath,
-  'Mount Kinabalu Trail': photoRidgeHikers,
-  'Trans-Tahan': photoMistyLake,
+  'Ao Ech (Frog Lake) Trail': photoLakePeaks,
+  'Bukit Kutu (via Old Colonial Route)': photoAlpinePath,
+  'Mount Pulag Lusod Trail': photoRidgeHikers,
+  'Mount Rinjani via Senaru': photoMistyLake,
 }
 
 const NAMES = Object.keys(PHOTOS)
