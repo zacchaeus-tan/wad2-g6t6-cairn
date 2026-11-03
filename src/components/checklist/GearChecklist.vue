@@ -195,137 +195,151 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
       This checklist is empty. Add items, or unsave it to generate a new one.
     </p>
 
-    <div v-if="isLoggedIn" class="gear-grid">
-      <div class="gear-pad">
-        <div class="gear-binding" aria-hidden="true"><i v-for="hole in 12" :key="hole"></i></div>
-        <div class="gear-sheet">
-          <div class="gear-sheet-head">
-            <strong>{{ route.name }} · Packing List</strong>
-          </div>
+    <!-- Sheet above the sidebar until lg, then side by side; at xl the sidebar is about 280px.
+         g-4 only: a wider gutter pushes the row past the container's padding and the page scrolls sideways -->
+    <div v-if="isLoggedIn" class="row g-4 align-items-start">
+      <div class="col-12 col-lg-8 col-xl-9">
+        <!-- Tilted inside the column, so its corners turn into the gutter instead of past the screen edge -->
+        <div class="gear-pad">
+          <div class="gear-binding" aria-hidden="true"><i v-for="hole in 12" :key="hole"></i></div>
+          <div class="gear-sheet">
+            <div class="gear-sheet-head">
+              <strong>{{ route.name }} · Packing List</strong>
+            </div>
 
-          <p v-if="!checklistStore.items.length" class="gear-empty">
-            {{
-              checklistStore.loading
-                ? 'Writing your list...'
-                : 'No items yet. Generate a checklist to start.'
-            }}
-          </p>
+            <p v-if="!checklistStore.items.length" class="gear-empty">
+              {{
+                checklistStore.loading
+                  ? 'Writing your list...'
+                  : 'No items yet. Generate a checklist to start.'
+              }}
+            </p>
 
-          <ChecklistCategory
-            ref="categoryComponent"
-            :items="checklistStore.items"
-            v-slot="{ items, categoryLabels }"
-          >
-            <ul class="gear-list">
-              <AnimatePresence mode="popLayout" :initial="false">
-                <motion.li
-                  v-for="(item, index) in items"
-                  :key="item.id"
-                  class="gear-item"
-                  :initial="{ opacity: 0, y: 8 }"
-                  :animate="{ opacity: 1, y: 0 }"
-                  :exit="{ opacity: 0 }"
-                  :transition="{
-                    duration: 0.2,
-                    delay: Math.min(index, 5) * 0.03,
-                  }"
-                >
-                  <label class="gear-item-label">
-                    <input
-                      type="checkbox"
-                      :checked="item.is_checked"
-                      :disabled="deletingItemId === item.id"
-                      @change="checklistStore.toggleChecked(item.id, !item.is_checked)"
-                    />
+            <ChecklistCategory
+              ref="categoryComponent"
+              :items="checklistStore.items"
+              v-slot="{ items, categoryLabels }"
+            >
+              <ul class="gear-list">
+                <AnimatePresence mode="popLayout" :initial="false">
+                  <!-- Phones stack the item and its buttons; from sm the buttons sit beside it -->
+                  <motion.li
+                    v-for="(item, index) in items"
+                    :key="item.id"
+                    class="gear-item row g-0 align-items-start align-items-sm-center pb-3 pb-sm-0"
+                    :initial="{ opacity: 0, y: 8 }"
+                    :animate="{ opacity: 1, y: 0 }"
+                    :exit="{ opacity: 0 }"
+                    :transition="{
+                      duration: 0.2,
+                      delay: Math.min(index, 5) * 0.03,
+                    }"
+                  >
+                    <!-- The reason shares this column, so it can never squeeze the label -->
+                    <div class="col-12 col-sm">
+                      <!-- No wrapping on phones, so long text stays beside the checkbox -->
+                      <label
+                        class="gear-item-label d-flex flex-nowrap flex-sm-wrap align-items-start align-items-sm-center"
+                      >
+                        <input
+                          class="mt-1 mt-sm-0"
+                          type="checkbox"
+                          :checked="item.is_checked"
+                          :disabled="deletingItemId === item.id"
+                          @change="checklistStore.toggleChecked(item.id, !item.is_checked)"
+                        />
 
-                    <span class="gear-item-text" :class="{ 'is-checked': item.is_checked }">
-                      {{ item.label }}
+                        <span class="gear-item-text" :class="{ 'is-checked': item.is_checked }">
+                          {{ item.label }}
 
-                      <span v-if="item.quantity" class="gear-item-quantity">
-                        — {{ item.quantity }}
+                          <span v-if="item.quantity" class="gear-item-quantity">
+                            — {{ item.quantity }}
+                          </span>
+                        </span>
+
+                        <!-- No room for category tags on phones -->
+                        <span class="gear-category-tag d-none d-sm-inline-flex">
+                          {{ categoryLabels[item.category] || 'Other' }}
+                        </span>
+                      </label>
+
+                      <span v-if="item.reason" class="gear-item-reason d-block pb-0 pb-sm-2">
+                        {{ item.reason }}
                       </span>
+                    </div>
+
+                    <span v-if="isSaved" class="gear-item-tools col-12 col-sm-auto ps-sm-0 ms-sm-3">
+                      <button
+                        type="button"
+                        :disabled="deletingItemId === item.id"
+                        @click="openForm(item)"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        class="is-remove"
+                        :disabled="deletingItemId === item.id"
+                        @click="removeItem(item)"
+                      >
+                        {{ deletingItemId === item.id ? 'Removing…' : 'Remove' }}
+                      </button>
                     </span>
 
-                    <span class="gear-category-tag">
-                      {{ categoryLabels[item.category] || 'Other' }}
-                    </span>
-                  </label>
+                    <AnimatePresence>
+                      <motion.div
+                        v-if="showForm && editingItem?.id === item.id"
+                        :key="editingItem.id"
+                        class="gear-item-form-wrapper col-12"
+                        :initial="{ opacity: 0, height: 0, y: -6 }"
+                        :animate="{ opacity: 1, height: 'auto', y: 0 }"
+                        :exit="{ opacity: 0, height: 0, y: -6 }"
+                        :transition="{ duration: 0.2, ease: 'easeOut' }"
+                      >
+                        <ChecklistForm
+                          class="gear-item-form"
+                          :item="editingItem"
+                          :checklist-id="checklistStore.checklistId"
+                          @done="closeForm"
+                        />
+                      </motion.div>
+                    </AnimatePresence>
+                  </motion.li>
+                </AnimatePresence>
+              </ul>
+            </ChecklistCategory>
 
-                  <span v-if="item.reason" class="gear-item-reason">
-                    {{ item.reason }}
-                  </span>
+            <div v-if="checklistStore.checklist && isSaved" class="gear-form-area">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  v-if="showForm && !editingItem"
+                  key="new"
+                  class="gear-add-form-wrapper"
+                  :initial="{ opacity: 0, height: 0, y: -6 }"
+                  :animate="{ opacity: 1, height: 'auto', y: 0 }"
+                  :exit="{ opacity: 0, height: 0, y: -6 }"
+                  :transition="{ duration: 0.2, ease: 'easeOut' }"
+                >
+                  <ChecklistForm :checklist-id="checklistStore.checklistId" @done="closeForm" />
+                </motion.div>
 
-                  <span v-if="isSaved" class="gear-item-tools">
-                    <button
-                      type="button"
-                      :disabled="deletingItemId === item.id"
-                      @click="openForm(item)"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      class="is-remove"
-                      :disabled="deletingItemId === item.id"
-                      @click="removeItem(item)"
-                    >
-                      {{ deletingItemId === item.id ? 'Removing…' : 'Remove' }}
-                    </button>
-                  </span>
-
-                  <AnimatePresence>
-                    <motion.div
-                      v-if="showForm && editingItem?.id === item.id"
-                      :key="editingItem.id"
-                      class="gear-item-form-wrapper"
-                      :initial="{ opacity: 0, height: 0, y: -6 }"
-                      :animate="{ opacity: 1, height: 'auto', y: 0 }"
-                      :exit="{ opacity: 0, height: 0, y: -6 }"
-                      :transition="{ duration: 0.2, ease: 'easeOut' }"
-                    >
-                      <ChecklistForm
-                        class="gear-item-form"
-                        :item="editingItem"
-                        :checklist-id="checklistStore.checklistId"
-                        @done="closeForm"
-                      />
-                    </motion.div>
-                  </AnimatePresence>
-                </motion.li>
+                <motion.button
+                  v-else
+                  key="add-button"
+                  type="button"
+                  class="cairn-link"
+                  @click="openForm()"
+                >
+                  + Add item
+                </motion.button>
               </AnimatePresence>
-            </ul>
-          </ChecklistCategory>
-
-          <div v-if="checklistStore.checklist && isSaved" class="gear-form-area">
-            <AnimatePresence mode="wait">
-              <motion.div
-                v-if="showForm && !editingItem"
-                key="new"
-                class="gear-add-form-wrapper"
-                :initial="{ opacity: 0, height: 0, y: -6 }"
-                :animate="{ opacity: 1, height: 'auto', y: 0 }"
-                :exit="{ opacity: 0, height: 0, y: -6 }"
-                :transition="{ duration: 0.2, ease: 'easeOut' }"
-              >
-                <ChecklistForm :checklist-id="checklistStore.checklistId" @done="closeForm" />
-              </motion.div>
-
-              <motion.button
-                v-else
-                key="add-button"
-                type="button"
-                class="cairn-link"
-                @click="openForm()"
-              >
-                + Add item
-              </motion.button>
-            </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
 
-      <aside class="gear-side">
+      <aside class="col-12 col-lg-4 col-xl-3 gear-side">
         <div class="gear-note">
           <strong>
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -448,4 +462,4 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
   </article>
 </template>
 
-<style scoped src="./checklist.css"></style>
+<style scoped src="./GearChecklist.css"></style>

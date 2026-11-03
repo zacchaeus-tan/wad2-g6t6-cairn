@@ -16,17 +16,9 @@
   font-size: 17px;
 }
 
-.gear-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  align-items: start;
-  gap: 32px;
-}
-
 /* A ring-bound sheet with a red margin and blue ruling, tilted slightly */
 .gear-pad {
   position: relative;
-  min-width: 0;
   filter: drop-shadow(0 16px 24px rgb(23 32 28 / 0.18));
   transform: rotate(-0.6deg);
 }
@@ -109,10 +101,6 @@
 }
 
 .gear-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 12px;
   min-height: 48px;
 }
 
@@ -121,15 +109,11 @@
 }
 
 .gear-item-form-wrapper {
-  grid-column: 1 / -1;
   min-height: 0;
   overflow: hidden;
 }
 
 .gear-item-label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 12px;
   row-gap: 6px;
   cursor: pointer;
@@ -167,28 +151,15 @@
 .gear-item-text {
   position: relative;
   font-size: 17px;
-}
-
-/* A strike that draws across once the item is ticked */
-.gear-item-text::after {
-  content: '';
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  top: 55%;
-  height: 2px;
-  background: var(--gear-granite);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-  transition: transform 0.35s var(--ease, ease);
+  min-width: 0;
 }
 
 .gear-item-text.is-checked {
   color: var(--granite-500, #7a867d);
-}
-
-.gear-item-text.is-checked::after {
-  transform: scaleX(1);
+  text-decoration: line-through;
+  text-decoration-color: var(--gear-granite);
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
 }
 
 .gear-item-quantity {
@@ -196,18 +167,17 @@
 }
 
 .gear-item-reason {
-  grid-column: 1;
-  padding: 0 0 10px 32px;
+  padding-left: 32px;
   color: var(--gear-granite);
   font-size: 14px;
   line-height: 20px;
 }
 
+/* Indented under the item text on phones; ps-sm-0 takes the indent off from sm */
 .gear-item-tools {
-  grid-column: 2;
-  grid-row: 1;
   display: flex;
   gap: 4px;
+  padding-left: 24px;
 }
 
 .gear-item-tools button {
@@ -287,7 +257,6 @@
 }
 
 .gear-category-tag {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 22px;
@@ -445,10 +414,6 @@
 }
 
 @media (max-width: 900px) {
-  .gear-grid {
-    grid-template-columns: 1fr;
-  }
-
   /* The ruling above reads --gear-margin, so only the values change here */
   .gear-sheet {
     --gear-margin: 44px;

@@ -146,6 +146,11 @@ export const useAdminStore = defineStore('admin', () => {
       .filter((r) => r.missing.length),
   )
 
+  // Routes an admin has marked as caution or closed.
+  const notOpenRoutes = computed(() =>
+    routes.value.filter((r) => r.safety_status && r.safety_status !== 'open'),
+  )
+
   const attentionCount = computed(
     () =>
       openHazardRoutes.value.length +
@@ -389,6 +394,7 @@ export const useAdminStore = defineStore('admin', () => {
     routeNames,
     difficultyMismatches,
     incompleteRoutes,
+    notOpenRoutes,
     attentionCount,
     searchRoutes,
     fetchAll,

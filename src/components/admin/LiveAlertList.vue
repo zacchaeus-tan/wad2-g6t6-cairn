@@ -5,6 +5,7 @@ import { useAdminStore } from '@/controller/adminStore'
 import { formatDate, modifierClass } from '@/lib/format'
 import { rowMotion } from '@/lib/motion'
 import AdminNote from '@/components/admin/AdminNote.vue'
+import AdminRow from '@/components/admin/AdminRow.vue'
 
 const emit = defineEmits(['edit-alert'])
 
@@ -34,7 +35,8 @@ function byline(alert) {
 
     <p v-if="!adminStore.liveAlerts.length" class="admin-empty">No alerts are published.</p>
 
-    <AnimatePresence v-else as="ul" class="admin-list">
+    <!-- Starts shown, as the tab may be hidden on load (see AttentionGroup) -->
+    <AnimatePresence v-else :initial="false" as="ul" class="admin-list">
       <motion.li
         v-for="alert in adminStore.liveAlerts"
         :key="alert.id"
@@ -42,34 +44,41 @@ function byline(alert) {
         layout="position"
         class="admin-item"
       >
-        <div class="admin-item-body admin-alert" :class="modifierClass(alert.severity)">
-          <p>
-            <strong>{{ alert.title }}</strong>
-          </p>
-          <p class="cairn-fine">
-            <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
-              alert.routes?.name
-            }}</RouterLink>
-            ·
-            <template v-if="isScheduled(alert)">starts {{ formatDate(alert.starts_at) }}</template>
-            <template v-else>since {{ formatDate(alert.starts_at) }}</template>
-            <template v-if="alert.ends_at"> · until {{ formatDate(alert.ends_at) }}</template>
-          </p>
-          <p v-if="alert.message" class="cairn-fine">{{ alert.message }}</p>
-          <p v-if="byline(alert)" class="admin-hint">{{ byline(alert) }}</p>
-        </div>
-        <div class="admin-actions">
-          <button
-            type="button"
-            class="cairn-btn is-ghost is-small"
-            @click="emit('edit-alert', alert)"
-          >
-            Edit
-          </button>
-          <button type="button" class="cairn-link" @click="adminStore.takeDownAlert(alert)">
-            Take down
-          </button>
-        </div>
+        <!-- This list sits in a narrow column, so the buttons always go under the alert -->
+        <AdminRow stacked>
+          <div class="admin-item-body admin-alert" :class="modifierClass(alert.severity)">
+            <p>
+              <strong>{{ alert.title }}</strong>
+            </p>
+            <p class="cairn-fine">
+              <RouterLink :to="{ name: 'route-detail', params: { id: alert.route_id } }">{{
+                alert.routes?.name
+              }}</RouterLink>
+              ·
+              <template v-if="isScheduled(alert)"
+                >starts {{ formatDate(alert.starts_at) }}</template
+              >
+              <template v-else>since {{ formatDate(alert.starts_at) }}</template>
+              <template v-if="alert.ends_at"> · until {{ formatDate(alert.ends_at) }}</template>
+            </p>
+            <p v-if="alert.message" class="cairn-fine">{{ alert.message }}</p>
+            <p v-if="byline(alert)" class="admin-hint">{{ byline(alert) }}</p>
+          </div>
+          <template #actions>
+            <div class="admin-actions">
+              <button
+                type="button"
+                class="cairn-btn is-ghost is-small"
+                @click="emit('edit-alert', alert)"
+              >
+                Edit
+              </button>
+              <button type="button" class="cairn-link" @click="adminStore.takeDownAlert(alert)">
+                Take down
+              </button>
+            </div>
+          </template>
+        </AdminRow>
       </motion.li>
     </AnimatePresence>
   </div>

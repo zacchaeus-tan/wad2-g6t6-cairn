@@ -665,10 +665,16 @@ const confettiPieces = Array.from({ length: 35 }, (_, i) => ({
   }
 }
 
-@media (max-width: 639.98px) {
+@media (max-width: 639px) {
+  .checklist-item {
+    row-gap: 0;
+    padding-bottom: 16px;
+  }
+
   .checklist-item-actions {
     grid-column: 2 / -1;
-    padding-top: 4px;
+    padding-top: 0;
+    margin-bottom: 0;
   }
 }
 
