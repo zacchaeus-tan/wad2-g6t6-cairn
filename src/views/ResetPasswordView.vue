@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { MotionConfig, motion } from 'motion-v'
+import { motion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
 import { validatePasswordForm } from '@/lib/profileTools'
 import { rowMotion } from '@/lib/motion'
@@ -46,69 +46,67 @@ async function submit() {
 </script>
 
 <template>
-  <MotionConfig reduced-motion="user">
-    <section class="cairn reset">
-      <div class="reset-backdrop">
-        <img class="reset-photo" :src="photo" alt="" />
-        <TrailBackground />
-      </div>
+  <section class="cairn reset">
+    <div class="reset-backdrop">
+      <img class="reset-photo" :src="photo" alt="" />
+      <TrailBackground />
+    </div>
 
-      <div class="reset-layout">
-        <motion.div v-bind="rowMotion" class="reset-card">
-          <h1 class="reset-title">Choose a new password</h1>
+    <div class="reset-layout">
+      <motion.div v-bind="rowMotion" class="reset-card">
+        <h1 class="reset-title">Choose a new password</h1>
 
-          <template v-if="!auth.user">
-            <NoticeBox type="error">
-              This reset link has expired or has already been used. Ask for a new one.
-            </NoticeBox>
-            <RouterLink class="cairn-btn" :to="{ name: 'auth' }">Back to sign in</RouterLink>
-          </template>
+        <template v-if="!auth.user">
+          <NoticeBox type="error">
+            This reset link has expired or has already been used. Ask for a new one.
+          </NoticeBox>
+          <RouterLink class="cairn-btn" :to="{ name: 'auth' }">Back to sign in</RouterLink>
+        </template>
 
-          <form v-else class="reset-form" novalidate @submit.prevent="submit">
-            <div class="reset-field">
-              <label class="cairn-label" for="new-password">New password</label>
-              <input
-                id="new-password"
-                v-model="password"
-                type="password"
-                class="cairn-input"
-                autocomplete="new-password"
-                required
-                :aria-invalid="Boolean(errors.password)"
-                :aria-describedby="errors.password ? 'new-password-error' : undefined"
-              />
-              <p v-if="errors.password" id="new-password-error" class="cairn-fine reset-error">
-                {{ errors.password }}
-              </p>
-            </div>
+        <form v-else class="reset-form" novalidate @submit.prevent="submit">
+          <div class="reset-field">
+            <label class="cairn-label" for="new-password">New password</label>
+            <input
+              id="new-password"
+              v-model="password"
+              type="password"
+              class="cairn-input"
+              autocomplete="new-password"
+              required
+              :aria-invalid="Boolean(errors.password)"
+              :aria-describedby="errors.password ? 'new-password-error' : undefined"
+            />
+            <p v-if="errors.password" id="new-password-error" class="cairn-fine reset-error">
+              {{ errors.password }}
+            </p>
+          </div>
 
-            <div class="reset-field">
-              <label class="cairn-label" for="confirm-password">Confirm new password</label>
-              <input
-                id="confirm-password"
-                v-model="confirm"
-                type="password"
-                class="cairn-input"
-                autocomplete="new-password"
-                required
-                :aria-invalid="Boolean(errors.confirm)"
-                :aria-describedby="errors.confirm ? 'confirm-password-error' : undefined"
-              />
-              <p v-if="errors.confirm" id="confirm-password-error" class="cairn-fine reset-error">
-                {{ errors.confirm }}
-              </p>
-            </div>
+          <div class="reset-field">
+            <label class="cairn-label" for="confirm-password">Confirm new password</label>
+            <input
+              id="confirm-password"
+              v-model="confirm"
+              type="password"
+              class="cairn-input"
+              autocomplete="new-password"
+              required
+              :aria-invalid="Boolean(errors.confirm)"
+              :aria-describedby="errors.confirm ? 'confirm-password-error' : undefined"
+            />
+            <p v-if="errors.confirm" id="confirm-password-error" class="cairn-fine reset-error">
+              {{ errors.confirm }}
+            </p>
+          </div>
 
-            <button class="cairn-btn" :disabled="saving" type="submit">
-              {{ saving ? 'Saving...' : 'Save new password' }}
-            </button>
+          <button class="cairn-btn" :disabled="saving" type="submit">
+            {{ saving ? 'Saving...' : 'Save new password' }}
+          </button>
 
-            <NoticeBox v-if="formError" type="error">{{ formError }}</NoticeBox>
-          </form>
-        </motion.div>
-      </div>
-    </section>
-  </MotionConfig>
+          <NoticeBox v-if="formError" type="error">{{ formError }}</NoticeBox>
+        </form>
+      </motion.div>
+    </div>
+  </section>
 </template>
 
 <style scoped>
