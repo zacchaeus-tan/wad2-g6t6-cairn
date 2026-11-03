@@ -53,14 +53,15 @@ const spinDegreesPerMs = 360 / 150000
 const tileFailuresBeforeWarning = 20
 const mapErrorMessage = "The globe's map couldn't load properly. Refresh the page to try again."
 
-// Where the user was last looking, so coming back from a route's page skips the intro and lands
-// in the same spot. sessionStorage works like localStorage but is cleared when the tab closes,
-// so a fresh visit still gets the full intro.
+// Where the user was looking when they opened a route, so coming back from its page skips the
+// intro and lands in the same spot. It's only used once: any other visit gets the full intro.
+// sessionStorage works like localStorage but is cleared when the tab closes.
 const savedViewKey = 'cairn-globe-view'
 
 function readSavedView() {
   try {
     const view = JSON.parse(sessionStorage.getItem(savedViewKey))
+    sessionStorage.removeItem(savedViewKey)
     return view && Array.isArray(view.center) && Number.isFinite(view.zoom) ? view : null
   } catch {
     return null
@@ -428,6 +429,9 @@ async function openRouteDetails(properties, lngLat) {
     return
   }
 
+  // Before the dive, so coming back lands where the user clicked rather than zoomed in on the route
+  saveView()
+
   if (!globeView || prefersReducedMotion) {
     openRoutePage(properties.routeId)
     return
@@ -603,12 +607,10 @@ function setupRouteInteraction() {
 
 watch(satelliteView, (showSatellite) => {
   applyMapType(globeView, showSatellite, layersUnderSatellite)
-  saveView()
 })
 
 function saveView() {
-  // Not during the dive, so coming back lands where the user clicked rather than zoomed in on the route
-  if (phase.value !== 'explore' || openingRoute.value) {
+  if (!globeView) {
     return
   }
 
@@ -764,7 +766,6 @@ onMounted(async () => {
       pixelRatio: Math.max(window.devicePixelRatio || 1, 2),
     })
     setMapInteraction(globeView, false)
-    globeView.on('moveend', saveView)
     globeView.on('move', updateReadout)
     updateReadout()
     // The scale bar goes in the readout rather than in one of the map's own corners
