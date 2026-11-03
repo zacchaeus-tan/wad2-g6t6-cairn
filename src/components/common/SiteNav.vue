@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'motion-v'
 import { useAuthStore } from '@/controller/authStore'
 import { EASE_OUT } from '@/lib/motion'
 
-// Phone menu drops down from under the bar: clipped away at the top, then uncovered downwards
 const PANEL_CLOSED = { clipPath: 'inset(0 0 100% 0)', y: -8 }
 const PANEL_OPEN = { clipPath: 'inset(0 0 0% 0)', y: 0 }
 
@@ -20,7 +19,10 @@ const currentRoute = useRoute()
 
 // Phone menu
 const menuOpen = ref(false)
-watch(() => currentRoute.fullPath, () => (menuOpen.value = false))
+watch(
+  () => currentRoute.fullPath,
+  () => (menuOpen.value = false),
+)
 
 async function logout() {
   await auth.logout()
@@ -33,7 +35,9 @@ async function logout() {
     <div class="cairn-wrap site-nav-inner">
       <nav class="site-nav-group is-left" aria-label="Explore">
         <RouterLink class="site-nav-link" to="/" exact-active-class="is-current">Home</RouterLink>
-        <RouterLink class="site-nav-link" to="/routes" active-class="is-current">Browse routes</RouterLink>
+        <RouterLink class="site-nav-link" to="/routes" active-class="is-current"
+          >Browse routes</RouterLink
+        >
         <RouterLink class="site-nav-link" to="/globe" active-class="is-current">Globe</RouterLink>
       </nav>
 
@@ -54,8 +58,16 @@ async function logout() {
 
       <nav class="site-nav-group is-right" aria-label="Account">
         <template v-if="auth.isLoggedIn">
-          <RouterLink class="site-nav-link" to="/profile" active-class="is-current">Profile</RouterLink>
-          <RouterLink v-if="auth.isAdmin" class="site-nav-link" to="/admin" active-class="is-current">Admin</RouterLink>
+          <RouterLink class="site-nav-link" to="/profile" active-class="is-current"
+            >Profile</RouterLink
+          >
+          <RouterLink
+            v-if="auth.isAdmin"
+            class="site-nav-link"
+            to="/admin"
+            active-class="is-current"
+            >Admin</RouterLink
+          >
           <button type="button" class="site-nav-link" @click="logout">Log out</button>
         </template>
         <RouterLink v-else class="site-nav-link is-solid" to="/auth">Sign in</RouterLink>

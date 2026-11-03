@@ -177,71 +177,76 @@ onBeforeUnmount(() => {
           :transition="{ duration: 0.35, ease: EASE }"
         >
           <img class="slide-photo" :src="slide.photo" alt="" loading="lazy" />
-          <div class="slide-text">
-            <h3>{{ slide.title }}</h3>
-            <p>{{ slide.text }}</p>
-          </div>
-
-          <div class="slide-visual">
-            <ul v-if="slide.key === 'fit'" class="levels">
-              <li v-for="level in LEVELS" :key="level.filled">
-                <span class="meter">
-                  <i
-                    v-for="n in 3"
-                    :key="n"
-                    :style="n <= level.filled ? { background: GRADES[level.filled].line } : null"
-                  ></i>
-                </span>
-                <strong>{{ level.label }}</strong>
-                <span>{{ level.note }}</span>
-              </li>
-            </ul>
-
-            <div v-else-if="slide.key === 'grade'" class="shift">
-              <div class="shift-grade">
-                <span class="cairn-label">Official</span>
-                <span class="shift-number cairn-data" :style="{ color: GRADES[1].ink }">1.00</span>
-                <strong>{{ GRADES[1].label }}</strong>
-              </div>
-              <ArrowIcon class="shift-arrow" />
-              <div class="shift-grade is-dark">
-                <span class="cairn-label">Community</span>
-                <span class="shift-number cairn-data">1.33</span>
-                <strong>Leaning moderate</strong>
-              </div>
+          <!-- Text beside the visual from lg (992px) up, stacked below it -->
+          <div class="row align-items-center gx-5 gy-3">
+            <div class="slide-text col-lg-5">
+              <h3>{{ slide.title }}</h3>
+              <p>{{ slide.text }}</p>
             </div>
 
-            <article v-else-if="slide.key === 'plan'" class="plan-day">
-              <p class="cairn-label">Day 1 · Sat, 31 Oct 2026</p>
-              <h4>Ascent via Akiki Trail</h4>
-              <p class="plan-way">Akiki Trailhead → Trail End at 2913 m</p>
-              <p class="plan-facts cairn-data">
-                <span>9.26 km</span><span>+1647 m</span><span>~7 h</span>
-              </p>
-              <ul>
-                <li>Panoramic views of the Philippine mountain ranges</li>
-                <li>Dense forest sections transitioning to alpine vegetation</li>
-                <li>Rewarding summit views at the highest altitude point</li>
+            <div class="slide-visual col-lg-7">
+              <ul v-if="slide.key === 'fit'" class="levels">
+                <li v-for="level in LEVELS" :key="level.filled">
+                  <span class="meter">
+                    <i
+                      v-for="n in 3"
+                      :key="n"
+                      :style="n <= level.filled ? { background: GRADES[level.filled].line } : null"
+                    ></i>
+                  </span>
+                  <strong>{{ level.label }}</strong>
+                  <span>{{ level.note }}</span>
+                </li>
               </ul>
-              <p class="plan-notes">
-                Start early to avoid afternoon weather changes; bring plenty of water and
-                high-energy snacks; wear sturdy hiking boots and layered clothing for altitude
-                changes; pace yourself for the steep elevation gain.
-              </p>
-            </article>
 
-            <div v-else class="pad">
-              <div class="pad-sheet">
-                <strong>Mount Pulag Lusod Trail · pack list</strong>
+              <div v-else-if="slide.key === 'grade'" class="shift">
+                <div class="shift-grade">
+                  <span class="cairn-label">Official</span>
+                  <span class="shift-number cairn-data" :style="{ color: GRADES[1].ink }"
+                    >1.00</span
+                  >
+                  <strong>{{ GRADES[1].label }}</strong>
+                </div>
+                <ArrowIcon class="shift-arrow" />
+                <div class="shift-grade is-dark">
+                  <span class="cairn-label">Community</span>
+                  <span class="shift-number cairn-data">1.33</span>
+                  <strong>Leaning moderate</strong>
+                </div>
+              </div>
+
+              <article v-else-if="slide.key === 'plan'" class="plan-day">
+                <p class="cairn-label">Day 1 · Sat, 31 Oct 2026</p>
+                <h4>Ascent via Akiki Trail</h4>
+                <p class="plan-way">Akiki Trailhead → Trail End at 2913 m</p>
+                <p class="plan-facts cairn-data">
+                  <span>9.26 km</span><span>+1647 m</span><span>~7 h</span>
+                </p>
                 <ul>
-                  <li v-for="item in PACK_LIST" :key="item.name">
-                    <span class="pad-tick" :class="{ 'is-on': item.done }"></span>
-                    <span class="pad-text" :class="{ 'is-on': item.done }">
-                      {{ item.name }}
-                      <span v-if="item.qty" class="pad-qty"> — {{ item.qty }}</span>
-                    </span>
-                  </li>
+                  <li>Panoramic views of the Philippine mountain ranges</li>
+                  <li>Dense forest sections transitioning to alpine vegetation</li>
+                  <li>Rewarding summit views at the highest altitude point</li>
                 </ul>
+                <p class="plan-notes">
+                  Start early to avoid afternoon weather changes; bring plenty of water and
+                  high-energy snacks; wear sturdy hiking boots and layered clothing for altitude
+                  changes; pace yourself for the steep elevation gain.
+                </p>
+              </article>
+
+              <div v-else class="pad">
+                <div class="pad-sheet">
+                  <strong>Mount Pulag Lusod Trail · pack list</strong>
+                  <ul>
+                    <li v-for="item in PACK_LIST" :key="item.name">
+                      <span class="pad-tick" :class="{ 'is-on': item.done }"></span>
+                      <span class="pad-text" :class="{ 'is-on': item.done }">
+                        {{ item.name }}
+                        <span v-if="item.qty" class="pad-qty"> — {{ item.qty }}</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -347,9 +352,7 @@ onBeforeUnmount(() => {
   position: relative;
   flex: 0 0 var(--slide-width);
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: clamp(32px, 5vw, 80px);
-  align-items: center;
+  align-content: center;
   min-height: 0;
   padding: clamp(20px, 4vw, 56px);
   overflow: hidden;
@@ -391,7 +394,6 @@ onBeforeUnmount(() => {
 .slide-visual {
   display: grid;
   justify-items: center;
-  min-width: 0;
 }
 
 .slide-visual > * {
@@ -685,15 +687,6 @@ onBeforeUnmount(() => {
 
 .tour-button.is-previous svg {
   rotate: 180deg;
-}
-
-@media (max-width: 900px) {
-  .slide {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
-    align-content: center;
-  }
 }
 
 @media (max-width: 760px) {

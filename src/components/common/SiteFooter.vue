@@ -8,23 +8,24 @@ const auth = useAuthStore()
 <template>
   <footer class="cairn site-footer">
     <div class="cairn-wrap">
-      <div class="site-footer-cols">
-        <div>
+      <!-- Bootstrap grid: the title spans the full width with links in pairs below, then 4 across from lg (992px) up -->
+      <div class="site-footer-cols row g-4">
+        <div class="col-12 col-lg-4">
           <h2 class="site-footer-title">Know before you go.</h2>
           <RouterLink class="cairn-btn is-light" to="/routes">Browse routes</RouterLink>
         </div>
-        <nav aria-label="Explore">
+        <nav class="col-6 col-lg" aria-label="Explore">
           <p class="site-footer-label">Explore</p>
           <p><RouterLink to="/routes">Routes</RouterLink></p>
           <p><RouterLink to="/globe">Globe</RouterLink></p>
           <p><RouterLink to="/quiz">Quiz</RouterLink></p>
         </nav>
-        <nav aria-label="Account">
+        <nav class="col-6 col-lg" aria-label="Account">
           <p class="site-footer-label">Account</p>
           <p v-if="auth.isLoggedIn"><RouterLink to="/profile">Profile</RouterLink></p>
           <p v-else><RouterLink to="/auth">Sign in</RouterLink></p>
         </nav>
-        <div>
+        <div class="col-6 col-lg">
           <p class="site-footer-label">Data</p>
           <p class="site-footer-small">
             Trails © OpenStreetMap contributors (ODbL). Weather by
@@ -36,7 +37,7 @@ const auth = useAuthStore()
 
       <div class="site-footer-word" aria-hidden="true">CAIRN</div>
 
-      <div class="site-footer-base">
+      <div class="site-footer-base d-flex flex-wrap justify-content-between gap-3">
         <span>© 2026 CAIRN · IS216 project</span>
         <span>Made for hikers</span>
       </div>
@@ -65,12 +66,6 @@ const auth = useAuthStore()
 .site-footer a:focus-visible {
   outline: 3px solid var(--glacier);
   outline-offset: 3px;
-}
-
-.site-footer-cols {
-  display: grid;
-  grid-template-columns: 1.5fr repeat(3, 1fr);
-  gap: 32px;
 }
 
 .site-footer-cols p {
@@ -151,22 +146,8 @@ const auth = useAuthStore()
 }
 
 .site-footer-base {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
   padding-top: 18px;
   border-top: 1px solid rgb(242 239 234 / 0.18);
   font-size: 13px;
-}
-
-@media (max-width: 1000px) {
-  .site-footer-cols {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .site-footer-cols > :first-child {
-    grid-column: 1 / -1;
-  }
 }
 </style>
