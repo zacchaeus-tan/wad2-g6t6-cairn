@@ -92,6 +92,10 @@ export const useAuthStore = defineStore('auth', {
     async loginWithGoogle(returnPath) {
       this.error = null
       const { error } = await signInWithGoogle(returnPath)
+      if (error) return this.failAccountChange(error.message)
+      return { success: true }
+    },
+
     // Supabase answers the same whether or not the email has an account, so this never says which
     async requestPasswordReset(email) {
       this.loading = true
