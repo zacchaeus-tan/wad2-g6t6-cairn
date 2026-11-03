@@ -22,11 +22,6 @@ const matches = computed(() =>
   search.value === selected.value?.name ? [] : adminStore.searchRoutes(search.value),
 )
 
-// Routes an admin has already marked as caution or closed.
-const flaggedRoutes = computed(() =>
-  adminStore.routes.filter((r) => r.safety_status && r.safety_status !== 'open'),
-)
-
 watch(selected, (route) => {
   saved.value = false
   adminStore.statusError = null
@@ -56,83 +51,92 @@ async function save() {
 </script>
 
 <template>
-  <div>
-    <div class="admin-field">
-      <label for="status-search" class="cairn-label">Find a route</label>
-      <input
-        id="status-search"
-        v-model="search"
-        type="search"
-        class="cairn-input"
-        placeholder="Route name or country"
-        autocomplete="off"
-      />
-    </div>
-    <motion.ul v-if="matches.length" v-bind="fadeMotion" class="admin-results">
-      <li v-for="route in matches" :key="route.id">
-        <button type="button" @click="choose(route)">
-          <span
-            >{{ route.name }} <span class="admin-hint">{{ route.country }}</span></span
-          >
-          <span class="admin-tag" :class="modifierClass(route.safety_status)">{{
-            route.safety_status || 'not set'
-          }}</span>
-        </button>
-      </li>
-    </motion.ul>
-
-    <motion.form
-      v-if="selected"
-      :key="selected.id"
-      v-bind="fadeMotion"
-      class="mt-4"
-      novalidate
-      @submit.prevent="save"
-    >
-      <h3 class="h5 fw-bold mb-3">{{ selected.name }}</h3>
-      <div class="admin-choice mb-3" role="radiogroup" aria-label="Safety status">
-        <template v-for="status in ['open', 'caution', 'closed']" :key="status">
+  <div class="row g-4 g-lg-5">
+    <div class="col-12 col-lg-7">
+      <h3 class="admin-subhead">Set a status</h3>
+      <div class="admin-form p-3 p-md-4">
+        <div class="admin-field">
+          <label for="status-search" class="cairn-label">Find a route</label>
           <input
-            :id="`status-${status}`"
-            v-model="form.safetyStatus"
-            type="radio"
-            name="safety-status"
-            :value="status"
+            id="status-search"
+            v-model="search"
+            type="search"
+            class="cairn-input"
+            placeholder="Route name or country"
+            autocomplete="off"
           />
-          <label :for="`status-${status}`" :class="{ 'is-active': form.safetyStatus === status }">{{
-            status
-          }}</label>
-        </template>
+        </div>
+        <motion.ul v-if="matches.length" v-bind="fadeMotion" class="admin-results">
+          <li v-for="route in matches" :key="route.id">
+            <button type="button" @click="choose(route)">
+              <span
+                >{{ route.name }} <span class="admin-hint">{{ route.country }}</span></span
+              >
+              <span class="admin-tag" :class="modifierClass(route.safety_status)">{{
+                route.safety_status || 'not set'
+              }}</span>
+            </button>
+          </li>
+        </motion.ul>
+
+        <motion.form
+          v-if="selected"
+          :key="selected.id"
+          v-bind="fadeMotion"
+          class="mt-4"
+          novalidate
+          @submit.prevent="save"
+        >
+          <p class="admin-chosen">{{ selected.name }}</p>
+          <div class="admin-choice mb-3" role="radiogroup" aria-label="Safety status">
+            <template v-for="status in ['open', 'caution', 'closed']" :key="status">
+              <input
+                :id="`status-${status}`"
+                v-model="form.safetyStatus"
+                type="radio"
+                name="safety-status"
+                :value="status"
+              />
+              <label
+                :for="`status-${status}`"
+                :class="{ 'is-active': form.safetyStatus === status }"
+                >{{ status }}</label
+              >
+            </template>
+          </div>
+
+          <div class="admin-field">
+            <label for="status-note" class="cairn-label">
+              Note for hikers<template v-if="form.safetyStatus === 'open'"> (optional)</template>
+            </label>
+            <textarea
+              id="status-note"
+              v-model="form.safetyStatusNote"
+              class="cairn-input"
+              rows="2"
+              placeholder="e.g. Closed by the park authority until the bridge is repaired"
+            ></textarea>
+          </div>
+
+          <AdminNote v-if="adminStore.statusError" type="error">
+            {{ adminStore.statusError }}
+          </AdminNote>
+          <AdminNote v-else-if="saved">Status saved.</AdminNote>
+
+          <button type="submit" class="cairn-btn mt-4" :disabled="saving">
+            {{ saving ? 'Saving…' : 'Save status' }}
+          </button>
+        </motion.form>
       </div>
+    </div>
 
-      <div class="admin-field">
-        <label for="status-note" class="cairn-label">
-          Note for hikers<template v-if="form.safetyStatus === 'open'"> (optional)</template>
-        </label>
-        <textarea
-          id="status-note"
-          v-model="form.safetyStatusNote"
-          class="cairn-input"
-          rows="2"
-          placeholder="e.g. Closed by the park authority until the bridge is repaired"
-        ></textarea>
-      </div>
-
-      <AdminNote v-if="adminStore.statusError" type="error">
-        {{ adminStore.statusError }}
-      </AdminNote>
-      <AdminNote v-else-if="saved">Status saved.</AdminNote>
-
-      <button type="submit" class="cairn-btn is-small mt-3" :disabled="saving">
-        {{ saving ? 'Saving…' : 'Save status' }}
-      </button>
-    </motion.form>
-
-    <div v-if="flaggedRoutes.length" class="admin-group mt-4">
-      <h3 class="cairn-label">Not open</h3>
-      <AnimatePresence as="ul" class="admin-list">
+    <div class="col-12 col-lg-5">
+      <h3 class="admin-subhead">Not open</h3>
+      <p v-if="!adminStore.notOpenRoutes.length" class="admin-empty">Every route is open.</p>
+      <!-- Starts shown, as the tab may be hidden on load (see AttentionGroup) -->
+      <AnimatePresence v-else :initial="false" as="ul" class="admin-list">
         <motion.li
-          v-for="route in flaggedRoutes"
+          v-for="route in adminStore.notOpenRoutes"
           :key="route.id"
           v-bind="rowMotion"
           layout="position"

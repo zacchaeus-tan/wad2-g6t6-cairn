@@ -11,11 +11,13 @@ defineProps({
 </script>
 
 <template>
-  <AnimatePresence>
+  <!-- :initial="false": the tab may be hidden when the page loads, and an entry animation
+       doesn't play there. The whole tab rises in instead; later changes still animate. -->
+  <AnimatePresence :initial="false">
     <motion.div v-if="show" v-bind="expandMotion" class="admin-group">
       <h3 class="cairn-label">{{ title }}</h3>
       <p v-if="hint" class="admin-hint mb-2">{{ hint }}</p>
-      <AnimatePresence as="ul" class="admin-list">
+      <AnimatePresence :initial="false" as="ul" class="admin-list">
         <slot />
       </AnimatePresence>
     </motion.div>

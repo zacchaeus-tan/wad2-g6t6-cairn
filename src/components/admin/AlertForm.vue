@@ -19,8 +19,6 @@ const routeSearch = ref('')
 
 const editing = computed(() => editingId.value !== null)
 
-const routeMatches = computed(() => adminStore.searchRoutes(routeSearch.value))
-
 function emptyForm() {
   return {
     routeId: '',
@@ -36,9 +34,24 @@ const form = ref(emptyForm())
 
 const selectedRoute = computed(() => adminStore.routes.find((r) => r.id === form.value.routeId))
 
+// A closed route's status already shows on its banner, so an alert about the same
+// closure would show there twice. Alerts are for short-lived problems.
+const routeClosed = computed(() => selectedRoute.value?.safety_status === 'closed')
+
+// The box shows the chosen route's name, so don't list it as a search.
+const routeMatches = computed(() =>
+  routeSearch.value === selectedRoute.value?.name ? [] : adminStore.searchRoutes(routeSearch.value),
+)
+
 function chooseRoute(route) {
   form.value.routeId = route.id
-  routeSearch.value = ''
+  routeSearch.value = route.name
+}
+
+// Typing over the chosen name drops the choice, so the box never shows one
+// route while the alert is saved to another.
+function onRouteInput(text) {
+  if (text !== selectedRoute.value?.name) form.value.routeId = ''
 }
 
 function reset() {
@@ -67,6 +80,7 @@ function toLocalInput(iso) {
 function fillDraft(draft) {
   reset()
   form.value = { ...form.value, ...draft }
+  routeSearch.value = selectedRoute.value?.name || ''
   drafted.value = true
   saved.value = ''
 }
@@ -83,6 +97,7 @@ function editAlert(alert) {
     startsAt: toLocalInput(alert.starts_at),
     endsAt: toLocalInput(alert.ends_at),
   }
+  routeSearch.value = selectedRoute.value?.name || ''
   saved.value = ''
 }
 
@@ -106,7 +121,8 @@ async function submit() {
 </script>
 
 <template>
-  <form novalidate @submit.prevent="submit">
+  <h3 class="admin-subhead">{{ editing ? 'Edit alert' : 'Publish an alert' }}</h3>
+  <form class="admin-form p-3 p-md-4" novalidate @submit.prevent="submit">
     <AdminNote v-if="editing" type="info" class="mt-0 mb-3">
       Editing a published alert. Changes show on the route page as soon as you save.
     </AdminNote>
@@ -126,6 +142,7 @@ async function submit() {
           placeholder="Route name or country"
           autocomplete="off"
           @keydown.enter.prevent
+          @input="onRouteInput($event.target.value)"
         />
         <motion.ul v-if="routeMatches.length" v-bind="fadeMotion" class="admin-results">
           <li v-for="route in routeMatches" :key="route.id">
@@ -136,16 +153,6 @@ async function submit() {
             </button>
           </li>
         </motion.ul>
-        <!-- The key replays the fade each time the route changes -->
-        <motion.p
-          v-if="selectedRoute"
-          :key="selectedRoute.id"
-          v-bind="fadeMotion"
-          class="mt-2 mb-0"
-        >
-          Selected: <strong>{{ selectedRoute.name }}</strong>
-          <span class="admin-hint"> {{ selectedRoute.country }}</span>
-        </motion.p>
       </div>
 
       <div class="col-12 col-md-4 admin-field">
@@ -155,6 +162,16 @@ async function submit() {
           <option value="warning">Warning</option>
           <option value="danger">Danger</option>
         </select>
+      </div>
+
+      <div v-if="routeClosed" class="col-12">
+        <AdminNote type="info" class="my-0">
+          This route is already marked Closed, and hikers see that on the route page. Only publish
+          an alert about something else.
+          <template v-if="selectedRoute.safety_status_note">
+            Its note: "{{ selectedRoute.safety_status_note }}"
+          </template>
+        </AdminNote>
       </div>
 
       <div class="col-12 admin-field">
@@ -188,7 +205,7 @@ async function submit() {
       <div class="col-12 col-md-6 admin-field">
         <label for="alert-ends" class="cairn-label">Ends</label>
         <input id="alert-ends" v-model="form.endsAt" type="datetime-local" class="cairn-input" />
-        <span class="admin-hint">Required. For a long closure, set the route status instead.</span>
+        <span class="admin-hint">Required.</span>
       </div>
     </div>
 
@@ -198,7 +215,7 @@ async function submit() {
     <AdminNote v-else-if="saved">{{ saved }}</AdminNote>
 
     <div class="admin-actions mt-3">
-      <button type="submit" class="cairn-btn is-small" :disabled="saving">
+      <button type="submit" class="cairn-btn is-blaze" :disabled="saving">
         <template v-if="saving">Saving…</template>
         <template v-else>{{ editing ? 'Save changes' : 'Publish alert' }}</template>
       </button>

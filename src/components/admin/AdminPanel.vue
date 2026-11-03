@@ -1,40 +1,30 @@
 <script setup>
-import { ref, useId } from 'vue'
-import { animate, motion } from 'motion-v'
-import { EASE_OUT, fadeMotion, rowMotion } from '@/lib/motion'
+import { motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 
+// One tab's content. Hidden tabs stay mounted (v-show), so a half-filled form
+// survives a switch to another tab; showing one makes it rise in.
 defineProps({
+  tab: { type: String, required: true }, // key shared with its tab button
   title: { type: String, required: true },
-  count: { type: Number, default: 0 }, // shown beside the title when above 0
+  lede: { type: String, default: '' },
+  active: { type: Boolean, required: true },
 })
-
-const titleId = useId()
-const panel = ref(null)
-
-// Called by the admin page to bring this panel's top edge to the top of the screen.
-function scrollToTop() {
-  const top = panel.value.getBoundingClientRect().top + window.scrollY
-  animate(window.scrollY, top, {
-    duration: 0.6,
-    ease: EASE_OUT,
-    onUpdate: (y) => window.scrollTo(0, y),
-  })
-}
-
-defineExpose({ scrollToTop })
 </script>
 
 <template>
-  <motion.section v-bind="rowMotion" :aria-labelledby="titleId">
-    <div ref="panel" class="admin-panel">
-      <h2 :id="titleId" class="admin-panel-title">
-        {{ title }}
-        <!-- The key replays the fade each time the count changes -->
-        <motion.span v-if="count" :key="count" v-bind="fadeMotion" class="admin-count">
-          {{ count }}
-        </motion.span>
-      </h2>
-      <slot />
-    </div>
+  <motion.section
+    v-show="active"
+    :id="`admin-panel-${tab}`"
+    class="admin-panel py-5 mt-lg-5"
+    role="tabpanel"
+    :aria-labelledby="`admin-tab-${tab}`"
+    :initial="{ opacity: 0, y: 12 }"
+    :animate="active ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }"
+    :transition="{ duration: 0.45, ease: EASE_OUT }"
+  >
+    <h2 class="cairn-headline">{{ title }}</h2>
+    <p v-if="lede" class="admin-panel-lede">{{ lede }}</p>
+    <slot />
   </motion.section>
 </template>
