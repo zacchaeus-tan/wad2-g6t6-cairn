@@ -161,33 +161,29 @@ onBeforeUnmount(() => {
   min-width: 240px;
 }
 
-@media (max-width: 960px) {
+/* At md and below the filters stack in a menu, so each panel opens in place under its button */
+@media (width < 992px) {
   .filter-dropdown,
   .filter-dropdown.is-right {
-    position: static;
-    flex: 1 1 33%;
     border: 0;
     border-bottom: 1px solid rgb(242 239 234 / 0.18);
   }
 
+  /* The arrow sits flush right, with the text taking the rest of the row */
   .filter-dropdown-button {
+    grid-template-columns: 1fr auto;
     width: 100%;
+    height: auto;
     min-height: 56px;
     padding: 8px 12px;
   }
 
   .filter-dropdown-panel,
   .filter-dropdown.is-right .filter-dropdown-panel {
-    left: var(--gutter);
-    right: var(--gutter);
+    position: static;
     min-width: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .filter-dropdown,
-  .filter-dropdown.is-right {
-    flex-basis: 50%;
+    margin-bottom: 12px;
+    box-shadow: none;
   }
 }
 </style>
