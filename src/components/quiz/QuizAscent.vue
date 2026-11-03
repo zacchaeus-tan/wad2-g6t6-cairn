@@ -534,6 +534,13 @@ const STONE_VARIANTS = {
   cursor: default;
 }
 
+/* On wide screens the stops on the mountain do the navigating */
+@media (min-width: 992px) {
+  .quiz-ascent-nav {
+    display: none;
+  }
+}
+
 /* The mountain scales to the height left on screen and the panel tightens */
 @media (min-width: 901px) {
   .quiz-ascent {
