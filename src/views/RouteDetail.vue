@@ -20,6 +20,7 @@ import TrailNotices from '@/components/routes/TrailNotices.vue'
 import RouteSuitability from '@/components/routes/RouteSuitability.vue'
 import GradeDial from '@/components/routes/GradeDial.vue'
 import TrailAnimation from '@/components/routes/TrailAnimation.vue'
+import CairnLoader from '@/components/common/CairnLoader.vue'
 
 const routeParams = useRoute()
 const reviewsStore = useReviewsStore()
@@ -139,14 +140,15 @@ const { scrollYProgress: trailProgress } = useScroll({
 
 <template>
   <div class="cairn route-detail">
-    <div v-if="loading || error || !route" class="route-detail-state">
+    <div v-if="loading" class="route-detail-state is-loading">
+      <CairnLoader message="Loading route" data-testid="route-loading" />
+    </div>
+
+    <div v-else-if="error || !route" class="route-detail-state">
       <div class="cairn-wrap">
-        <p v-if="loading" role="status">Loading route...</p>
-        <p v-else-if="error" role="alert">{{ error }}</p>
+        <p v-if="error" role="alert">{{ error }}</p>
         <p v-else>This route could not be found.</p>
-        <RouterLink v-if="!loading" class="cairn-btn is-light" to="/routes"
-          >Back to all routes</RouterLink
-        >
+        <RouterLink class="cairn-btn is-light" to="/routes">Back to all routes</RouterLink>
       </div>
     </div>
 
@@ -277,6 +279,13 @@ const { scrollYProgress: trailProgress } = useScroll({
   padding: calc(var(--nav-height) + 96px) 0 96px;
   background: #0d1411;
   color: var(--paper);
+}
+
+/* Fills the screen like the transition screen, so a direct visit opens the same way */
+.route-detail-state.is-loading {
+  display: grid;
+  place-content: center;
+  min-height: 100svh;
 }
 
 .route-detail-state .cairn-wrap {

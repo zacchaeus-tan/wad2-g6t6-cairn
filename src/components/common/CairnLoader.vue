@@ -1,14 +1,19 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) drops the stones into place
-import { motion } from 'motion-v'
+import { AnimatePresence, motion } from 'motion-v'
 
-// A cairn that grows as loading progresses, with a line of text under it while there's a message
+// A cairn that grows as loading progresses, with a line of text under it while there's a message.
+// Without a progress it builds and clears on a loop, for pages that can't tell how far along they are.
 const props = defineProps({
   // 0 to 100
-  progress: { type: Number, required: true },
+  progress: { type: Number, default: null },
   message: { type: String, default: '' },
+  // On the light paper pages, where the usual lichen text is too faint
+  onLight: Boolean,
 })
+
+const looping = computed(() => props.progress === null)
 
 // The cairn from its biggest stone at the bottom up to the smallest
 const stones = [
@@ -19,10 +24,25 @@ const stones = [
   { cx: 60, cy: 20, rx: 9, ry: 5.5, fill: '#d3d1c6' },
 ]
 
+// On a loop, one stone goes down each step, the full cairn holds for a step, then it clears
+const loopStep = ref(0)
+let loopTimer = null
+
+onMounted(() => {
+  if (looping.value) {
+    loopTimer = setInterval(() => {
+      loopStep.value = (loopStep.value + 1) % (stones.length + 2)
+    }, 400)
+  }
+})
+
+onBeforeUnmount(() => clearInterval(loopTimer))
+
 // The first stone goes down as soon as loading makes any progress
-const placedStones = computed(() =>
-  stones.slice(0, Math.ceil((props.progress / 100) * stones.length)),
-)
+const placedStones = computed(() => {
+  if (looping.value) return loopStep.value > stones.length ? [] : stones.slice(0, loopStep.value)
+  return stones.slice(0, Math.ceil((props.progress / 100) * stones.length))
+})
 </script>
 
 <template>
@@ -37,21 +57,30 @@ const placedStones = computed(() =>
       aria-valuemin="0"
       aria-valuemax="100"
     >
-      <!-- Each stone drops into place -->
-      <motion.ellipse
-        v-for="stone in placedStones"
-        :key="stone.cy"
-        v-bind="stone"
-        :initial="{ opacity: 0, y: -16 }"
-        :animate="{ opacity: 1, y: 0 }"
-        :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
-      />
+      <!-- Each stone drops into place, and on a loop they all fade away together -->
+      <AnimatePresence as="g">
+        <motion.ellipse
+          v-for="stone in placedStones"
+          :key="stone.cy"
+          v-bind="stone"
+          :initial="{ opacity: 0, y: -16 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :exit="{ opacity: 0 }"
+          :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
+        />
+      </AnimatePresence>
     </svg>
 
-    <p v-if="message" class="cairn-loader-text" role="status" data-testid="cairn-loading">
+    <p
+      v-if="message"
+      class="cairn-loader-text"
+      :class="{ 'is-on-light': onLight }"
+      role="status"
+      data-testid="cairn-loading"
+    >
       <span>{{ message }}</span>
       <!-- The progress bar already gives the number, so screen readers don't hear every change -->
-      <span class="cairn-data" aria-hidden="true">{{ progress }}%</span>
+      <span v-if="!looping" class="cairn-data" aria-hidden="true">{{ progress }}%</span>
     </p>
   </div>
 </template>
@@ -78,6 +107,10 @@ const placedStones = computed(() =>
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--lichen);
+}
+
+.cairn-loader-text.is-on-light {
+  color: var(--granite-500);
 }
 
 .cairn-loader-text .cairn-data {

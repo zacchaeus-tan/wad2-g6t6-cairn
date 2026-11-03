@@ -165,7 +165,7 @@ test.describe('Browsing routes', () => {
     // assert
     await expect(page.getByTestId('route-transition-screen')).toContainText(name)
     await expect(page).toHaveURL(/\/routes\/[^/]+$/)
-    await expect(page.getByText('Loading route...')).toHaveCount(0)
+    await expect(page.getByTestId('route-loading')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
   })
 

@@ -20,6 +20,11 @@
   margin-top: 8px;
 }
 
+/* Stands where the panels will be while the page's data loads */
+.admin-loading {
+  padding: 96px 0;
+}
+
 /* The usual label grey is too faint on the darker page */
 .admin-header .cairn-label {
   color: var(--granite-700);

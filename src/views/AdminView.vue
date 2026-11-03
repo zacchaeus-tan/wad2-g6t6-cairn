@@ -10,6 +10,7 @@ import LiveAlertList from '@/components/admin/LiveAlertList.vue'
 import RouteStatusEditor from '@/components/admin/RouteStatusEditor.vue'
 import DataQualityList from '@/components/admin/DataQualityList.vue'
 import ReviewModeration from '@/components/admin/ReviewModeration.vue'
+import CairnLoader from '@/components/common/CairnLoader.vue'
 import '@/assets/admin.css'
 
 const adminStore = useAdminStore()
@@ -60,7 +61,12 @@ function editAlert(alert) {
         That did not save: {{ adminStore.actionError }}
       </AdminNote>
 
-      <p v-if="adminStore.loading && !adminStore.routes.length" role="status">Loading…</p>
+      <CairnLoader
+        v-if="adminStore.loading && !adminStore.routes.length"
+        class="admin-loading"
+        message="Loading admin data"
+        on-light
+      />
 
       <div v-else class="row g-4 mt-1">
         <AdminPanel class="col-12" title="Needs attention" :count="adminStore.attentionCount">
