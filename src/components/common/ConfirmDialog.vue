@@ -11,6 +11,7 @@ const props = defineProps({
   title: { type: String, required: true },
   confirmLabel: { type: String, required: true },
   cancelLabel: { type: String, default: 'Cancel' },
+  disabled: { type: Boolean, default: false },
 })
 const emit = defineEmits(['confirm', 'cancel'])
 
@@ -50,10 +51,15 @@ function onClick(event) {
         <h2 id="confirm-dialog-title" class="confirm-dialog-title">{{ title }}</h2>
         <p id="confirm-dialog-text" class="confirm-dialog-text"><slot /></p>
         <div class="confirm-dialog-actions">
-          <button type="button" class="cairn-btn is-ghost" @click="emit('cancel')">
+          <button
+            type="button"
+            class="cairn-btn is-ghost"
+            :disabled="disabled"
+            @click="emit('cancel')"
+          >
             {{ cancelLabel }}
           </button>
-          <button type="button" class="cairn-btn" @click="emit('confirm')">
+          <button type="button" class="cairn-btn" :disabled="disabled" @click="emit('confirm')">
             {{ confirmLabel }}
           </button>
         </div>

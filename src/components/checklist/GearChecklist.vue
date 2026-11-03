@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion-v'
 import { useChecklistStore } from '@/controller/checklistStore'
 import ChecklistForm from './ChecklistForm.vue'
 import ChecklistCategory from './ChecklistCategory.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const props = defineProps({
   route: { type: Object, required: true },
@@ -425,47 +426,25 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
       </aside>
     </div>
     <!-- Custom confirmation dialog -->
-    <div v-if="confirmation" class="gear-confirm-backdrop" @click.self="cancelConfirmation">
-      <section
-        class="gear-confirm-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="gear-confirm-title"
-      >
-        <span class="gear-confirm-eyebrow">CONFIRM ACTION</span>
+    <ConfirmDialog
+      :open="Boolean(confirmation)"
+      :title="confirmation?.type === 'delete' ? 'Remove this item?' : 'Regenerate checklist?'"
+      :confirm-label="confirmation?.type === 'delete' ? 'Remove item' : 'Regenerate'"
+      :disabled="checklistStore.loading || deletingItemId !== null"
+      @confirm="confirmAction"
+      @cancel="cancelConfirmation"
+    >
+      <template v-if="confirmation?.type === 'delete'">
+        Are you sure you want to remove
+        <strong>{{ confirmation.item.label }}</strong>
+        from your checklist?
+      </template>
 
-        <h3 id="gear-confirm-title">
-          {{ confirmation.type === 'delete' ? 'Remove this item?' : 'Regenerate checklist?' }}
-        </h3>
-
-        <p v-if="confirmation.type === 'delete'">
-          Are you sure you want to remove
-          <strong>{{ confirmation.item.label }}</strong>
-          from your checklist?
-        </p>
-
-        <p v-else>
-          Your current checklist will be replaced with a newly generated one. This action cannot be
-          undone.
-        </p>
-
-        <div class="gear-confirm-actions">
-          <button type="button" class="gear-confirm-cancel" @click="cancelConfirmation">
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            class="gear-confirm-accept"
-            :class="{ 'is-danger': confirmation.type === 'delete' }"
-            :disabled="checklistStore.loading || deletingItemId !== null"
-            @click="confirmAction"
-          >
-            {{ confirmation.type === 'delete' ? 'Remove item' : 'Regenerate' }}
-          </button>
-        </div>
-      </section>
-    </div>
+      <template v-else>
+        Your current checklist will be replaced with a newly generated one. This action cannot be
+        undone.
+      </template>
+    </ConfirmDialog>
   </article>
 </template>
 
