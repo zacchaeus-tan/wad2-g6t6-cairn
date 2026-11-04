@@ -4,7 +4,9 @@ import { AnimatePresence, motion } from 'motion-v'
 import {
   LONG_ITINERARY_DAYS,
   PACES,
+  daysForPace,
   maxDaysFor,
+  paceForDays,
   todayString,
 } from '@/controller/itineraryController'
 
@@ -23,6 +25,20 @@ const today = todayString()
 const startDate = ref(today)
 const days = ref(props.route.duration_days > 0 ? Math.min(props.route.duration_days, maxDays.value) : 1)
 const pace = ref('moderate')
+
+// Pace and days stay in step: picking a pace fills in its suggested days, and typing
+// a number of days moves the pace to match, so 1 day of a 5-day trek can't be relaxed.
+function choosePace(p) {
+  pace.value = p
+  const suggested = daysForPace(props.route, p)
+  if (suggested) {
+    days.value = suggested
+  }
+}
+
+watch(days, (newDays) => {
+  pace.value = paceForDays(props.route, newDays, pace.value)
+})
 
 const isValid = computed(
   () =>
@@ -101,7 +117,7 @@ function submit() {
           :key="p"
           type="button"
           :aria-pressed="pace === p ? 'true' : 'false'"
-          @click="pace = p"
+          @click="choosePace(p)"
         >
           {{ p.charAt(0).toUpperCase() + p.slice(1) }}
         </button>
