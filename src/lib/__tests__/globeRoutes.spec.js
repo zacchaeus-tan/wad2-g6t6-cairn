@@ -9,6 +9,7 @@ import {
   countrySummaries,
   difficultyLevel,
   hasRenderableGeometry,
+  mainTrail,
   routePosition,
   shortRouteName,
 } from '../globe/globeRoutes'
@@ -56,6 +57,61 @@ describe('globeRoutes', () => {
   it('should shorten a route name without leaving it blank', () => {
     expect(shortRouteName('Gunung Merbabu (Wekas BC)')).toBe('Gunung Merbabu')
     expect(shortRouteName('(Wekas BC)')).toBe('(Wekas BC)')
+  })
+
+  // Verify that the dot follows the main trail from the trailhead in one unbroken line:
+  // flipping a part stored back to front, and skipping a short side trip off the middle.
+  it('should find the main trail through a route with a side trip', () => {
+    const route = {
+      type: 'MultiLineString',
+      coordinates: [
+        // the side trip, about 220 m, leaving the main trail halfway along the first part
+        [
+          [110.005, 0],
+          [110.005, 0.002],
+        ],
+        // the second half of the main trail, stored back to front
+        [
+          [110.02, 0],
+          [110.01, 0],
+        ],
+        [
+          [110.0, 0],
+          [110.005, 0],
+          [110.01, 0],
+        ],
+      ],
+    }
+
+    expect(mainTrail(route, [110.0, 0])).toEqual([
+      [110.0, 0],
+      [110.005, 0],
+      [110.01, 0],
+      [110.02, 0],
+    ])
+  })
+
+  // Verify that a short stub at the trailhead, not joined to the rest, doesn't stop the dot
+  // walking the main trail.
+  it('should walk the main trail when the trailhead is on a stub', () => {
+    const route = {
+      type: 'MultiLineString',
+      coordinates: [
+        [
+          [110.0, 0],
+          [110.00003, 0],
+        ],
+        [
+          [110.03, 0],
+          [110.01, 0],
+        ],
+      ],
+    }
+
+    expect(mainTrail(route, [110.0, 0])).toEqual([
+      [110.01, 0],
+      [110.03, 0],
+    ])
   })
 
   // Verify that the "Fly to" list is alphabetical and only counts routes with a location.

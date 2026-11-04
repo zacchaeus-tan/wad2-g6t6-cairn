@@ -10,7 +10,7 @@
 
 import { animate } from 'motion-v'
 import { GRADES } from '@/lib/difficultyStyle'
-import { distanceInMetres, lineParts, unratedColour } from './globeRoutes'
+import { distanceInMetres, mainTrail, unratedColour } from './globeRoutes'
 
 const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
 
@@ -300,12 +300,10 @@ export function addRouteLayers(map, markerData) {
   })
 }
 
-// Walks a dot along the longest part of a route's line, over and over. Returns a function that
-// stops it and removes the dot.
-export function walkRoute(map, geometry) {
-  const line = lineParts(geometry).reduce((longest, part) =>
-    part.length > longest.length ? part : longest,
-  )
+// Walks a dot along a route's main trail (see mainTrail), from the trailhead (`start`) to the
+// far end, over and over. Returns a function that stops it and removes the dot.
+export function walkRoute(map, geometry, start) {
+  const line = mainTrail(geometry, start)
   // How far along the line each point is. Points aren't evenly spaced, so the dot moves by
   // distance rather than from point to point to keep a steady speed.
   const distances = [0]

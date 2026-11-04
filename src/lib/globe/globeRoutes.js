@@ -46,6 +46,134 @@ export function lineParts(geometry) {
   return geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates
 }
 
+// How close two points must be to count as the same spot on a trail
+const joinMetres = 50
+
+// A MultiLineString route is often a small trail network: side trips and alternates branch off
+// the middle of the main line, and the parts come in no set order or direction. This finds the
+// main trail through it, the longest way from the trailhead (`start`) that never walks the same
+// stretch twice, as one unbroken line. Branches off it and parts not joined to it are left out.
+export function mainTrail(geometry, start) {
+  const parts = lineParts(geometry)
+
+  // Where a part's end meets another part, cut the other part there, so that every junction
+  // is the end of a stretch
+  const cuts = parts.map((part) => new Set([0, part.length - 1]))
+  parts.forEach((part, i) => {
+    for (const end of [part[0], part.at(-1)]) {
+      parts.forEach((other, j) => {
+        const nearest = nearestIndex(other, end)
+        if (j !== i && distanceInMetres(other[nearest], end) < joinMetres) {
+          cuts[j].add(nearest)
+        }
+      })
+    }
+  })
+
+  // The junctions, and for each one the stretches leaving it. A stretch can be walked either
+  // way, so it is listed at both of its ends.
+  const junctions = []
+  const exits = []
+  function junctionAt(point) {
+    const index = junctions.findIndex((junction) => distanceInMetres(junction, point) < joinMetres)
+    if (index !== -1) {
+      return index
+    }
+    exits.push([])
+    return junctions.push(point) - 1
+  }
+  let stretchCount = 0
+  parts.forEach((part, i) => {
+    const indexes = [...cuts[i]].sort((a, b) => a - b)
+    for (let k = 1; k < indexes.length; k++) {
+      const line = part.slice(indexes[k - 1], indexes[k] + 1)
+      const from = junctionAt(line[0])
+      const to = junctionAt(line.at(-1))
+      const stretch = { id: stretchCount++, length: lineLength(line) }
+      exits[from].push({ ...stretch, to, line })
+      exits[to].push({ ...stretch, to: from, line: [...line].reverse() })
+    }
+  })
+
+  // Tries the ways on from a junction that don't reuse a stretch, and keeps the longest. Where
+  // many small loops meet, the number of ways grows too fast to try them all, so it takes the
+  // longest stretches first (the first way it finds is already a good one) and stops after
+  // maxTries, keeping the best found so far.
+  for (const stretches of exits) {
+    stretches.sort((a, b) => b.length - a.length)
+  }
+  const maxTries = 20000
+  let tries = 0
+  const used = new Set()
+  function longestFrom(junction) {
+    let best = { length: 0, lines: [] }
+    for (const stretch of exits[junction]) {
+      if (used.has(stretch.id) || ++tries > maxTries) {
+        continue
+      }
+      used.add(stretch.id)
+      const rest = longestFrom(stretch.to)
+      used.delete(stretch.id)
+      if (stretch.length + rest.length > best.length) {
+        best = { length: stretch.length + rest.length, lines: [stretch.line, ...rest.lines] }
+      }
+    }
+    return best
+  }
+
+  // Parts not joined to the rest, like a short stub at the trailhead, make their own little
+  // networks. The dot walks the network with the most trail in it, from its junction nearest
+  // the trailhead.
+  const network = junctions.map(() => -1)
+  const networkLength = []
+  junctions.forEach((_, first) => {
+    if (network[first] !== -1) {
+      return
+    }
+    const id = networkLength.push(0) - 1
+    network[first] = id
+    const toVisit = [first]
+    while (toVisit.length) {
+      for (const stretch of exits[toVisit.pop()]) {
+        // Half, because each stretch is listed at both of its ends
+        networkLength[id] += stretch.length / 2
+        if (network[stretch.to] === -1) {
+          network[stretch.to] = id
+          toVisit.push(stretch.to)
+        }
+      }
+    }
+  })
+  const mainNetwork = networkLength.indexOf(Math.max(...networkLength))
+  const onMainNetwork = junctions.map((_, i) => i).filter((i) => network[i] === mainNetwork)
+  const mainJunctions = onMainNetwork.map((i) => junctions[i])
+
+  const { lines } = longestFrom(onMainNetwork[nearestIndex(mainJunctions, start)])
+  // Each stretch starts where the one before ended, so that point is dropped
+  return lines.flatMap((line, i) => (i === 0 ? line : line.slice(1)))
+}
+
+function nearestIndex(points, target) {
+  let nearest = 0
+  let nearestDistance = Infinity
+  points.forEach((point, i) => {
+    const distance = distanceInMetres(point, target)
+    if (distance < nearestDistance) {
+      nearest = i
+      nearestDistance = distance
+    }
+  })
+  return nearest
+}
+
+function lineLength(line) {
+  let length = 0
+  for (let i = 1; i < line.length; i++) {
+    length += distanceInMetres(line[i - 1], line[i])
+  }
+  return length
+}
+
 // The south-west and north-east corners of a route line, for framing it on the map
 export function routeBounds(geometry) {
   let west = Infinity
@@ -74,8 +202,7 @@ export function routePosition(route) {
 
 // 1 (easy) to 4 (strenuous), from whichever difficulty the route has
 export function difficultyLevel(route) {
-  const value =
-    route.effective_difficulty ?? route.official_difficulty ?? route.technical_rating
+  const value = route.effective_difficulty ?? route.official_difficulty ?? route.technical_rating
   // Number(null) and Number('') are 0, which would otherwise show an unrated route as easy
   if (value == null || value === '') {
     return null
