@@ -75,6 +75,8 @@ function decimalsFor(value) {
   /* Shorter as the screen narrows: 44px/36px top and bottom on wide screens, down to 14px/12px on phones */
   padding: clamp(14px, 3vw, 44px) 20px clamp(12px, 2.5vw, 36px);
   border-right: 1px solid var(--granite-200);
+  /* The numbers size to their own box (cqi below), not the screen, so they never run into the next one */
+  container-type: inline-size;
 }
 
 .route-numbers-list > div:first-child {
@@ -95,7 +97,8 @@ function decimalsFor(value) {
 
 .route-numbers-list dd {
   margin: 0;
-  font-size: clamp(32px, 4.6vw, 68px);
+  /* 17% of the box's width fits nine characters like "+12,345 m" */
+  font-size: clamp(22px, 17cqi, 56px);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -113,7 +116,7 @@ function decimalsFor(value) {
   }
 }
 
-/* Below sm: smaller numbers and side padding on phones */
+/* Below sm: smaller side padding on phones */
 @media (width < 576px) {
   .route-numbers-list > div {
     padding-right: 12px;
@@ -121,10 +124,6 @@ function decimalsFor(value) {
 
   .route-numbers-list > div:nth-child(even) {
     padding-left: 12px;
-  }
-
-  .route-numbers-list dd {
-    font-size: 26px;
   }
 }
 </style>
