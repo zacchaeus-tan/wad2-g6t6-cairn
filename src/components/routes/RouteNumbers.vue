@@ -21,7 +21,9 @@ function decimalsFor(value) {
 <template>
   <section id="overview" class="route-numbers" aria-label="Route facts">
     <div class="cairn-wrap">
-      <dl class="route-numbers-list">
+      <!-- Bootstrap grid: two across, four from lg (992px) up. The lines between them are in the CSS,
+           on the same breakpoint, so keep the two in step -->
+      <dl class="route-numbers-list row row-cols-2 row-cols-lg-4 g-0 m-0">
         <div>
           <dt>Distance</dt>
           <dd v-if="toNumber(route.distance_km) != null" class="cairn-data">
@@ -66,17 +68,12 @@ function decimalsFor(value) {
   background: var(--ground);
 }
 
-.route-numbers-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  margin: 0;
-}
-
 .route-numbers-list > div {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: clamp(28px, 4vw, 44px) 20px clamp(24px, 3vw, 36px);
+  /* Shorter as the screen narrows: 44px/36px top and bottom on wide screens, down to 14px/12px on phones */
+  padding: clamp(14px, 3vw, 44px) 20px clamp(12px, 2.5vw, 36px);
   border-right: 1px solid var(--granite-200);
 }
 
@@ -105,11 +102,8 @@ function decimalsFor(value) {
   white-space: nowrap;
 }
 
-@media (max-width: 1000px) {
-  .route-numbers-list {
-    grid-template-columns: 1fr 1fr;
-  }
-
+/* Below lg, where they sit two across (row-cols-2 in the template), the even boxes end their row */
+@media (width < 992px) {
   .route-numbers-list > div:nth-child(odd) {
     padding-left: 0;
   }
@@ -119,7 +113,8 @@ function decimalsFor(value) {
   }
 }
 
-@media (max-width: 480px) {
+/* Below sm: smaller numbers and side padding on phones */
+@media (width < 576px) {
   .route-numbers-list > div {
     padding-right: 12px;
   }

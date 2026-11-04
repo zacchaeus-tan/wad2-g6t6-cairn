@@ -11,8 +11,8 @@ defineProps({
 </script>
 
 <template>
-  <div class="review-entry-meta">
-    <span class="review-entry-felt">
+  <div class="review-entry-meta d-flex flex-wrap align-items-center row-gap-2 column-gap-3 mt-2">
+    <span class="d-inline-flex align-items-center gap-2">
       Felt {{ difficultyLabel(review.perceived_difficulty) }}
       <DifficultyMark :grade="review.perceived_difficulty" :show-label="false" />
     </span>
@@ -23,7 +23,7 @@ defineProps({
     <div
       v-for="incident in review.review_incidents"
       :key="incident.id"
-      class="review-entry-incident"
+      class="review-entry-incident w-100 d-flex align-items-start gap-2"
     >
       <WarningIcon />
       <div>
@@ -36,19 +36,8 @@ defineProps({
 
 <style scoped>
 .review-entry-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-top: 8px;
   color: var(--granite-700);
   font-size: 13px;
-}
-
-.review-entry-felt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .is-done {
@@ -62,10 +51,6 @@ defineProps({
 }
 
 .review-entry-incident {
-  flex-basis: 100%;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   padding: 6px 10px;
   background: var(--warning-mist);
   color: #5c3d00;

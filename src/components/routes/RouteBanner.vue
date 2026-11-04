@@ -59,39 +59,51 @@ const warnings = computed(() => {
     <img class="route-banner-photo" :src="bannerPhoto" alt="" />
 
     <div v-if="warnings.length" class="cairn-wrap route-banner-warning" role="alert">
-      <a :href="warningLink">
+      <a :href="warningLink" class="d-inline-flex align-items-center gap-3">
         <WarningIcon />
         <span>
-          <span v-for="warning in warnings" :key="warning.key" class="route-banner-warning-item">
-            <strong>{{ warning.title }}</strong>
+          <span
+            v-for="warning in warnings"
+            :key="warning.key"
+            class="route-banner-warning-item d-block"
+          >
+            <strong class="d-block">{{ warning.title }}</strong>
             <span v-if="warning.note">{{ warning.note }}</span>
           </span>
         </span>
       </a>
     </div>
 
-    <div class="cairn-wrap route-banner-inner">
-      <div>
-        <p class="route-banner-crumb">
-          <RouterLink to="/routes">Routes</RouterLink
-          ><template v-if="route.country"> / {{ route.country }}</template>
-        </p>
-        <h1 id="route-title" class="route-banner-title">{{ route.name }}</h1>
-        <p class="route-banner-labels">
-          <DifficultyMark :grade="grade" :color="lineColor" />
-          <span v-if="route.avg_rating != null" class="route-banner-stars">
-            <StarIcon v-for="(fill, index) in starFills" :key="index" :fill="fill" />
-          </span>
-          <SaveRouteButton v-if="isLoggedIn" :routeId="route.id"></SaveRouteButton>
-        </p>
-      </div>
-      <div class="route-banner-art">
-        <RouteLine
-          class="route-banner-line"
-          :geometry="route.geometry"
-          :color="lineColor"
-          :width="5"
-        />
+    <div class="cairn-wrap route-banner-inner d-flex flex-column">
+      <!-- Bootstrap grid: the title beside the route line from lg (992px) up, under it on smaller screens.
+           The padding and line height for the stacked layout are in the CSS, on the same breakpoint. -->
+      <div class="row flex-grow-1 align-items-end gx-lg-5 gy-4">
+        <div class="col-lg-6">
+          <p class="route-banner-crumb">
+            <RouterLink to="/routes">Routes</RouterLink
+            ><template v-if="route.country"> / {{ route.country }}</template>
+          </p>
+          <h1 id="route-title" class="route-banner-title mt-3">{{ route.name }}</h1>
+          <p
+            class="route-banner-labels d-flex flex-wrap align-items-center row-gap-2 column-gap-4 mt-4"
+          >
+            <DifficultyMark :grade="grade" :color="lineColor" />
+            <span v-if="route.avg_rating != null" class="route-banner-stars">
+              <StarIcon v-for="(fill, index) in starFills" :key="index" :fill="fill" />
+            </span>
+            <SaveRouteButton v-if="isLoggedIn" :routeId="route.id"></SaveRouteButton>
+          </p>
+        </div>
+        <div class="col-lg-6 order-first order-lg-0 align-self-stretch">
+          <div class="route-banner-art h-100">
+            <RouteLine
+              class="route-banner-line"
+              :geometry="route.geometry"
+              :color="lineColor"
+              :width="5"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -135,9 +147,6 @@ const warnings = computed(() => {
 }
 
 .route-banner-warning a {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
   color: var(--paper);
   text-decoration: none;
 }
@@ -148,12 +157,7 @@ const warnings = computed(() => {
   flex: none;
 }
 
-.route-banner-warning-item {
-  display: block;
-}
-
 .route-banner-warning-item strong {
-  display: block;
   color: var(--hazard);
   font-size: 13px;
   font-weight: 900;
@@ -178,10 +182,6 @@ const warnings = computed(() => {
 .route-banner-inner {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: end;
-  gap: clamp(24px, 4vw, 72px);
   padding-top: clamp(150px, 19vh, 180px);
   padding-bottom: 48px;
 }
@@ -206,7 +206,6 @@ const warnings = computed(() => {
 
 .route-banner-title {
   max-width: 14ch;
-  margin-top: 12px !important;
   font-size: clamp(44px, 6.6vw, 104px);
   line-height: 0.95;
   font-weight: 900;
@@ -215,11 +214,6 @@ const warnings = computed(() => {
 }
 
 .route-banner-labels {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 22px;
-  margin-top: 22px !important;
   font-size: 15px;
   font-weight: 700;
 }
@@ -242,7 +236,6 @@ const warnings = computed(() => {
 
 .route-banner-art {
   position: relative;
-  align-self: stretch;
   min-height: clamp(320px, 54vh, 560px);
 }
 
@@ -272,14 +265,13 @@ const warnings = computed(() => {
   }
 }
 
-@media (max-width: 1000px) {
+/* Below lg, where the title sits under the route line (col-lg-6 in the template) */
+@media (width < 992px) {
   .route-banner-inner {
-    grid-template-columns: 1fr;
     padding-top: 160px;
   }
 
   .route-banner-art {
-    order: -1;
     min-height: 240px;
   }
 }

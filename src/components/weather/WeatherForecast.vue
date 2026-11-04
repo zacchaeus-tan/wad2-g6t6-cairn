@@ -51,8 +51,18 @@ function dayNumber(day) {
   return dateOf(day).getDate()
 }
 
-function fullDate(day) {
-  return dateOf(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+// "Nov", shown under or beside the day number
+function shortMonth(day) {
+  return dateOf(day).toLocaleDateString('en-GB', { month: 'short' })
+}
+
+function fullWeekday(day) {
+  return dateOf(day).toLocaleDateString('en-GB', { weekday: 'long' })
+}
+
+// Chart labels to one decimal place, like 12.4°
+function oneDecimal(temperature) {
+  return `${temperature.toFixed(1)}°`
 }
 
 // Both lines share one scale, from the week's coldest to warmest high, so the gap
@@ -60,8 +70,8 @@ function fullDate(day) {
 const scale = computed(() => {
   const values = []
   for (const day of days.value) {
-    if (day.max != null) values.push(Math.round(day.max))
-    if (day.summit?.max != null) values.push(Math.round(day.summit.max))
+    if (day.max != null) values.push(day.max)
+    if (day.summit?.max != null) values.push(day.summit.max)
   }
   if (!values.length) return { low: 0, high: 0 }
   return { low: Math.min(...values), high: Math.max(...values) }
@@ -71,7 +81,7 @@ const scale = computed(() => {
 function heightOf(temperature) {
   const { low, high } = scale.value
   if (high === low) return 50
-  return 14 + (1 - (Math.round(temperature) - low) / (high - low)) * 72
+  return 14 + (1 - (temperature - low) / (high - low)) * 72
 }
 
 function linePath(values) {
@@ -122,7 +132,7 @@ const chartDays = computed(() =>
     <p v-else-if="!weather" class="weather-message">Loading the forecast...</p>
 
     <template v-else>
-      <p class="weather-now">
+      <p class="weather-now d-flex flex-wrap align-items-baseline row-gap-1 column-gap-2">
         <span class="cairn-label">Current Weather:</span>
         <strong class="cairn-data">{{ show(weather.current.temperature_2m, '°C') }}</strong>
         <template v-if="weather.summitCurrent">
@@ -193,14 +203,14 @@ const chartDays = computed(() =>
               class="weather-point is-summit cairn-data"
               :style="{ top: `${heightOf(day.summit.max)}%` }"
             >
-              <i></i>{{ Math.round(day.summit.max) }}°
+              <i></i>{{ oneDecimal(day.summit.max) }}
             </span>
             <span
               v-if="day.max != null"
               class="weather-point is-trailhead cairn-data"
               :style="{ top: `${heightOf(day.max)}%` }"
             >
-              <i></i>{{ Math.round(day.max) }}°
+              <i></i>{{ oneDecimal(day.max) }}
             </span>
           </span>
           <span class="weather-day-foot">
@@ -239,13 +249,20 @@ const chartDays = computed(() =>
         </button>
       </motion.div>
 
-      <div class="weather-summary">
-        <span class="weather-summary-number cairn-data">{{ dayNumber(selectedDay) }}</span>
-        <span class="weather-summary-what">
-          <span class="cairn-label">{{ fullDate(selectedDay) }}</span>
+      <!-- Date, weather and the details button in one row from md (768px) up, stacked on phones -->
+      <div class="weather-summary d-flex flex-column flex-md-row align-items-md-center gap-3">
+        <!-- "5 NOV": the month under the day number from md up, beside it on phones -->
+        <span
+          class="weather-summary-date cairn-data d-flex flex-md-column align-items-center align-items-md-start column-gap-2"
+        >
+          <span class="weather-summary-number">{{ dayNumber(selectedDay) }}</span>
+          <span class="weather-summary-month text-uppercase">{{ shortMonth(selectedDay) }}</span>
+        </span>
+        <span class="weather-summary-what flex-grow-1 d-grid gap-1">
+          <span class="cairn-label">{{ fullWeekday(selectedDay) }}</span>
           <strong>{{ weatherLabel(selectedDay.code) }}</strong>
           <span
-            class="weather-summary-warnings"
+            class="weather-summary-warnings d-flex align-items-start gap-2"
             :class="{ 'has-warnings': selectedDay.warnings.length }"
           >
             <WarningIcon v-if="selectedDay.warnings.length" />
@@ -279,72 +296,71 @@ const chartDays = computed(() =>
           :transition="{ duration: 0.5, ease: EASE }"
         >
           <div class="weather-details-inner">
-            <div>
-              <h3>Trailhead</h3>
-              <dl>
-                <dt>High / low</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.max, '°') }} / {{ show(selectedDay.min, '°C') }}
-                </dd>
-                <dt>Feels like</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.feelsMax, '°') }} / {{ show(selectedDay.feelsMin, '°C') }}
-                </dd>
-                <dt>Chance of rain</dt>
-                <dd class="cairn-data">{{ show(selectedDay.rainChance, '%') }}</dd>
-                <dt>Morning / afternoon rain</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.morningRainChance, '%') }} /
-                  {{ show(selectedDay.afternoonRainChance, '%') }}
-                </dd>
-                <dt>Rain total</dt>
-                <dd class="cairn-data">{{ show(selectedDay.rain, ' mm') }}</dd>
-                <dt>Hours of rain</dt>
-                <dd class="cairn-data">{{ show(selectedDay.rainHours, ' h') }}</dd>
-              </dl>
-            </div>
-            <div>
-              <h3 v-if="selectedDay.summit">
-                Summit · {{ weather.summitElevation.toLocaleString('en') }} m
-              </h3>
-              <dl v-if="selectedDay.summit">
-                <dt>High / low</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.summit.max, '°') }} / {{ show(selectedDay.summit.min, '°C') }}
-                </dd>
-                <dt>Feels like</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.summit.feelsMax, '°') }} /
-                  {{ show(selectedDay.summit.feelsMin, '°C') }}
-                </dd>
-              </dl>
-              <h3>The day</h3>
-              <dl>
-                <dt>Wind / gusts</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.windMax, ' km/h') }} /
-                  {{ show(selectedDay.gustMax, ' km/h') }}
-                </dd>
-                <dt>UV index</dt>
-                <dd class="cairn-data">{{ show(selectedDay.uv) }}</dd>
-                <dt>Lowest daytime visibility</dt>
-                <dd class="cairn-data">{{ showVisibility(selectedDay.minVisibility) }}</dd>
-                <dt>Average humidity</dt>
-                <dd class="cairn-data">{{ show(selectedDay.humidity, '%') }}</dd>
-                <dt>Sunrise / sunset</dt>
-                <dd class="cairn-data">
-                  {{ show(selectedDay.sunrise) }} / {{ show(selectedDay.sunset) }}
-                </dd>
-              </dl>
+            <!-- Bootstrap grid: Trailhead and Summit side by side from lg (992px) up, stacked below -->
+            <div class="row row-cols-1 row-cols-lg-2 g-4">
+              <div>
+                <h3>Trailhead</h3>
+                <dl>
+                  <dt>High / low</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.max, '°') }} / {{ show(selectedDay.min, '°C') }}
+                  </dd>
+                  <dt>Feels like</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.feelsMax, '°') }} / {{ show(selectedDay.feelsMin, '°C') }}
+                  </dd>
+                  <dt>Chance of rain</dt>
+                  <dd class="cairn-data">{{ show(selectedDay.rainChance, '%') }}</dd>
+                  <dt>Morning / afternoon rain</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.morningRainChance, '%') }} /
+                    {{ show(selectedDay.afternoonRainChance, '%') }}
+                  </dd>
+                  <dt>Rain total</dt>
+                  <dd class="cairn-data">{{ show(selectedDay.rain, ' mm') }}</dd>
+                  <dt>Hours of rain</dt>
+                  <dd class="cairn-data">{{ show(selectedDay.rainHours, ' h') }}</dd>
+                </dl>
+              </div>
+              <div>
+                <h3 v-if="selectedDay.summit">
+                  Summit · {{ weather.summitElevation.toLocaleString('en') }} m
+                </h3>
+                <dl v-if="selectedDay.summit">
+                  <dt>High / low</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.summit.max, '°') }} /
+                    {{ show(selectedDay.summit.min, '°C') }}
+                  </dd>
+                  <dt>Feels like</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.summit.feelsMax, '°') }} /
+                    {{ show(selectedDay.summit.feelsMin, '°C') }}
+                  </dd>
+                </dl>
+                <h3>The day</h3>
+                <dl>
+                  <dt>Wind / gusts</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.windMax, ' km/h') }} /
+                    {{ show(selectedDay.gustMax, ' km/h') }}
+                  </dd>
+                  <dt>UV index</dt>
+                  <dd class="cairn-data">{{ show(selectedDay.uv) }}</dd>
+                  <dt>Lowest daytime visibility</dt>
+                  <dd class="cairn-data">{{ showVisibility(selectedDay.minVisibility) }}</dd>
+                  <dt>Average humidity</dt>
+                  <dd class="cairn-data">{{ show(selectedDay.humidity, '%') }}</dd>
+                  <dt>Sunrise / sunset</dt>
+                  <dd class="cairn-data">
+                    {{ show(selectedDay.sunrise) }} / {{ show(selectedDay.sunset) }}
+                  </dd>
+                </dl>
+              </div>
             </div>
           </div>
         </motion.div>
       </AnimatePresence>
-
-      <p class="cairn-fine">
-        Weather data by
-        <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>.
-      </p>
     </template>
   </article>
 </template>
@@ -367,10 +383,6 @@ const chartDays = computed(() =>
 }
 
 .weather-now {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 12px;
   color: var(--granite-700);
   font-size: 14px;
 }
@@ -598,10 +610,6 @@ const chartDays = computed(() =>
 
 /* Selected day and the details drawer */
 .weather-summary {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 20px;
   padding: 18px 20px;
   background: var(--linen);
 }
@@ -612,9 +620,10 @@ const chartDays = computed(() =>
   line-height: 1;
 }
 
-.weather-summary-what {
-  display: grid;
-  gap: 4px;
+.weather-summary-month {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .weather-summary-what .cairn-label {
@@ -627,9 +636,6 @@ const chartDays = computed(() =>
 }
 
 .weather-summary-warnings {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   color: var(--granite-700);
   font-size: 14px;
 }
@@ -653,9 +659,6 @@ const chartDays = computed(() =>
 }
 
 .weather-details-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 28px;
   padding: 22px 20px 16px;
   border: 2px solid var(--ink);
   border-top: 0;
@@ -696,7 +699,8 @@ const chartDays = computed(() =>
   text-align: right;
 }
 
-@media (max-width: 900px) {
+/* Below lg the axis column goes and the chart scrolls sideways, 80px per day */
+@media (width < 992px) {
   .weather-chart {
     grid-template-columns: repeat(var(--days), minmax(80px, 1fr));
     overflow-x: auto;
@@ -709,11 +713,6 @@ const chartDays = computed(() =>
   .weather-lines {
     left: 0;
     width: max(100%, calc(80px * var(--days)));
-  }
-
-  .weather-summary,
-  .weather-details-inner {
-    grid-template-columns: 1fr;
   }
 }
 </style>

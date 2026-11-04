@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useReviewsStore } from '@/controller/reviewsStore'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import TrashButton from '@/components/common/TrashButton.vue'
 import IncidentFields from './IncidentFields.vue'
 
 const props = defineProps({
@@ -70,18 +72,26 @@ async function submitReview() {
   if (submitted) emit('saved')
 }
 
+// Deleting can't be undone, so it asks first
+const confirmingDelete = ref(false)
+const deleting = ref(false)
+
 async function deleteReview() {
+  deleting.value = true
   const deleted = await reviewsStore.remove(myReview.value.id, props.route.id)
+  deleting.value = false
+  confirmingDelete.value = false
   if (deleted) emit('deleted')
 }
 </script>
 
 <template>
-  <form class="review-form" @submit.prevent="submitReview">
+  <form class="review-form d-grid gap-3 p-4" @submit.prevent="submitReview">
     <h3 class="review-form-title">{{ myReview ? 'Edit your review' : 'Write a review' }}</h3>
 
-    <div class="review-form-row">
-      <label class="review-form-field">
+    <!-- Bootstrap grid: 3 across from md (768px) up, stacked on phones -->
+    <div class="row row-cols-1 row-cols-md-3 g-3">
+      <label class="review-form-field d-grid gap-2">
         <span class="cairn-label">Quality (1–5)</span>
         <select v-model.number="form.rating" class="cairn-input">
           <option :value="null" disabled>Select rating</option>
@@ -89,7 +99,7 @@ async function deleteReview() {
         </select>
       </label>
 
-      <label class="review-form-field">
+      <label class="review-form-field d-grid gap-2">
         <span class="cairn-label">How hard did it feel?</span>
         <select v-model.number="form.perceivedDifficulty" class="cairn-input">
           <option :value="null" disabled>Select difficulty</option>
@@ -100,7 +110,7 @@ async function deleteReview() {
         </select>
       </label>
 
-      <label class="review-form-field">
+      <label class="review-form-field d-grid gap-2">
         <span class="cairn-label">Did you finish?</span>
         <select v-model="form.completed" class="cairn-input">
           <option :value="null" disabled>Select an answer</option>
@@ -110,7 +120,7 @@ async function deleteReview() {
       </label>
     </div>
 
-    <label class="review-form-field">
+    <label class="review-form-field d-grid gap-2">
       <span class="cairn-label">Your review</span>
       <textarea
         v-model="form.reviewText"
@@ -128,34 +138,41 @@ async function deleteReview() {
       @remove="form.incidents.splice(index, 1)"
     />
 
-    <div class="review-form-actions">
+    <div class="d-flex flex-wrap align-items-center gap-2">
       <button type="button" class="cairn-btn is-ghost is-small" @click="addIncident">
         Flag an incident
       </button>
       <button :disabled="saving" type="submit" class="cairn-btn is-small">
         {{ myReview ? 'Update review' : 'Submit review' }}
       </button>
-      <button
+      <TrashButton
         v-if="myReview"
-        type="button"
-        class="cairn-link review-form-delete"
-        @click="deleteReview"
-      >
-        Delete
-      </button>
+        class="ms-auto"
+        label="Delete your review"
+        @click="confirmingDelete = true"
+      />
     </div>
 
     <p v-if="reviewsStore.error" class="review-form-error">
       {{ reviewsStore.error }}
     </p>
+
+    <ConfirmDialog
+      :open="confirmingDelete"
+      title="Delete your review?"
+      confirm-label="Delete review"
+      :disabled="deleting"
+      @confirm="deleteReview"
+      @cancel="confirmingDelete = false"
+    >
+      Your rating, review and any incidents you flagged will be removed from this route. You can't
+      undo this.
+    </ConfirmDialog>
   </form>
 </template>
 
 <style scoped>
 .review-form {
-  display: grid;
-  gap: 16px;
-  padding: 24px;
   border: 2px solid var(--ink);
   background: var(--white);
 }
@@ -163,17 +180,6 @@ async function deleteReview() {
 .review-form-title {
   font-size: 18px;
   font-weight: 900;
-}
-
-.review-form-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.review-form-field {
-  display: grid;
-  gap: 6px;
 }
 
 .review-form-field .cairn-label {
@@ -186,28 +192,10 @@ async function deleteReview() {
   resize: vertical;
 }
 
-.review-form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.review-form-delete {
-  margin-left: 6px;
-  color: #b42318;
-}
-
 .review-form-error {
   padding: 10px 12px;
   background: #fdecea;
   color: #b42318;
   font-size: 14px;
-}
-
-@media (max-width: 700px) {
-  .review-form-row {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
