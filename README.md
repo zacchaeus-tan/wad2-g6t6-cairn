@@ -55,7 +55,7 @@ A test earns its place if it does at least one of these:
 2. **Protects a rule**: something that keeps hikers safe or data correct, such as sign-in guards, a closure needing a note, or confirming before a review is removed.
 3. **Catches a real failure**: an error a user could actually hit, such as the database being down, a wrong password or a failed save.
 
-We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, making 33.
+We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, making 34.
 
 ### Focus areas
 
@@ -149,7 +149,7 @@ You can also run them from the Testing panel in VS Code with the [Playwright Tes
 | `e2e/quiz.spec.js` (5) | Get sent to sign in, go back without losing an answer, save to the profile, retake it with a new answer, and see an error if saving fails |
 | `e2e/admin.spec.js` (8) | Keep non-admins out, check what needs attention, turn a hazard report into an alert, take an alert down, close a route, and remove a review |
 | `e2e/route-signed-in.spec.js` (3) | Sign in from a route, save it and find it on the profile, post a review that flags a hazard, and be stopped from flagging one without a description |
-| `e2e/legal.spec.js` (1) | Open the privacy policy from the footer without signing in |
+| `e2e/legal.spec.js` (2) | Open the privacy policy from the footer without signing in |
 
 ### Lint with [ESLint](https://eslint.org/)
 
