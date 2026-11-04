@@ -232,7 +232,8 @@ async function showRouteGeometry(routeId) {
   stopWalker?.()
   stopWalker = null
   if (line && routeId === pinnedRouteId && !openingRoute.value && !prefersReducedMotion) {
-    stopWalker = walkRoute(globeView, line)
+    const route = routesOnGlobe.value.find((route) => route.id === routeId)
+    stopWalker = walkRoute(globeView, line, routePosition(route))
   }
 }
 
