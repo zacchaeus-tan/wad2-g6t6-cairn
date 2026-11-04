@@ -17,6 +17,11 @@ const hiker = ref({ x: 0, y: 0 })
 const trailPath = ref(null)
 let totalLength = 0
 let resizeObserver = null
+let resizeTimer = null
+
+// Rebuilding measures every section and redraws all the grass, so while the page is
+// being resized (dragging the window or DevTools) it waits until the size settles
+const RESIZE_DELAY_MS = 150
 
 // A smooth curve (Catmull-Rom) through the points, written as cubic Béziers
 function smoothPath(points) {
@@ -104,13 +109,31 @@ function draw(amount) {
 
 useMotionValueEvent(props.progress, 'change', draw)
 
+function onResize() {
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    const container = root.value?.parentElement
+    // Nothing to redraw if it ended up the same size it was built for
+    if (
+      !container ||
+      (container.clientWidth === width.value && container.offsetHeight === height.value)
+    ) {
+      return
+    }
+    build()
+  }, RESIZE_DELAY_MS)
+}
+
 onMounted(() => {
-  resizeObserver = new ResizeObserver(() => build())
+  resizeObserver = new ResizeObserver(onResize)
   resizeObserver.observe(root.value.parentElement)
   build()
 })
 
-onBeforeUnmount(() => resizeObserver?.disconnect())
+onBeforeUnmount(() => {
+  clearTimeout(resizeTimer)
+  resizeObserver?.disconnect()
+})
 </script>
 
 <template>
