@@ -152,14 +152,22 @@
   position: relative;
   font-size: 17px;
   min-width: 0;
+  transition: color 0.35s var(--ease, ease);
 }
 
 .gear-item-text.is-checked {
   color: var(--granite-500, #7a867d);
-  text-decoration: line-through;
-  text-decoration-color: var(--gear-granite);
-  text-decoration-thickness: 2px;
-  text-decoration-skip-ink: none;
+}
+
+/* A strike that draws across once the item is ticked. It's a background on an inline
+   span, so on wrapped text it runs along the first line, then the next. */
+.gear-item-strike {
+  background: linear-gradient(var(--gear-granite), var(--gear-granite)) no-repeat 0 55% / 0% 2px;
+  transition: background-size 0.35s var(--ease, ease);
+}
+
+.gear-item-text.is-checked .gear-item-strike {
+  background-size: 100% 2px;
 }
 
 .gear-item-quantity {

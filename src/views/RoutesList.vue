@@ -38,7 +38,39 @@ const routes = ref([])
 const loading = ref(true)
 const error = ref('')
 
+// searchTerm is what's in the box; appliedSearch is what the results are filtered by.
+// It only catches up once typing stops, so the tiles don't reshuffle on every letter.
+const SEARCH_DELAY_MS = 350
+const SEARCH_MIN_LENGTH = 2
 const searchTerm = ref('')
+const appliedSearch = ref('')
+let searchTimer = null
+
+function applySearch() {
+  clearTimeout(searchTimer)
+  appliedSearch.value = searchTerm.value.trim()
+}
+
+watch(searchTerm, (text) => {
+  clearTimeout(searchTimer)
+  const term = text.trim()
+  // An emptied box shows every route again straight away
+  if (!term) {
+    appliedSearch.value = ''
+    return
+  }
+  // One letter matches almost everything, so wait for a second (or for Enter)
+  searchTimer = setTimeout(() => {
+    appliedSearch.value = term.length < SEARCH_MIN_LENGTH ? '' : term
+  }, SEARCH_DELAY_MS)
+})
+
+// Enter searches at once, then takes you down to what it found
+function searchNow() {
+  applySearch()
+  scrollToResults()
+}
+
 const selectedCountry = ref('')
 const selectedGrades = ref([])
 const selectedTrips = ref([])
@@ -114,7 +146,7 @@ const countries = computed(() => {
 
 // skip leaves one filter out, so each option can show how many routes it would give.
 function matchesFilters(route, skip = '') {
-  const query = searchTerm.value.trim().toLocaleLowerCase()
+  const query = appliedSearch.value.toLocaleLowerCase()
   // route names may be missing, so ?. avoids calling toLocaleLowerCase on undefined.
   if (query && !route.name?.toLocaleLowerCase().includes(query)) {
     return false
@@ -202,17 +234,16 @@ const filteredRoutes = computed(() => {
 const displayedRoutes = computed(() => filteredRoutes.value.slice(0, visibleCount.value))
 
 const filterBar = ref(null)
-const results = ref(null)
 
 // Bring the first result into view, just under the sticky bar. upOnly stops it pulling
 // the page down while someone is still typing in the banner search.
 function scrollToResults(upOnly = false) {
-  if (!results.value) {
+  if (!barSentinel.value) {
     return
   }
-  const barHeight = filterBar.value ? filterBar.value.offsetHeight : 0
-  // One pixel past the bar's resting point, so it counts as stuck and shows its own search
-  const offset = results.value.getBoundingClientRect().top - barHeight + 1
+  // One pixel past the bar's resting point (its sentinel), so it counts as stuck and shows
+  // its own search. The bar grows once stuck, so its height can't be used to work this out.
+  const offset = barSentinel.value.getBoundingClientRect().top + 1
   if (upOnly && offset >= 0) {
     return
   }
@@ -221,7 +252,15 @@ function scrollToResults(upOnly = false) {
 
 // Start again from the first page, at the top of the results, whenever the results change
 watch(
-  [searchTerm, selectedCountry, selectedGrades, selectedTrips, distanceRange, climbRange, sortBy],
+  [
+    appliedSearch,
+    selectedCountry,
+    selectedGrades,
+    selectedTrips,
+    distanceRange,
+    climbRange,
+    sortBy,
+  ],
   () => {
     visibleCount.value = PAGE_SIZE
     scrollToResults(true)
@@ -285,10 +324,10 @@ const tripSummary = computed(() =>
 // One pill per applied filter, each with its own way to remove it
 const activeFilters = computed(() => {
   const pills = []
-  if (searchTerm.value.trim()) {
+  if (appliedSearch.value) {
     pills.push({
       key: 'search',
-      label: `“${searchTerm.value.trim()}”`,
+      label: `“${appliedSearch.value}”`,
       remove: () => (searchTerm.value = ''),
     })
   }
@@ -424,6 +463,7 @@ watch(barSentinel, (element) => {
 })
 
 onBeforeUnmount(() => {
+  clearTimeout(searchTimer)
   stickObserver?.disconnect()
   mdOrBelowQuery.removeEventListener('change', onScreenChange)
   document.removeEventListener('click', onDocumentClick)
@@ -464,13 +504,13 @@ onBeforeUnmount(() => {
             <circle cx="11" cy="11" r="6.5" />
             <path d="m20 20-4.4-4.4" />
           </svg>
-          <!-- Enter takes you down to what the search found -->
+          <!-- Enter searches straight away and takes you down to what it found -->
           <input
             v-model="searchTerm"
             type="search"
             placeholder="Search a route, like Kinabalu"
             data-testid="routes-search"
-            @keydown.enter="scrollToResults()"
+            @keydown.enter="searchNow"
           />
         </label>
       </motion.div>
@@ -508,15 +548,32 @@ onBeforeUnmount(() => {
                 @toggle="toggleFilter('country')"
                 @close="closeFilter('country')"
               >
-                <label class="routes-field">
-                  <span class="cairn-label">Country</span>
-                  <select v-model="selectedCountry" class="cairn-input">
-                    <option value="">All countries</option>
-                    <option v-for="country in countries" :key="country" :value="country">
+                <!-- Radios, as only one country can be picked at a time -->
+                <fieldset class="routes-options routes-country-options">
+                  <legend class="cairn-visually-hidden">Country</legend>
+                  <label class="routes-option">
+                    <input v-model="selectedCountry" type="radio" name="country" value="" />
+                    <span>
+                      All countries
+                      <span class="routes-option-count cairn-data">{{
+                        countFor('country', () => true)
+                      }}</span>
+                    </span>
+                  </label>
+                  <label v-for="country in countries" :key="country" class="routes-option">
+                    <input v-model="selectedCountry" type="radio" name="country" :value="country" />
+                    <span>
                       {{ country }}
-                    </option>
-                  </select>
-                </label>
+                      <span class="routes-option-count cairn-data">{{
+                        countFor(
+                          'country',
+                          (r) =>
+                            r.country?.trim().toLocaleLowerCase() === country.toLocaleLowerCase(),
+                        )
+                      }}</span>
+                    </span>
+                  </label>
+                </fieldset>
               </FilterDropdown>
 
               <FilterDropdown
@@ -669,7 +726,7 @@ onBeforeUnmount(() => {
               v-model="searchTerm"
               type="search"
               placeholder="Search a route, like Kinabalu"
-              @keydown.enter="scrollToResults()"
+              @keydown.enter="searchNow"
             />
           </label>
 
@@ -689,7 +746,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <section ref="results" class="cairn-wrap routes-results" aria-label="Route results">
+      <section class="cairn-wrap routes-results" aria-label="Route results">
         <!-- Bootstrap grid: the pills and the key share a row from md (768px) up, the key below them on phones -->
         <div class="row align-items-center gy-3 py-4">
           <div class="col-12 col-md d-flex flex-wrap align-items-center gap-2">
@@ -1036,17 +1093,18 @@ onBeforeUnmount(() => {
 }
 
 /* Inside the filter panels */
-.routes-field {
-  display: grid;
-  gap: 8px;
-}
-
 .routes-options {
   display: grid;
   gap: 6px;
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+/* Fits today's countries; past that the list scrolls inside the panel */
+.routes-country-options {
+  max-height: 440px;
+  overflow-y: auto;
 }
 
 .routes-option {

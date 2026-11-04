@@ -23,6 +23,42 @@ export function maxDaysFor(route) {
   return Math.min(ABSOLUTE_MAX_DAYS, Math.max(MIN_MAX_DAYS, Math.ceil(usual * 1.5)))
 }
 
+// Days suggested for each pace: relaxed spreads the route over about 1.5x its
+// usual duration and fast fits it into about 0.75x. null when the route has no
+// usual duration to start from, so the form keeps whatever days were chosen.
+export function daysForPace(route, pace) {
+  const usual = Number(route.duration_days)
+  if (!usual) {
+    return null
+  }
+  let suggested = usual
+  if (pace === 'relaxed') {
+    suggested = Math.ceil(usual * 1.5)
+  } else if (pace === 'fast') {
+    suggested = Math.max(1, Math.floor(usual * 0.75))
+  }
+  return Math.min(suggested, maxDaysFor(route))
+}
+
+// The pace a number of days works out to: fewer days than usual is fast, more is
+// relaxed. A one-day route can't be done in fewer days, so one day can stay fast.
+export function paceForDays(route, days, currentPace) {
+  const usual = Number(route.duration_days)
+  if (!usual || !Number.isInteger(days)) {
+    return currentPace
+  }
+  if (days > usual) {
+    return 'relaxed'
+  }
+  if (days < usual) {
+    return 'fast'
+  }
+  if (currentPace === 'fast' && daysForPace(route, 'fast') === usual) {
+    return 'fast'
+  }
+  return 'moderate'
+}
+
 // Today's date as 'YYYY-MM-DD' in the user's own timezone
 export function todayString() {
   const now = new Date()

@@ -250,10 +250,13 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
                         />
 
                         <span class="gear-item-text" :class="{ 'is-checked': item.is_checked }">
-                          {{ item.label }}
+                          <!-- Inline, so the strike can draw along every line the text wraps onto -->
+                          <span class="gear-item-strike">
+                            {{ item.label }}
 
-                          <span v-if="item.quantity" class="gear-item-quantity">
-                            — {{ item.quantity }}
+                            <span v-if="item.quantity" class="gear-item-quantity">
+                              — {{ item.quantity }}
+                            </span>
                           </span>
                         </span>
 
