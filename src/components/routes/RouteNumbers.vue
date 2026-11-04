@@ -23,7 +23,7 @@ function decimalsFor(value) {
     <div class="cairn-wrap">
       <!-- Bootstrap grid: two across, four from lg (992px) up. The lines between them are in the CSS,
            on the same breakpoint, so keep the two in step -->
-      <dl class="route-numbers-list row row-cols-2 row-cols-lg-4 g-0 m-0">
+      <dl class="route-numbers-list row row-cols-2 row-cols-lg-4 g-0 m-0 text-center">
         <div>
           <dt>Distance</dt>
           <dd v-if="toNumber(route.distance_km) != null" class="cairn-data">
@@ -79,10 +79,6 @@ function decimalsFor(value) {
   container-type: inline-size;
 }
 
-.route-numbers-list > div:first-child {
-  padding-left: 0;
-}
-
 .route-numbers-list > div:last-child {
   border-right: 0;
 }
@@ -107,10 +103,6 @@ function decimalsFor(value) {
 
 /* Below lg, where they sit two across (row-cols-2 in the template), the even boxes end their row */
 @media (width < 992px) {
-  .route-numbers-list > div:nth-child(odd) {
-    padding-left: 0;
-  }
-
   .route-numbers-list > div:nth-child(even) {
     border-right: 0;
   }
@@ -119,11 +111,8 @@ function decimalsFor(value) {
 /* Below sm: smaller side padding on phones */
 @media (width < 576px) {
   .route-numbers-list > div {
-    padding-right: 12px;
-  }
-
-  .route-numbers-list > div:nth-child(even) {
     padding-left: 12px;
+    padding-right: 12px;
   }
 }
 </style>
