@@ -15,44 +15,42 @@ function update(field, value) {
 
 <template>
   <div class="incident-fields">
-    <label class="incident-fields-field">
-      <span class="cairn-label">Incident</span>
-      <select
-        :value="modelValue.category"
-        class="cairn-input"
-        @change="update('category', $event.target.value)"
-      >
-        <option value="" disabled>Select category</option>
-        <option v-for="c in categories" :key="c.category" :value="c.category">{{ c.label }}</option>
-      </select>
-    </label>
+    <!-- Bootstrap grid: category, note and remove on one line from md (768px) up, stacked on phones -->
+    <div class="row g-3 align-items-end">
+      <label class="incident-fields-field col-12 col-md-4 d-grid gap-2">
+        <span class="cairn-label">Incident</span>
+        <select
+          :value="modelValue.category"
+          class="cairn-input"
+          @change="update('category', $event.target.value)"
+        >
+          <option value="" disabled>Select category</option>
+          <option v-for="c in categories" :key="c.category" :value="c.category">
+            {{ c.label }}
+          </option>
+        </select>
+      </label>
 
-    <label class="incident-fields-field">
-      <span class="cairn-label">What happened?</span>
-      <input
-        :value="modelValue.note"
-        class="cairn-input"
-        @input="update('note', $event.target.value)"
-      />
-    </label>
+      <label class="incident-fields-field col-12 col-md d-grid gap-2">
+        <span class="cairn-label">What happened?</span>
+        <input
+          :value="modelValue.note"
+          class="cairn-input"
+          @input="update('note', $event.target.value)"
+        />
+      </label>
 
-    <button type="button" class="incident-fields-remove" @click="emit('remove')">Remove</button>
+      <div class="col-12 col-md-auto">
+        <button type="button" class="incident-fields-remove" @click="emit('remove')">Remove</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .incident-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
-  align-items: end;
-  gap: 12px;
   padding: 12px;
   background: var(--warning-mist);
-}
-
-.incident-fields-field {
-  display: grid;
-  gap: 6px;
 }
 
 .incident-fields-field .cairn-label {
@@ -69,15 +67,5 @@ function update(field, value) {
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-}
-
-@media (max-width: 700px) {
-  .incident-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .incident-fields-remove {
-    justify-self: start;
-  }
 }
 </style>

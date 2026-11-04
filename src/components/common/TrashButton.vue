@@ -17,7 +17,7 @@ const LID = {
 <template>
   <motion.button
     type="button"
-    class="trash-button"
+    class="trash-button d-inline-flex align-items-center justify-content-center"
     :aria-label="label"
     :title="label"
     initial="closed"
@@ -42,8 +42,6 @@ const LID = {
 <style scoped>
 /* 44px, the height of a small Cairn button, so it lines up beside one */
 .trash-button {
-  display: inline-grid;
-  place-items: center;
   width: 44px;
   height: 44px;
   padding: 0;

@@ -24,7 +24,7 @@ function nameOf(review) {
 <template>
   <p v-if="!reviews.length" class="review-list-empty">No reviews yet.</p>
 
-  <AnimatePresence v-else as="div" class="review-list">
+  <AnimatePresence v-else as="div" class="review-list d-grid">
     <motion.article
       v-for="(review, index) in reviews"
       :key="review.id"
@@ -42,8 +42,10 @@ function nameOf(review) {
         {{ nameOf(review).charAt(0).toUpperCase() }}
       </span>
       <div>
-        <div class="review-entry-top">
-          <strong>
+        <div
+          class="review-entry-top d-flex flex-wrap justify-content-between align-items-baseline gap-3"
+        >
+          <strong class="d-inline-flex align-items-center gap-2">
             {{ nameOf(review) }}
             <span class="review-entry-stars">
               <StarIcon v-for="n in 5" :key="n" :fill="n <= review.rating ? 1 : 0" />
@@ -59,7 +61,9 @@ function nameOf(review) {
           </span>
         </div>
 
-        <p v-if="review.review_text" class="review-entry-text">{{ review.review_text }}</p>
+        <p v-if="review.review_text" class="review-entry-text mt-2 mb-2">
+          {{ review.review_text }}
+        </p>
 
         <ReviewEntryMeta :review="review" />
       </div>
@@ -75,7 +79,6 @@ function nameOf(review) {
 }
 
 .review-list {
-  display: grid;
   border-top: 2px solid var(--ink);
 }
 
@@ -98,18 +101,7 @@ function nameOf(review) {
   font-weight: 900;
 }
 
-.review-entry-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
 .review-entry-top strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   font-size: 16px;
 }
 
@@ -130,7 +122,6 @@ function nameOf(review) {
 }
 
 .review-entry-text {
-  margin: 8px 0 10px !important;
   font-size: 17px;
   line-height: 26px;
 }
