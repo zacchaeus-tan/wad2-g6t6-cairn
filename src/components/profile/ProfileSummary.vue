@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { genderLabels } from '@/lib/countries'
-import ProfileAccount from './ProfileAccount.vue'
+import ProfileAccountButtons from '@/components/profile/ProfileAccountButtons.vue'
 
 const props = defineProps({
   profile: { type: Object, required: true },
@@ -31,13 +31,17 @@ const initials = computed(() =>
 <template>
   <div class="profile-summary">
     <div class="profile-summary-avatar" aria-hidden="true">{{ initials }}</div>
-    <div class="profile-summary-text">
+    <div class="profile-summary-main">
       <h2 class="cairn-headline profile-summary-name">{{ displayName }}</h2>
-      <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
-      <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
-      <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
+      <div class="profile-summary-text">
+        <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
+        <p v-if="profileDetails && profile.about?.trim()">|</p>
+        <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
+        <p v-if="profile.about?.trim()">|</p>
+        <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
+      </div>
     </div>
-    <ProfileAccount />
+    <ProfileAccountButtons />
   </div>
 </template>
 
@@ -61,11 +65,17 @@ const initials = computed(() =>
   font-weight: 900;
 }
 
-.profile-summary-text {
+.profile-summary-main {
   display: grid;
   flex: 1 1 16rem;
-  justify-items: start;
   gap: 8px;
+  min-width: 0;
+}
+
+.profile-summary-text {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -79,6 +89,7 @@ const initials = computed(() =>
 
 .profile-summary-chip {
   display: inline-flex;
+  flex: none;
   align-items: center;
   min-height: 30px;
   padding: 0 12px;
