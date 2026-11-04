@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useReviewsStore } from '@/controller/reviewsStore'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import TrashButton from '@/components/common/TrashButton.vue'
 import IncidentFields from './IncidentFields.vue'
 
 const props = defineProps({
@@ -70,8 +72,15 @@ async function submitReview() {
   if (submitted) emit('saved')
 }
 
+// Deleting can't be undone, so it asks first
+const confirmingDelete = ref(false)
+const deleting = ref(false)
+
 async function deleteReview() {
+  deleting.value = true
   const deleted = await reviewsStore.remove(myReview.value.id, props.route.id)
+  deleting.value = false
+  confirmingDelete.value = false
   if (deleted) emit('deleted')
 }
 </script>
@@ -135,19 +144,29 @@ async function deleteReview() {
       <button :disabled="saving" type="submit" class="cairn-btn is-small">
         {{ myReview ? 'Update review' : 'Submit review' }}
       </button>
-      <button
+      <TrashButton
         v-if="myReview"
-        type="button"
-        class="cairn-link review-form-delete"
-        @click="deleteReview"
-      >
-        Delete
-      </button>
+        class="ms-auto"
+        label="Delete your review"
+        @click="confirmingDelete = true"
+      />
     </div>
 
     <p v-if="reviewsStore.error" class="review-form-error">
       {{ reviewsStore.error }}
     </p>
+
+    <ConfirmDialog
+      :open="confirmingDelete"
+      title="Delete your review?"
+      confirm-label="Delete review"
+      :disabled="deleting"
+      @confirm="deleteReview"
+      @cancel="confirmingDelete = false"
+    >
+      Your rating, review and any incidents you flagged will be removed from this route. You can't
+      undo this.
+    </ConfirmDialog>
   </form>
 </template>
 
@@ -191,11 +210,6 @@ async function deleteReview() {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-
-.review-form-delete {
-  margin-left: 6px;
-  color: #b42318;
 }
 
 .review-form-error {

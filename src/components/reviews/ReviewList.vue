@@ -1,31 +1,19 @@
 <script setup>
-import { ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
 import { formatDate } from '@/lib/format'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
 import StarIcon from '@/components/common/StarIcon.vue'
+import TrashButton from '@/components/common/TrashButton.vue'
 import ReviewEntryMeta from './ReviewEntryMeta.vue'
 
-// no need to declare a variable as it is only used in the template
-const props = defineProps({
+// Your own review is edited and deleted from the "Edit your review" button above the list.
+// Admins can delete anyone's review from here, but not edit it.
+defineProps({
   reviews: { type: Array, required: true },
-  userId: { type: String, default: null },
   isAdmin: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit', 'delete'])
-
-// Deleting can't be undone, so it takes a second click
-const confirmingId = ref(null)
-
-function isOwn(review) {
-  return Boolean(props.userId) && review.user_id === props.userId
-}
-
-function confirmDelete(review) {
-  confirmingId.value = null
-  emit('delete', review)
-}
+const emit = defineEmits(['delete'])
 
 // display_name can be empty, so fall back to a generic name
 function nameOf(review) {
@@ -61,29 +49,19 @@ function nameOf(review) {
               <StarIcon v-for="n in 5" :key="n" :fill="n <= review.rating ? 1 : 0" />
             </span>
           </strong>
-          <time :datetime="review.created_at">{{ formatDate(review.created_at) }}</time>
+          <span class="d-inline-flex align-items-center gap-2">
+            <time :datetime="review.created_at">{{ formatDate(review.created_at) }}</time>
+            <TrashButton
+              v-if="isAdmin"
+              :label="`Delete ${nameOf(review)}'s review`"
+              @click="emit('delete', review)"
+            />
+          </span>
         </div>
 
         <p v-if="review.review_text" class="review-entry-text">{{ review.review_text }}</p>
 
-        <ReviewEntryMeta :review="review">
-          <span v-if="isOwn(review) || isAdmin" class="review-entry-actions">
-            <template v-if="confirmingId === review.id">
-              <button type="button" class="cairn-link is-danger" @click="confirmDelete(review)">
-                Confirm delete
-              </button>
-              <button type="button" class="cairn-link" @click="confirmingId = null">Cancel</button>
-            </template>
-            <template v-else>
-              <button v-if="isOwn(review)" type="button" class="cairn-link" @click="emit('edit')">
-                Edit
-              </button>
-              <button type="button" class="cairn-link" @click="confirmingId = review.id">
-                Delete
-              </button>
-            </template>
-          </span>
-        </ReviewEntryMeta>
+        <ReviewEntryMeta :review="review" />
       </div>
     </motion.article>
   </AnimatePresence>
@@ -118,16 +96,6 @@ function nameOf(review) {
   color: var(--paper);
   font-size: 17px;
   font-weight: 900;
-}
-
-.review-entry-actions {
-  display: inline-flex;
-  gap: 14px;
-  font-size: 14px;
-}
-
-.review-entry-actions .is-danger {
-  color: var(--blaze-deep);
 }
 
 .review-entry-top {

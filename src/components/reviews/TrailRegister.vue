@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { AnimatePresence, motion } from 'motion-v'
 import { useReviewsStore } from '@/controller/reviewsStore'
 import NumberTicker from '@/components/common/NumberTicker.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import ReviewForm from './ReviewForm.vue'
 import ReviewList from './ReviewList.vue'
 
@@ -45,8 +46,15 @@ function onDeleted() {
   emit('deleted')
 }
 
-async function deleteFromList(review) {
-  const deleted = await reviewsStore.remove(review.id, props.route.id)
+// An admin deleting someone's review from the list; it asks first
+const reviewToDelete = ref(null)
+const deleting = ref(false)
+
+async function deleteFromList() {
+  deleting.value = true
+  const deleted = await reviewsStore.remove(reviewToDelete.value.id, props.route.id)
+  deleting.value = false
+  reviewToDelete.value = null
   if (deleted) onDeleted()
 }
 </script>
@@ -128,10 +136,8 @@ async function deleteFromList(review) {
           </p>
           <ReviewList
             :reviews="reviewsStore.reviews"
-            :user-id="userId"
             :is-admin="isAdmin"
-            @edit="formOpen = true"
-            @delete="deleteFromList"
+            @delete="reviewToDelete = $event"
           />
           <div v-if="reviewsStore.hasMore" class="register-more">
             <button
@@ -146,6 +152,18 @@ async function deleteFromList(review) {
         </template>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="Boolean(reviewToDelete)"
+      title="Delete this review?"
+      confirm-label="Delete review"
+      :disabled="deleting"
+      @confirm="deleteFromList"
+      @cancel="reviewToDelete = null"
+    >
+      {{ reviewToDelete?.profiles?.display_name || 'This hiker' }}'s rating, review and any
+      incidents they flagged will be removed from this route. You can't undo this.
+    </ConfirmDialog>
   </article>
 </template>
 
