@@ -58,7 +58,7 @@ function between(hours, [from, to]) {
   return hours.filter((h) => h.hour >= from && h.hour <= to)
 }
 
-export function warningsFor(day) {
+function warningsFor(day) {
   const warnings = []
 
   const coldest = day.summit ? day.summit.feelsMin : day.feelsMin
@@ -90,7 +90,7 @@ export function warningsFor(day) {
 }
 
 // summit is null when the route has no altitude_m.
-export function summariseWeather(start, summit, altitude) {
+function summariseWeather(start, summit, altitude) {
   const daily = start.daily
   const showSummit = summit !== null && altitude - start.elevation >= MIN_SUMMIT_GAIN_M
 
