@@ -92,10 +92,7 @@ const communityNeedle = computed(() =>
 
 <template>
   <article class="grade-dial d-grid gap-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-3">
-      <h2 class="cairn-headline">How hard, honestly</h2>
-      <span class="cairn-fine">Official grade and community grade</span>
-    </div>
+    <h2 class="cairn-headline">How hard, honestly</h2>
 
     <!-- Bootstrap grid: the dial beside its key from lg (992px) up, above it on smaller screens -->
     <div class="row align-items-center gx-5 gy-4">
@@ -181,11 +178,6 @@ const communityNeedle = computed(() =>
   padding: clamp(24px, 3vw, 44px);
   background: var(--sand);
   box-shadow: var(--shadow-stop);
-}
-
-/* Muted text steps up a shade on sand so it stays readable */
-.grade-dial .cairn-fine {
-  color: var(--granite-700);
 }
 
 .grade-dial-svg {
