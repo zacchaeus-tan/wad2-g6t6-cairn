@@ -5,11 +5,12 @@
 // - MapLibre GL JS (https://maplibre.org, BSD-3-Clause), the open-source map library
 // - MapTiler (https://www.maptiler.com) Outdoor style, vector tiles and satellite photos, with our API key
 // - CARTO basemaps (https://carto.com/basemaps) and Esri World Imagery, used when no MapTiler key is set
-// - NASA GIBS Blue Marble imagery (https://earthdata.nasa.gov/gibs) and NASA's cloud picture (public/clouds.jpg)
+// - NASA GIBS Blue Marble imagery (https://earthdata.nasa.gov/gibs) and NASA's cloud picture (src/assets/img/globeClouds.jpg)
 // - Motion for Vue (https://motion.dev, MIT), which walks the dot along a pinned route
 
 import { animate } from 'motion-v'
 import { GRADES } from '@/lib/difficultyStyle'
+import globeClouds from '@/assets/img/globeClouds.jpg'
 import { distanceInMetres, mainTrail, unratedColour } from './globeRoutes'
 
 const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
@@ -165,12 +166,12 @@ export function applyMapType(map, showSatellite, layersUnderSatellite) {
   }
 }
 
-// NASA's cloud picture (public/clouds.jpg) is white clouds on black, stretched evenly from pole to
+// NASA's cloud picture (globeClouds.jpg) is white clouds on black, stretched evenly from pole to
 // pole. The map needs it in the Web Mercator projection with see-through gaps between clouds.
 // `isSatelliteView` is checked once the picture is ready, as the user may have switched views by then.
 export async function addCloudLayer(map, isSatelliteView) {
   const image = new Image()
-  image.src = '/clouds.jpg'
+  image.src = globeClouds
   await image.decode()
 
   // Copy one row at a time into the Mercator position for that latitude
