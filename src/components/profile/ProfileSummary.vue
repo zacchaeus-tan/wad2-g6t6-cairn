@@ -33,11 +33,13 @@ const initials = computed(() =>
     <div class="profile-summary-avatar" aria-hidden="true">{{ initials }}</div>
     <div class="profile-summary-main">
       <h2 class="cairn-headline profile-summary-name">{{ displayName }}</h2>
-      <div class="profile-summary-text">
+      <div
+        class="profile-summary-text d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 gap-sm-3"
+      >
         <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
-        <p v-if="profileDetails && profile.about?.trim()">|</p>
+        <p v-if="profileDetails && profile.about?.trim()" class="d-none d-sm-block">|</p>
         <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
-        <p v-if="profile.about?.trim()">|</p>
+        <p v-if="profile.about?.trim()" class="d-none d-sm-block">|</p>
         <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
       </div>
     </div>
@@ -73,9 +75,6 @@ const initials = computed(() =>
 }
 
 .profile-summary-text {
-  display: flex;
-  align-items: center;
-  gap: 16px;
   min-width: 0;
 }
 
