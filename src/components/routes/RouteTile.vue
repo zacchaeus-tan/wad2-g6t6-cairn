@@ -2,14 +2,16 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { GRADES, gradeOf, isCommunityAdjusted } from '@/lib/difficultyStyle'
+import { routePhotoUrl } from '@/controller/routesController'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import RouteLine from './RouteLine.vue'
 
 const props = defineProps({
   route: { type: Object, required: true },
-  photo: { type: String, required: true }, // stock photo for now; real route photos come later
 })
 
+// The route's own photo, from the route-photos bucket
+const photo = computed(() => routePhotoUrl(props.route))
 const grade = computed(() => gradeOf(props.route))
 const lineColor = computed(() => GRADES[grade.value]?.line ?? '#f2efea')
 const adjusted = computed(() => isCommunityAdjusted(props.route))

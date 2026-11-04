@@ -11,7 +11,13 @@ export function listRoutes() {
 // Just what the browse filters and tiles need. line_svg is a small ready-made path for the
 // tile, so browse doesn't download every full line (geometry).
 const TILE_COLUMNS =
-  'id, name, country, distance_km, elevation_gain_m, duration_days, is_multiday, effective_difficulty, official_difficulty, technical_rating, line_svg'
+  'id, name, country, distance_km, elevation_gain_m, duration_days, is_multiday, effective_difficulty, official_difficulty, technical_rating, line_svg, photo_path'
+
+// A route's photo in the public route-photos bucket, as { data: { publicUrl } }.
+// Builds the link from the project URL; it doesn't send a request.
+export function getRoutePhotoUrl(photoPath) {
+  return supabase.storage.from('route-photos').getPublicUrl(photoPath)
+}
 
 export function listRouteTiles() {
   return supabase.from('routes').select(TILE_COLUMNS)
