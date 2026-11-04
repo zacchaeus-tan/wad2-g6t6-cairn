@@ -91,72 +91,75 @@ const communityNeedle = computed(() =>
 </script>
 
 <template>
-  <article class="grade-dial">
-    <div class="grade-dial-head">
+  <article class="grade-dial d-grid gap-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-3">
       <h2 class="cairn-headline">How hard, honestly</h2>
       <span class="cairn-fine">Official grade and community grade</span>
     </div>
 
-    <div class="grade-dial-split">
-      <motion.div
-        class="grade-dial-svg"
-        initial="resting"
-        while-in-view="pointing"
-        :in-view-options="{ once: true, amount: 0.5 }"
-      >
-        <svg viewBox="0 0 400 236">
-          <motion.path
-            v-for="band in bands"
-            :key="band.grade"
-            :d="band.d"
-            fill="none"
-            :stroke="band.color"
-            stroke-width="30"
-            :variants="band.variants"
-          />
-          <g fill="var(--granite-700)" font-size="12" font-weight="700" letter-spacing="1">
-            <text x="40" y="228" text-anchor="middle">1 EASY</text>
-            <text
-              v-for="mark in edgeLabels"
-              :key="mark.edge"
-              :x="mark.x"
-              :y="mark.y"
-              text-anchor="middle"
-              dominant-baseline="middle"
-            >
-              {{ mark.edge }}
-            </text>
-            <text x="360" y="228" text-anchor="middle">4 STRENUOUS</text>
-          </g>
-          <motion.g v-if="communityNeedle" :variants="communityNeedle" :style="NEEDLE_PIVOT">
-            <line
-              x1="200"
-              y1="200"
-              x2="200"
-              y2="66"
-              stroke="var(--blaze)"
-              stroke-width="5"
-              stroke-linecap="round"
+    <!-- Bootstrap grid: the dial beside its key from lg (992px) up, above it on smaller screens -->
+    <div class="row align-items-center gx-5 gy-4">
+      <div class="col-lg-6">
+        <motion.div
+          class="grade-dial-svg w-100 mx-auto"
+          initial="resting"
+          while-in-view="pointing"
+          :in-view-options="{ once: true, amount: 0.5 }"
+        >
+          <svg viewBox="0 0 400 236">
+            <motion.path
+              v-for="band in bands"
+              :key="band.grade"
+              :d="band.d"
+              fill="none"
+              :stroke="band.color"
+              stroke-width="30"
+              :variants="band.variants"
             />
-            <path d="M200 46 L189 70 L211 70 Z" fill="var(--blaze)" />
-          </motion.g>
-          <motion.g :variants="officialNeedle" :style="NEEDLE_PIVOT">
-            <line
-              x1="200"
-              y1="200"
-              x2="200"
-              y2="66"
-              stroke="var(--ink)"
-              stroke-width="5"
-              stroke-linecap="round"
-            />
-            <path d="M200 46 L189 70 L211 70 Z" fill="var(--ink)" />
-          </motion.g>
-          <circle cx="200" cy="200" r="13" fill="var(--ink)" />
-        </svg>
-      </motion.div>
+            <g fill="var(--granite-700)" font-size="12" font-weight="700" letter-spacing="1">
+              <text x="40" y="228" text-anchor="middle">1 EASY</text>
+              <text
+                v-for="mark in edgeLabels"
+                :key="mark.edge"
+                :x="mark.x"
+                :y="mark.y"
+                text-anchor="middle"
+                dominant-baseline="middle"
+              >
+                {{ mark.edge }}
+              </text>
+              <text x="360" y="228" text-anchor="middle">4 STRENUOUS</text>
+            </g>
+            <motion.g v-if="communityNeedle" :variants="communityNeedle" :style="NEEDLE_PIVOT">
+              <line
+                x1="200"
+                y1="200"
+                x2="200"
+                y2="66"
+                stroke="var(--blaze)"
+                stroke-width="5"
+                stroke-linecap="round"
+              />
+              <path d="M200 46 L189 70 L211 70 Z" fill="var(--blaze)" />
+            </motion.g>
+            <motion.g :variants="officialNeedle" :style="NEEDLE_PIVOT">
+              <line
+                x1="200"
+                y1="200"
+                x2="200"
+                y2="66"
+                stroke="var(--ink)"
+                stroke-width="5"
+                stroke-linecap="round"
+              />
+              <path d="M200 46 L189 70 L211 70 Z" fill="var(--ink)" />
+            </motion.g>
+            <circle cx="200" cy="200" r="13" fill="var(--ink)" />
+          </svg>
+        </motion.div>
+      </div>
 
-      <div class="grade-dial-key">
+      <div class="col-lg-6 d-grid gap-3">
         <div class="grade-dial-row">
           <span class="grade-dial-swatch is-official" aria-hidden="true"></span>
           <strong>Official</strong>
@@ -175,8 +178,6 @@ const communityNeedle = computed(() =>
 
 <style scoped>
 .grade-dial {
-  display: grid;
-  gap: 20px;
   padding: clamp(24px, 3vw, 44px);
   background: var(--sand);
   box-shadow: var(--shadow-stop);
@@ -187,25 +188,8 @@ const communityNeedle = computed(() =>
   color: var(--granite-700);
 }
 
-.grade-dial-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.grade-dial-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 32px;
-}
-
 .grade-dial-svg {
-  width: 100%;
   max-width: 460px;
-  justify-self: center;
 }
 
 .grade-dial-svg svg {
@@ -216,11 +200,6 @@ const communityNeedle = computed(() =>
 
 .grade-dial-svg text {
   font-family: var(--font);
-}
-
-.grade-dial-key {
-  display: grid;
-  gap: 14px;
 }
 
 .grade-dial-row {
@@ -289,11 +268,5 @@ const communityNeedle = computed(() =>
   margin-top: -7px;
   background: var(--blaze);
   clip-path: polygon(0 0, 100% 50%, 0 100%);
-}
-
-@media (max-width: 900px) {
-  .grade-dial-split {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
