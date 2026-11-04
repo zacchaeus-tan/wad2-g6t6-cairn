@@ -85,20 +85,6 @@ test.describe('Browsing routes', () => {
     await expect(tiles.first()).toBeVisible()
   })
 
-  // Verify that removing a filter's pill undoes that filter.
-  test('should bring all routes back when a filter pill is removed', async ({ page }) => {
-    // setup
-    await page.goto('/routes')
-    const tiles = page.getByTestId('route-tile')
-
-    // actions
-    await page.getByTestId('routes-search').fill('no route is called this')
-    await page.getByRole('button', { name: /remove filter/ }).click()
-
-    // assert
-    await expect(tiles).toHaveCount(PAGE_SIZE)
-  })
-
   // Verify that sorting by distance puts the longest routes first.
   test('should list the longest routes first when sorted by distance', async ({ page }) => {
     // setup
@@ -137,21 +123,6 @@ test.describe('Browsing routes', () => {
     await expect(tiles).toHaveCount(PAGE_SIZE * 2)
   })
 
-  // Verify that clicking a tile opens that route's own page.
-  test("should open a route's page when its tile is clicked", async ({ page }) => {
-    // setup
-    await page.goto('/routes')
-    const firstTile = page.getByTestId('route-tile').first()
-    const name = await firstTile.getByRole('heading').textContent()
-
-    // actions
-    await firstTile.click()
-
-    // assert
-    await expect(page).toHaveURL(/\/routes\/[^/]+$/)
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
-  })
-
   // Verify that the transition screen shows the route, and its page then opens with no loading message.
   test('should show the transition screen before the route page opens', async ({ page }) => {
     // setup
@@ -162,9 +133,9 @@ test.describe('Browsing routes', () => {
     // actions
     await firstTile.click()
 
-    // assert
+    // assert: the transition waits for the route's photos before the page opens
     await expect(page.getByTestId('route-transition-screen')).toContainText(name)
-    await expect(page).toHaveURL(/\/routes\/[^/]+$/)
+    await expect(page).toHaveURL(/\/routes\/[^/]+$/, { timeout: 30000 })
     await expect(page.getByTestId('route-loading')).toHaveCount(0)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
   })

@@ -1,20 +1,17 @@
 /* quiz.spec.js
  E2E tests for the /quiz page.
  Journey: a visitor (signed in) takes the hiking quiz:
-   1. Answers 5 questions
-   2. Able to go back to previous questions
-   3. Able to go to next question
-   4. Summary that shows questions' answers
-   5. Submit by pressing save answers
-   6. Notification of saved, redirecting to profile is created
-   7. Redirected to profile page
-   8. If user attempts the quiz again, the previous attempt will be the default choice but users can choose to reselect new answers
+   1. Answers 5 questions, and can go back without losing an answer
+   2. Saves the answers, is told they are saved, and is taken to their profile
+   3. Retakes the quiz, which starts from the previous answers, and saves a new one
+   4. Is told if saving fails
  Saving writes to the user's profile, so Supabase is mocked: the tests sign in through the
  real form with a fake user, and no real account or data is touched.
  Expected values come from quizQuestions, not hard-coded text,
  so the tests still pass when questions are added or edited.
 */
 
+import { Buffer } from 'node:buffer'
 import { test, expect } from '@playwright/test'
 import { quizQuestions, splitOption } from '../src/lib/quizQuestions.js'
 
@@ -69,6 +66,14 @@ const optionRadio = (page, option) => page.getByRole('radio', { name: splitOptio
 const backButton = (page) => page.getByRole('button', { name: 'Back down' })
 const saveAnswers = (page) => page.getByRole('button', { name: 'Save answers' }).click()
 
+// Back down and Next stop only show below 992px; wider screens move between questions with
+// the stops on the mountain. 375px wide is the iPhone 6, the smallest screen we design for.
+const PHONE = { viewport: { width: 375, height: 667 } }
+
+// The app waits 2 seconds after saving before it redirects, and the profile page then has to
+// load, which can take longer than the usual 5 seconds when several browsers are running
+const AFTER_SAVE = { timeout: 15000 }
+
 // The second option of each question, so answers don't depend on what's listed first
 const defaultAnswer = (question) => question.options[1]
 
@@ -103,7 +108,7 @@ async function nextFrom(page, question) {
 async function saveAndRetake(page) {
   await answerAll(page)
   await saveAnswers(page)
-  await expect(page).toHaveURL(/\/profile$/)
+  await expect(page).toHaveURL(/\/profile$/, AFTER_SAVE)
   await page.getByRole('link', { name: 'Retake quiz' }).click()
   await expect(page).toHaveURL(/\/quiz$/)
 }
@@ -133,68 +138,23 @@ test.describe('Taking the quiz', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in')
   })
 
-  // Verify that answering moves through every question in order, then on to the summit.
-  test('should move through all the questions as they are answered', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
+  test.describe('moving with the buttons on a phone', () => {
+    test.use(PHONE)
 
-    // actions and assert
-    for (const [i, question] of quizQuestions.entries()) {
-      await expect(quizSection(page).getByText(`Stop ${i + 1} of ${quizQuestions.length}`)).toBeVisible()
-      await answer(page, question)
-    }
+    // Verify that going back returns to the last question with its answer still picked.
+    test('should go back to the previous question and keep its answer', async ({ page }) => {
+      // setup
+      await signInToQuiz(page)
 
-    // assert
-    await expect(summitHeading(page)).toBeVisible()
-  })
+      // assert: there's nothing before the first question
+      await expect(backButton(page)).toBeDisabled()
 
-  // Verify that going back returns to the last question with its answer still picked.
-  test('should go back to the previous question and keep its answer', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
+      // actions
+      await answerFirstAndGoBack(page)
 
-    // assert: there's nothing before the first question
-    await expect(backButton(page)).toBeDisabled()
-
-    // actions
-    await answerFirstAndGoBack(page)
-
-    // assert
-    await expect(optionRadio(page, defaultAnswer(quizQuestions[0]))).toBeChecked()
-  })
-
-  // Verify that the next button stays locked until the question has an answer.
-  test('should only go to the next question once this one is answered', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
-    const [first, second] = quizQuestions
-    const nextButton = page.getByRole('button', { name: 'Next stop' })
-
-    // assert
-    await expect(nextButton).toBeDisabled()
-
-    // actions: answer, come back, and use the button this time
-    await answerFirstAndGoBack(page)
-    await nextFrom(page, first)
-
-    // assert
-    await expect(questionHeading(page, second)).toBeVisible()
-  })
-
-  // Verify that an answer can be changed from the summary.
-  test('should update the summary when an answer is changed', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
-    const last = quizQuestions.at(-1)
-    const newOption = last.options[0]
-    await answerAll(page)
-
-    // actions: the last question is used because answering it goes straight back to the summit
-    await summaryRow(page, last).getByRole('button', { name: 'Change' }).click()
-    await answer(page, last, newOption)
-
-    // assert
-    await expect(summaryRow(page, last)).toContainText(newOption.desc)
+      // assert
+      await expect(optionRadio(page, defaultAnswer(quizQuestions[0]))).toBeChecked()
+    })
   })
 
   // Verify the end of the journey: saving confirms, then opens a profile showing the answers.
@@ -209,7 +169,7 @@ test.describe('Taking the quiz', () => {
     // assert: the notification comes first, then the app waits a moment before redirecting
     await expectSaved(page, profile)
 
-    await expect(page).toHaveURL(/\/profile$/)
+    await expect(page).toHaveURL(/\/profile$/, AFTER_SAVE)
     const experience = page.getByRole('region', { name: 'Your experience' })
     await expect(experience.getByRole('link', { name: 'Retake quiz' })).toBeVisible()
     // The first question is shown as a badge on the summary card rather than in this section
@@ -218,43 +178,30 @@ test.describe('Taking the quiz', () => {
     }
   })
 
-  // Verify that a second attempt starts with the previous answers already picked.
-  test('should pick the previous answers when the quiz is retaken', async ({ page }) => {
-    // setup
-    await signInToQuiz(page)
-    await saveAndRetake(page)
+  test.describe('retaking it on a phone', () => {
+    test.use(PHONE)
 
-    // assert: each question has its old answer, so the button works without picking again
-    for (const question of quizQuestions) {
-      await expect(optionRadio(page, defaultAnswer(question))).toBeChecked()
-      await nextFrom(page, question)
-    }
+    // Verify that a second attempt can replace an answer and leaves the others as they were.
+    test('should save a new answer when the quiz is retaken', async ({ page }) => {
+      // Two full attempts and two redirects take longer than a normal test
+      test.slow()
 
-    // assert
-    await expectSummary(page)
-    await expect(page.getByRole('button', { name: 'Save answers' })).toBeEnabled()
-  })
+      // setup
+      const profile = await signInToQuiz(page)
+      const [first, ...rest] = quizQuestions
+      const pick = (question) => (question === first ? first.options[0] : defaultAnswer(question))
+      await saveAndRetake(page)
 
-  // Verify that a second attempt can replace an answer and leaves the others as they were.
-  test('should save a new answer when the quiz is retaken', async ({ page }) => {
-    // Two full attempts and two redirects take longer than a normal test
-    test.slow()
+      // actions
+      await answer(page, first, pick(first))
+      for (const question of rest) await nextFrom(page, question)
+      await expectSummary(page, pick)
+      await saveAnswers(page)
 
-    // setup
-    const profile = await signInToQuiz(page)
-    const [first, ...rest] = quizQuestions
-    const pick = (question) => (question === first ? first.options[0] : defaultAnswer(question))
-    await saveAndRetake(page)
-
-    // actions
-    await answer(page, first, pick(first))
-    for (const question of rest) await nextFrom(page, question)
-    await expectSummary(page, pick)
-    await saveAnswers(page)
-
-    // assert
-    await expectSaved(page, profile, pick)
-    await expect(page).toHaveURL(/\/profile$/)
+      // assert
+      await expectSaved(page, profile, pick)
+      await expect(page).toHaveURL(/\/profile$/, AFTER_SAVE)
+    })
   })
 
   // Verify that a failed save shows an error and leaves the user on the quiz.

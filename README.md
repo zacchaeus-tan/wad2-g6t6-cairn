@@ -37,6 +37,76 @@ pnpm dev
 pnpm build
 ```
 
+## Testing strategy
+
+### Why most of our tests are end-to-end
+
+CAIRN's value is in journeys that cross pages and services: a hiker finds a route, checks its weather and reviews, signs in, and plans or reports on it. Most of the bugs we hit while building were in the joins between parts, not inside one function: router guards sending people to the wrong page, Supabase rows not coming back, transitions opening the wrong route, the weather API being slow. A unit test can't catch those, so we test mainly with Playwright end-to-end (E2E) tests that drive the real app in a real browser, the way a user would.
+
+We keep a few Vitest unit tests for pure logic that is hard to reach through the UI (grouping globe routes, drafting alerts from hazard reports, profile helpers).
+
+We don't try to test everything. We chose the journeys below by asking two questions: how bad is it for a hiker if this breaks, and how likely is it to break?
+
+### How we decide which tests to keep
+
+A test earns its place if it does at least one of these:
+
+1. **Covers a journey step**: something a hiker or admin must be able to do, such as finding a route, saving the quiz or publishing an alert.
+2. **Protects a rule**: something that keeps hikers safe or data correct, such as sign-in guards, a closure needing a note, or confirming before a review is removed.
+3. **Catches a real failure**: an error a user could actually hit, such as the database being down, a wrong password or a failed save.
+
+We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, making 34.
+
+### Focus areas
+
+| Focus area | Why it matters | Spec |
+| --- | --- | --- |
+| **Find a route** (search, filter, sort, page, globe) | The first thing every visitor does. Filters, sorting and paging share state, so they break each other easily. | `routes-browse.spec.js`, `globe.spec.js` |
+| **Decide on a route** (details, live weather, reviews) | The page hikers use to judge if a route is safe. It depends on an outside weather API and on other hikers' reviews. | `route-detail.spec.js` |
+| **Sign in and access** (sign in, Google, guards) | Everything personal sits behind sign-in. A broken guard either locks hikers out or shows pages they shouldn't see. | `auth.spec.js`, `quiz.spec.js`, `admin.spec.js` |
+| **Personalise** (experience quiz to profile) | Saves the hiker's answers, which shape what we suggest to them. | `quiz.spec.js` |
+| **Plan and report** (save a route, review it and flag a hazard) | What a signed-in hiker does with a route. A flagged hazard is what the admin page turns into an alert, so a broken review form means admins never hear about it. | `route-signed-in.spec.js` |
+| **Keep hikers safe** (admin alerts, route status, review moderation) | The highest-stakes feature: a wrong closure or a missing alert can send someone onto a dangerous trail. | `admin.spec.js` |
+| **Legal pages** | Google sign-in needs the privacy policy to open without signing in. | `legal.spec.js` |
+
+### What we test in each journey
+
+- **The happy path**, start to finish, checking what the user sees and what was saved.
+- **Error states**: the database down, a wrong password, a failed save, a route that doesn't exist.
+- **Rules the app enforces**: signed-out visitors sent to sign in, non-admins sent home, a hazard needs a description, an alert needs a route, closing a route needs a note.
+
+### How the tests stay stable and repeatable
+
+- **Selectors a user would recognise.** We find elements by role, label or visible text first (`getByRole`, `getByLabel`), which also checks the page is accessible. Where an element has no name, such as a route tile or a pill on the globe, we added a `data-testid`. We avoid CSS classes and element order, which change whenever the design does.
+- **No hard-coded data.** Tests read what they expect from the page or from the app's own source (for example the quiz questions in `src/lib/quizQuestions.js`), so they keep passing when routes or questions change.
+- **Two kinds of data.** Journeys that only read data run against the real Supabase project, so they prove the real database works. Journeys that write data (quiz, admin, Google sign-up, saving and reviewing a route) answer Supabase's requests with Playwright's `page.route`, so no real account or row is touched, every run starts from the same state, and we can make a request fail on purpose to test error messages. The signed-in route tests mix the two: what the hiker saves is mocked, while public data such as the route itself still comes from the real database.
+- **A clean server every run.** Playwright starts its own dev server on port 5199 and never reuses one that is already running.
+- **Three browsers.** Every test runs on Chromium, Firefox and WebKit (Safari's engine).
+- **Phone width where the UI changes.** The quiz's Back down and Next stop buttons only appear below 992px, so the tests that use them run at 375px wide (iPhone 6).
+- **Clear structure.** One spec file per journey, with the journey described at the top. Each test is named "should …", says what it verifies in a comment, and is split into setup, actions and assert, as in the course's Playwright example. Shared steps such as signing in are helper functions.
+
+### What we don't test automatically, and why
+
+- **What the globe draws.** It is a WebGL canvas that Playwright can't see into, so we test the HTML drawn over it (pills, cards, the position readout) instead.
+- **Real Google sign-in.** It runs on Google's site, so we stop at the redirect and check where it would send the user back to.
+- **Animations and most of the styling.** We checked these by hand in Chrome DevTools, from iPhone 6 (375px) up to desktop widths.
+- **What the AI writes.** Itineraries and gear checklists come from an AI model, so the text changes every time. A test can only check that one appears, not that it is right. A gear checklist only has items once the AI has written one, so we left it out of the E2E tests.
+
+### How we made the tests
+
+We used two methods, depending on what a test needs:
+
+- **Recorded in VS Code (8 tests).** Tests that only read real data and make simple checks were recorded by Zacchaeus with the Playwright VS Code extension's recorder, then tidied into setup → actions → assert: renamed, made to use relative URLs, extra recorded steps removed, and the last step turned into an assertion. These were the codes that were recorded in Playwright VS Code:
+  - `legal.spec.js`: should open the terms of service from the footer (new)
+  - `legal.spec.js`: should open the privacy policy from the footer, at the top
+  - `quiz.spec.js`: should send a signed out visitor to sign in first
+  - `route-detail.spec.js`: should show the route's name, numbers and weather forecast
+  - `route-detail.spec.js`: should show a route's reviews and a sign-in prompt when signed out
+  - `route-detail.spec.js`: should show a message and a link back when the route doesn't exist
+  - `routes-browse.spec.js`: should show a message when nothing matches, and recover on clear
+  - `routes-browse.spec.js`: should show the transition screen before the route page opens
+- **Generated with AI (26 tests).** Tests that need mocked Supabase data, or checks worked out from the page (sorting, counting, reading route names), can't be recorded, so these were generated with AI and reviewed by the team. This is every other test in `e2e/`.
+
 ### Run Unit Tests with [Vitest](https://vitest.dev/)
 
 ```sh
@@ -79,15 +149,20 @@ pnpm playwright test --debug
 pnpm exec playwright show-report
 ```
 
+Running one browser or one file, `--headed` and `--debug` are extra commands from the [Playwright docs](https://playwright.dev/docs/running-tests).
+
 You can also run them from the Testing panel in VS Code with the [Playwright Test for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright) extension.
 
 | Spec | User journey |
 | --- | --- |
-| `e2e/routes-browse.spec.js` | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable |
-| `e2e/globe.spec.js` | Start exploring the globe, fly to a country and back, and open a route from its pill |
-| `e2e/route-detail.spec.js` | Read a route's details, weather and reviews, get prompted to sign in, and find a way back from a missing route |
-| `e2e/auth.spec.js` | See the sign-in form, switch to registering, and see an error for a wrong password |
-| `e2e/quiz.spec.js` | Sign in, answer the quiz, go back, review the summary, save to the profile, retake it, and see an error if saving fails |
+| `e2e/routes-browse.spec.js` (8) | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable |
+| `e2e/globe.spec.js` (2) | Fly to a country on the globe and back, and open a route from its pill |
+| `e2e/route-detail.spec.js` (3) | Read a route's details, weather and reviews, get prompted to sign in to write one, and find a way back from a missing route |
+| `e2e/auth.spec.js` (3) | See an error for a wrong password, get sent to Google and back, and finish a new Google user's profile |
+| `e2e/quiz.spec.js` (5) | Get sent to sign in, go back without losing an answer, save to the profile, retake it with a new answer, and see an error if saving fails |
+| `e2e/admin.spec.js` (8) | Keep non-admins out, check what needs attention, turn a hazard report into an alert, take an alert down, close a route, and remove a review |
+| `e2e/route-signed-in.spec.js` (3) | Sign in from a route, save it and find it on the profile, post a review that flags a hazard, and be stopped from flagging one without a description |
+| `e2e/legal.spec.js` (2) | Open the privacy policy from the footer without signing in |
 
 ### Lint with [ESLint](https://eslint.org/)
 

@@ -2,9 +2,8 @@
  E2E tests for the /routes/:id page.
  Journey: a visitor (not signed in) decides whether to walk a route:
    1. Reads the route's details and weather forecast
-   2. Is told to sign in to plan an itinerary
-   3. Reads other hikers' reviews
-   4. Gets a way back if the route doesn't exist
+   2. Reads other hikers' reviews, and is told to sign in to write one
+   3. Gets a way back if the route doesn't exist
  These tests only read data, so they can run again and again without any cleanup.
 */
 
@@ -17,7 +16,7 @@ const MISSING_ROUTE = '/routes/00000000-0000-0000-0000-000000000000'
 test.describe('Viewing a route', () => {
   // Verify that the details a hiker decides on are shown, including live weather.
   test("should show the route's name, numbers and weather forecast", async ({ page }) => {
-    // actions
+    // setup
     await page.goto(ROUTE_WITH_REVIEWS)
 
     // assert
@@ -27,33 +26,22 @@ test.describe('Viewing a route', () => {
     await expect(page.getByText('Current Weather:')).toBeVisible({ timeout: 15000 })
   })
 
-  // Verify that a signed out visitor is told how to get an itinerary.
-  test('should show a sign-in link in the itinerary section when signed out', async ({ page }) => {
-    // actions
-    await page.goto(ROUTE_WITH_REVIEWS)
-    const plan = page.getByRole('region', { name: 'Plan your itinerary' })
-
-    // assert
-    await expect(plan.getByRole('link', { name: 'Sign in' })).toBeVisible()
-    await expect(plan).toContainText('to generate an itinerary')
-  })
-
   // Verify that reviews can be read without an account, and that writing one asks for sign-in.
   test("should show a route's reviews and a sign-in prompt when signed out", async ({ page }) => {
-    // actions
+    // setup
     await page.goto(ROUTE_WITH_REVIEWS)
-    const register = page.locator('#reviews')
+    const register = page.getByRole('region', { name: 'Trail register' })
 
     // assert
     await expect(register.getByRole('heading', { name: 'Trail register' })).toBeVisible()
-    await expect(register.locator('.review-entry').first()).toBeVisible()
+    await expect(register.getByTestId('review-entry').first()).toBeVisible()
     await expect(register.getByText('No reviews yet.')).toHaveCount(0)
     await expect(register.getByRole('link', { name: 'Sign in' })).toBeVisible()
   })
 
   // Verify that an old or mistyped link explains itself and offers a way back.
   test("should show a message and a link back when the route doesn't exist", async ({ page }) => {
-    // actions
+    // setup
     await page.goto(MISSING_ROUTE)
 
     // assert

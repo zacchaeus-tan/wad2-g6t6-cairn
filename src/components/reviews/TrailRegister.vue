@@ -68,7 +68,7 @@ async function deleteFromList() {
 <template>
   <article class="d-grid gap-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-      <h2 class="cairn-headline">Trail register</h2>
+      <h2 id="reviews-title" class="cairn-headline">Trail register</h2>
       <button v-if="userId" type="button" class="cairn-btn is-small" @click="formOpen = !formOpen">
         {{ formOpen ? 'Close' : hasOwnReview ? 'Edit your review' : 'Write a review' }}
       </button>
