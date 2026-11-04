@@ -306,6 +306,12 @@ const { scrollYProgress: trailProgress } = useScroll({
   position: relative;
 }
 
+/* The notices sit above the trail too, like the sections below */
+.trail-notices {
+  position: relative;
+  z-index: 1;
+}
+
 .route-stop {
   position: relative;
   z-index: 1;
