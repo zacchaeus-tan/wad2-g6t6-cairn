@@ -1,12 +1,10 @@
 import {
-  listRoutes,
   listRouteTiles,
   listFeaturedRoutes,
   countRoutes,
   listRouteSummaries,
   getRoute,
   getRouteGeometry,
-  listRoutesByIds,
   listAlertsForRoute,
   getRoutePhotoUrl,
 } from '@/model/routesModel'
@@ -14,15 +12,6 @@ import {
 // The link to a route's photo, from its photo_path in the route-photos bucket
 export function routePhotoUrl(route) {
   return getRoutePhotoUrl(route.photo_path).data.publicUrl
-}
-
-export async function fetchRoutes() {
-  const { data, error } = await listRoutes()
-  if (error) {
-    throw error
-  }
-
-  return data
 }
 
 export async function fetchRouteTiles() {
@@ -102,19 +91,6 @@ export function takePreloadedRoute(id) {
   const route = preloadedRoute?.id === id ? preloadedRoute : null
   preloadedRoute = null
   return route
-}
-
-export async function fetchRoutesByIds(ids) {
-  if (!ids || ids.length === 0) {
-    return []
-  }
-
-  const { data, error } = await listRoutesByIds(ids)
-  if (error) {
-    throw error
-  }
-
-  return data
 }
 
 export async function fetchRouteAlerts(routeId) {

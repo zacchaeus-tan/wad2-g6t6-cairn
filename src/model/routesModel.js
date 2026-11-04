@@ -4,10 +4,6 @@ import { alertsHaveReports, withLiveReportCount } from '@/lib/alertDrafts'
 // Model: talks to the database only. Each function returns Supabase's
 // { data, error } unchanged; the controller decides what to do with errors.
 
-export function listRoutes() {
-  return supabase.from('routes').select('*')
-}
-
 // Just what the browse filters and tiles need. line_svg is a small ready-made path for the
 // tile, so browse doesn't download every full line (geometry).
 const TILE_COLUMNS =
