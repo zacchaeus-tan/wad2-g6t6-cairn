@@ -33,60 +33,71 @@ async function logout() {
 <template>
   <header class="cairn site-nav" :class="{ 'is-overlay': overlay }">
     <div class="cairn-wrap site-nav-inner">
-      <nav class="site-nav-group is-left" aria-label="Explore">
-        <RouterLink class="site-nav-link" to="/" exact-active-class="is-current">Home</RouterLink>
-        <RouterLink class="site-nav-link" to="/routes" active-class="is-current"
-          >Browse routes</RouterLink
+      <!-- Bootstrap: links | logo | links from lg (992px) up, the two link groups sharing the space
+           equally so the logo stays centred. Below lg, just the logo and the menu button. -->
+      <div class="row h-100 g-0 gap-3 align-items-center">
+        <nav class="col d-none d-lg-flex align-items-center gap-1" aria-label="Explore">
+          <RouterLink class="site-nav-link" to="/" exact-active-class="is-current">Home</RouterLink>
+          <RouterLink class="site-nav-link" to="/routes" active-class="is-current"
+            >Browse routes</RouterLink
+          >
+          <RouterLink class="site-nav-link" to="/globe" active-class="is-current">Globe</RouterLink>
+        </nav>
+
+        <RouterLink
+          class="site-brand col-auto d-inline-flex align-items-center gap-2"
+          to="/"
+          aria-label="CAIRN home"
         >
-        <RouterLink class="site-nav-link" to="/globe" active-class="is-current">Globe</RouterLink>
-      </nav>
+          <span class="site-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <g fill="currentColor">
+                <ellipse cx="12" cy="20" rx="8" ry="2.4" />
+                <ellipse cx="12" cy="15.2" rx="6" ry="2.2" />
+                <ellipse cx="12" cy="10.6" rx="4.4" ry="2" />
+                <ellipse cx="12" cy="6.4" rx="3" ry="1.8" />
+                <ellipse cx="12" cy="3" rx="1.6" ry="1.2" />
+              </g>
+            </svg>
+          </span>
+          CAIRN
+        </RouterLink>
 
-      <RouterLink class="site-brand" to="/" aria-label="CAIRN home">
-        <span class="site-brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <g fill="currentColor">
-              <ellipse cx="12" cy="20" rx="8" ry="2.4" />
-              <ellipse cx="12" cy="15.2" rx="6" ry="2.2" />
-              <ellipse cx="12" cy="10.6" rx="4.4" ry="2" />
-              <ellipse cx="12" cy="6.4" rx="3" ry="1.8" />
-              <ellipse cx="12" cy="3" rx="1.6" ry="1.2" />
-            </g>
+        <nav
+          class="col d-none d-lg-flex align-items-center justify-content-end gap-1"
+          aria-label="Account"
+        >
+          <template v-if="auth.isLoggedIn">
+            <RouterLink class="site-nav-link" to="/profile" active-class="is-current"
+              >Profile</RouterLink
+            >
+            <RouterLink
+              v-if="auth.isAdmin"
+              class="site-nav-link"
+              to="/admin"
+              active-class="is-current"
+              >Admin</RouterLink
+            >
+            <button type="button" class="site-nav-link" @click="logout">Log out</button>
+          </template>
+          <RouterLink v-else class="site-nav-link is-solid" to="/auth">Sign in</RouterLink>
+          <RouterLink class="site-nav-link is-pine" to="/quiz">Take the quiz</RouterLink>
+        </nav>
+
+        <button
+          type="button"
+          class="site-nav-menu d-lg-none ms-auto"
+          :aria-expanded="menuOpen ? 'true' : 'false'"
+          aria-controls="site-nav-panel"
+          @click="menuOpen = !menuOpen"
+        >
+          <span class="cairn-visually-hidden">{{ menuOpen ? 'Close menu' : 'Open menu' }}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path v-if="menuOpen" d="M6 6l12 12M18 6 6 18" />
+            <path v-else d="M4 7h16M4 12h16M4 17h16" />
           </svg>
-        </span>
-        CAIRN
-      </RouterLink>
-
-      <nav class="site-nav-group is-right" aria-label="Account">
-        <template v-if="auth.isLoggedIn">
-          <RouterLink class="site-nav-link" to="/profile" active-class="is-current"
-            >Profile</RouterLink
-          >
-          <RouterLink
-            v-if="auth.isAdmin"
-            class="site-nav-link"
-            to="/admin"
-            active-class="is-current"
-            >Admin</RouterLink
-          >
-          <button type="button" class="site-nav-link" @click="logout">Log out</button>
-        </template>
-        <RouterLink v-else class="site-nav-link is-solid" to="/auth">Sign in</RouterLink>
-        <RouterLink class="site-nav-link is-pine" to="/quiz">Take the quiz</RouterLink>
-      </nav>
-
-      <button
-        type="button"
-        class="site-nav-menu"
-        :aria-expanded="menuOpen ? 'true' : 'false'"
-        aria-controls="site-nav-panel"
-        @click="menuOpen = !menuOpen"
-      >
-        <span class="cairn-visually-hidden">{{ menuOpen ? 'Close menu' : 'Open menu' }}</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path v-if="menuOpen" d="M6 6l12 12M18 6 6 18" />
-          <path v-else d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
+        </button>
+      </div>
     </div>
 
     <AnimatePresence>
@@ -127,22 +138,8 @@ async function logout() {
 }
 
 .site-nav-inner {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
   height: var(--nav-height);
   border-bottom: 2px solid var(--ink);
-}
-
-.site-nav-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.site-nav-group.is-right {
-  justify-content: flex-end;
 }
 
 .site-nav-link {
@@ -199,9 +196,6 @@ async function logout() {
 }
 
 .site-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   color: inherit;
   font-size: 18px;
   font-weight: 900;
@@ -227,12 +221,12 @@ async function logout() {
   height: 18px;
 }
 
+/* Shown below lg only (d-lg-none); grid centres the icon */
 .site-nav-menu {
-  display: none;
+  display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
-  justify-self: end;
   border: 2px solid currentColor;
   background: transparent;
   color: inherit;
@@ -307,19 +301,5 @@ async function logout() {
 .site-nav.is-overlay .site-nav-link.is-solid {
   background: var(--paper);
   color: var(--ink);
-}
-
-@media (max-width: 960px) {
-  .site-nav-group {
-    display: none;
-  }
-
-  .site-nav-inner {
-    grid-template-columns: 1fr auto;
-  }
-
-  .site-nav-menu {
-    display: inline-grid;
-  }
 }
 </style>
