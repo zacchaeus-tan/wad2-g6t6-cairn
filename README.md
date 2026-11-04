@@ -94,7 +94,18 @@ We cut tests that repeated the steps of another test, or that only checked a nic
 
 ### How we made the tests
 
-<!-- TODO (team): say truthfully which specs were recorded with Playwright's codegen in VS Code, which were written or tidied with AI, and which were written by hand. -->
+We used two methods, depending on what a test needs:
+
+- **Recorded in VS Code (8 tests).** Tests that only read real data and make simple checks were recorded by Zacchaeus with the Playwright VS Code extension's recorder, then tidied into setup → actions → assert: renamed, made to use relative URLs, extra recorded steps removed, and the last step turned into an assertion. These were the codes that were recorded in Playwright VS Code:
+  - `legal.spec.js`: should open the terms of service from the footer (new)
+  - `legal.spec.js`: should open the privacy policy from the footer, at the top
+  - `quiz.spec.js`: should send a signed out visitor to sign in first
+  - `route-detail.spec.js`: should show the route's name, numbers and weather forecast
+  - `route-detail.spec.js`: should show a route's reviews and a sign-in prompt when signed out
+  - `route-detail.spec.js`: should show a message and a link back when the route doesn't exist
+  - `routes-browse.spec.js`: should show a message when nothing matches, and recover on clear
+  - `routes-browse.spec.js`: should show the transition screen before the route page opens
+- **Generated with AI (26 tests).** Tests that need mocked Supabase data, or checks worked out from the page (sorting, counting, reading route names), can't be recorded, so these were generated with AI and reviewed by the team. This is every other test in `e2e/`.
 
 ### Run Unit Tests with [Vitest](https://vitest.dev/)
 
@@ -137,6 +148,8 @@ pnpm playwright test --debug
 # Open the HTML report from the last run
 pnpm exec playwright show-report
 ```
+
+Running one browser or one file, `--headed` and `--debug` are extra commands from the [Playwright docs](https://playwright.dev/docs/running-tests).
 
 You can also run them from the Testing panel in VS Code with the [Playwright Test for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright) extension.
 
