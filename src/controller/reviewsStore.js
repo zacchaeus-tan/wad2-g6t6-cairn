@@ -199,15 +199,12 @@ export const useReviewsStore = defineStore('reviews', () => {
 
   return {
     reviews,
-    totalReviews,
-    ownReview,
     hasMore,
     categories,
     error,
     loadError,
     loading,
     loadingMore,
-    clearError,
     fetchCategories,
     fetchForRoute,
     loadMore,

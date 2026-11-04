@@ -61,5 +61,5 @@ export const useMyReviewsStore = defineStore('myReviews', () => {
     error.value = null
   }
 
-  return { reviews, total, loading, loadingMore, error, hasMore, loadFirst, loadMore, reset }
+  return { reviews, total, loading, loadingMore, error, hasMore, loadFirst, loadMore }
 })
