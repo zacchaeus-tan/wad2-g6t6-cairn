@@ -249,7 +249,7 @@ const { scrollYProgress: trailProgress } = useScroll({
           />
         </section>
 
-        <section id="reviews" class="mt-4 route-stop">
+        <section id="reviews" class="mt-4 route-stop" aria-labelledby="reviews-title">
           <TrailRegister
             :route="route"
             :user-id="auth.user?.id ?? null"

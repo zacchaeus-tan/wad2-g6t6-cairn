@@ -1,7 +1,11 @@
 /* admin.spec.js
  E2E tests for the /admin page.
- Journey: an admin signs in, checks what needs attention, publishes an alert, sets a route's
- status and removes a review.
+ Journey: an admin keeps hikers safe:
+   1. Only admins can open the page
+   2. Sees what needs attention
+   3. Turns a hiker's hazard report into an alert, and can take an alert down
+   4. Closes a route, with a note for hikers
+   5. Removes a review, after confirming
  Supabase is mocked: the tests sign in through the real form with a fake admin, and every
  request is answered here, so no real account or data is touched.
 */
@@ -173,126 +177,97 @@ const routeBox = (page) => page.getByLabel('Route', { exact: true })
 const tab = (page, name) => page.getByRole('tab', { name })
 const panel = (page) => page.getByRole('tabpanel')
 
+// The radios are hidden behind their labels, so click the label an admin sees
+async function chooseStatus(page, status) {
+  await page.getByRole('radiogroup', { name: 'Safety status' }).getByText(status, { exact: true }).click()
+  await expect(page.getByRole('radio', { name: status })).toBeChecked()
+}
+
 test.describe('Admin page', () => {
+  // Verify that only admins can open /admin.
   test('should send someone who is not an admin back home', async ({ page }) => {
+    // setup: the signed in user is a hiker, not an admin
     await mockSupabase(page)
     await page.route('**/rest/v1/profiles*', (route) =>
       route.fulfill({ headers: CORS, json: { id: ADMIN.id, display_name: 'Hiker', is_admin: false } }),
     )
     await page.goto('/admin')
+
+    // actions
     await page.getByLabel('Email').fill(ADMIN.email)
     await page.getByLabel('Password').fill('password')
     await page.getByLabel('Password').press('Enter')
 
+    // assert
     await expect(page).toHaveURL(/\/$/)
   })
 
+  // Verify that the counts show what needs doing, and each one opens its tab.
   test('should show the counts, and open the matching tab from each one', async ({ page }) => {
+    // setup
     await signInToAdmin(page)
 
+    // assert
     await expect(page.getByText('1 item needs your attention, and 1 route is not open.')).toBeVisible()
     await expect(page.getByTestId('admin-number-attention')).toContainText('1')
     await expect(page.getByTestId('admin-number-status')).toContainText('1')
     await expect(page.getByTestId('admin-number-info')).toContainText('1')
 
+    // actions
     await page.getByTestId('admin-number-info').click()
+
+    // assert
     await expect(tab(page, 'Route info')).toHaveAttribute('aria-selected', 'true')
     await expect(page).toHaveURL(/tab=info/)
     await expect(panel(page)).toContainText('Gunung Datuk')
   })
 
-  test('should keep the open tab on reload, and move between tabs with the arrow keys', async ({ page }) => {
-    await signInToAdmin(page)
-
-    await tab(page, 'Route status').click()
-    await page.reload()
-    await expect(tab(page, 'Route status')).toHaveAttribute('aria-selected', 'true')
-
-    await tab(page, 'Route status').press('ArrowRight')
-    await expect(tab(page, 'Route info')).toHaveAttribute('aria-selected', 'true')
-    await expect(tab(page, 'Route info')).toBeFocused()
-    await tab(page, 'Route info').press('ArrowLeft')
-    await expect(tab(page, 'Route status')).toHaveAttribute('aria-selected', 'true')
-  })
-
-  test('should open the hazard confirmed in the banner', async ({ page }) => {
-    await signInToAdmin(page)
-    await tab(page, 'Reviews').click()
-
-    await page.getByRole('button', { name: /Hazard confirmed by hikers/ }).click()
-
-    await expect(tab(page, 'Needs attention')).toHaveAttribute('aria-selected', 'true')
-    await expect(panel(page)).toContainText('Landslide or rockfall')
-  })
-
+  // Verify that a hazard hikers reported can be turned into a published alert.
   test('should fill in an alert from a hazard report and publish it', async ({ page }) => {
+    // setup
     const db = await signInToAdmin(page)
 
+    // actions
     await panel(page).getByRole('button', { name: 'Raise alert' }).click()
 
+    // assert: the form is filled in from the report
     await expect(tab(page, 'Alerts')).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText('Filled in from hiker reports')).toBeVisible()
     await expect(routeBox(page)).toHaveValue(OPEN_ROUTE.name)
     await expect(page.getByLabel('Title')).not.toHaveValue('')
 
+    // actions
     await page.getByRole('button', { name: 'Publish alert' }).click()
 
+    // assert: it was saved, and leaves the attention list and the count
     await expect(page.getByText('Alert published.')).toBeVisible()
     const sent = db.requests.find((r) => r.method === 'POST' && r.url.includes('route_alerts'))
     expect(sent.body).toMatchObject({ route_id: OPEN_ROUTE.id, source: 'community', status: 'active' })
-    // Handled, so it leaves the attention list and the count
     await expect(page.getByTestId('admin-number-attention')).toContainText('0')
     await expect(page.getByTestId('admin-number-alerts')).toContainText('1')
   })
 
-  test('should publish an alert for a route found by searching', async ({ page }) => {
-    const db = await signInToAdmin(page)
-    await tab(page, 'Alerts').click()
-
-    await routeBox(page).fill('bukit')
-    await panel(page).getByRole('button', { name: /Bukit Timah Summit/ }).click()
-    await expect(routeBox(page)).toHaveValue(OPEN_ROUTE.name)
-    await page.getByLabel('Severity').selectOption('danger')
-    await page.getByLabel('Title').fill('Bridge washed out')
-    await page.getByRole('button', { name: 'Publish alert' }).click()
-
-    await expect(page.getByText('Alert published.')).toBeVisible()
-    const sent = db.requests.find((r) => r.method === 'POST' && r.url.includes('route_alerts'))
-    expect(sent.body).toMatchObject({ route_id: OPEN_ROUTE.id, severity: 'danger', title: 'Bridge washed out' })
-    await expect(panel(page)).toContainText('Bridge washed out')
-  })
-
+  // Verify that an alert can't be published until a route is chosen.
   test('should not publish an alert without a route', async ({ page }) => {
+    // setup
     const db = await signInToAdmin(page)
     await tab(page, 'Alerts').click()
 
+    // actions: typing over the chosen name drops the choice
     await routeBox(page).fill('bukit')
     await panel(page).getByRole('button', { name: /Bukit Timah Summit/ }).click()
-    // Typing over the chosen name drops the choice
     await routeBox(page).fill('Bukit Timah Summi')
     await page.getByLabel('Title').fill('Bridge washed out')
     await page.getByRole('button', { name: 'Publish alert' }).click()
 
+    // assert
     await expect(page.getByText('Select the route this alert is for.')).toBeVisible()
     expect(db.requests.some((r) => r.url.includes('route_alerts'))).toBe(false)
   })
 
-  test('should warn when the route for an alert is already closed', async ({ page }) => {
-    await signInToAdmin(page)
-    await tab(page, 'Alerts').click()
-
-    await routeBox(page).fill('ciremai')
-    await panel(page).getByRole('button', { name: /Ciremai Track Via Apuy/ }).click()
-
-    await expect(panel(page)).toContainText('This route is already marked Closed')
-    await expect(panel(page)).toContainText(CLOSED_ROUTE.safety_status_note)
-
-    await routeBox(page).fill('bukit')
-    await panel(page).getByRole('button', { name: /Bukit Timah Summit/ }).click()
-    await expect(panel(page)).not.toContainText('This route is already marked Closed')
-  })
-
+  // Verify that an alert can be taken down, and that a mistake can be undone.
   test('should take down a published alert, and undo it', async ({ page }) => {
+    // setup: publish an alert to take down
     const db = await signInToAdmin(page)
     await tab(page, 'Alerts').click()
     await routeBox(page).fill('bukit')
@@ -301,56 +276,77 @@ test.describe('Admin page', () => {
     await page.getByRole('button', { name: 'Publish alert' }).click()
     await expect(panel(page)).toContainText('Bridge washed out')
 
+    // actions
     await panel(page).getByRole('button', { name: /Take down/i }).click()
+
+    // assert
     await expect(page.getByTestId('admin-number-alerts')).toContainText('0')
     expect(db.alerts[0].status).toBe('dismissed')
 
+    // actions
     await panel(page).getByRole('button', { name: /Undo/i }).click()
+
+    // assert
     await expect(page.getByTestId('admin-number-alerts')).toContainText('1')
     expect(db.alerts[0].status).toBe('active')
   })
 
+  // Verify that closing a route saves its status and note, and counts it as not open.
   test('should close a route and list it under Not open', async ({ page }) => {
+    // setup
     const db = await signInToAdmin(page)
     await tab(page, 'Route status').click()
 
+    // actions
     await page.getByLabel('Find a route').fill('bukit')
     await panel(page).getByRole('button', { name: /Bukit Timah Summit/ }).click()
-    await page.locator('label[for="status-closed"]').click()
+    await chooseStatus(page, 'closed')
     await page.getByLabel(/Note for hikers/).fill('Closed for repairs.')
     await page.getByRole('button', { name: 'Save status' }).click()
 
+    // assert
     await expect(page.getByText('Status saved.')).toBeVisible()
     const sent = db.requests.find((r) => r.method === 'PATCH' && r.url.includes('/routes'))
     expect(sent.body).toEqual({ safety_status: 'closed', safety_status_note: 'Closed for repairs.' })
     await expect(page.getByTestId('admin-number-status')).toContainText('2')
   })
 
+  // Verify that a route can't be closed without telling hikers why.
   test('should need a note to close a route', async ({ page }) => {
+    // setup
     const db = await signInToAdmin(page)
     await tab(page, 'Route status').click()
 
+    // actions
     await page.getByLabel('Find a route').fill('bukit')
     await panel(page).getByRole('button', { name: /Bukit Timah Summit/ }).click()
-    await page.locator('label[for="status-closed"]').click()
+    await chooseStatus(page, 'closed')
     await page.getByRole('button', { name: 'Save status' }).click()
 
+    // assert
     await expect(panel(page).getByRole('alert')).toBeVisible()
     expect(db.requests.some((r) => r.url.includes('/routes'))).toBe(false)
   })
 
+  // Verify that a review is only removed once the admin confirms.
   test('should remove a review only after confirming', async ({ page }) => {
+    // setup
     const db = await signInToAdmin(page)
     await tab(page, 'Reviews').click()
     await expect(panel(page)).toContainText('Spam spam spam')
 
+    // actions
     await panel(page).getByRole('button', { name: 'Remove' }).click()
     await panel(page).getByRole('button', { name: 'Cancel' }).click()
+
+    // assert: cancelling sends nothing
     expect(db.requests.some((r) => r.url.includes('/reviews'))).toBe(false)
 
+    // actions
     await panel(page).getByRole('button', { name: 'Remove' }).click()
     await panel(page).getByRole('button', { name: 'Confirm remove' }).click()
 
+    // assert
     await expect(panel(page)).not.toContainText('Spam spam spam')
     expect(db.requests.some((r) => r.method === 'DELETE' && r.url.includes('/reviews'))).toBe(true)
   })

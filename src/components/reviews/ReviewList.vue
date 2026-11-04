@@ -41,6 +41,7 @@ function nameOf(review) {
       v-for="(review, index) in reviews"
       :key="review.id"
       class="review-entry"
+      data-testid="review-entry"
       :initial="{ opacity: 0, y: 12 }"
       :animate="{ opacity: 1, y: 0 }"
       :exit="{ opacity: 0 }"

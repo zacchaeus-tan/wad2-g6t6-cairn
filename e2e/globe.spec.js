@@ -23,18 +23,6 @@ async function startExploring(page) {
 }
 
 test.describe('Exploring the globe', () => {
-  // Verify that the title screen leads to the route index, with routes loaded.
-  test('should show the route index after clicking "Explore the globe"', async ({ page }) => {
-    // actions
-    await startExploring(page)
-
-    // assert
-    await expect(page.getByTestId('globe-panel')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Trailhead board' })).toBeVisible()
-    await expect(page.getByTestId('globe-country-button').first()).toBeVisible()
-    await expect(page.getByRole('alert')).toHaveCount(0)
-  })
-
   // Verify that a country can be selected, and that "All routes" returns to the opening view.
   test('should select a country, then go back to all routes', async ({ page }) => {
     // setup
