@@ -8,7 +8,13 @@ import {
   getRouteGeometry,
   listRoutesByIds,
   listAlertsForRoute,
+  getRoutePhotoUrl,
 } from '@/model/routesModel'
+
+// The link to a route's photo, from its photo_path in the route-photos bucket
+export function routePhotoUrl(route) {
+  return getRoutePhotoUrl(route.photo_path).data.publicUrl
+}
 
 export async function fetchRoutes() {
   const { data, error } = await listRoutes()

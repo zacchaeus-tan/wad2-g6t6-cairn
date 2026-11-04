@@ -4,21 +4,15 @@ import { RouterLink } from 'vue-router'
 import { fetchFeaturedRoutes } from '@/controller/routesController'
 import { GRADES } from '@/lib/difficultyStyle'
 import RouteTile from '@/components/routes/RouteTile.vue'
-import photoLakePeaks from '@/assets/img/card-lake-peaks.jpg'
-import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
-import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
-import photoMistyLake from '@/assets/img/card-misty-lake.jpg'
 
 // One route per grade (Easy, Moderate, Hard, Strenuous), each with complete
 // distance/climb/duration and a single, unbroken trail line
-const PHOTOS = {
-  'Ao Ech (Frog Lake) Trail': photoLakePeaks,
-  'Bukit Kutu (via Old Colonial Route)': photoAlpinePath,
-  'Mount Pulag Lusod Trail': photoRidgeHikers,
-  'Mount Rinjani via Senaru': photoMistyLake,
-}
-
-const NAMES = Object.keys(PHOTOS)
+const NAMES = [
+  'Ao Ech (Frog Lake) Trail',
+  'Bukit Kutu (via Old Colonial Route)',
+  'Mount Pulag Lusod Trail',
+  'Mount Rinjani via Senaru',
+]
 
 const routes = ref([])
 const total = ref(null)
@@ -59,12 +53,7 @@ onMounted(async () => {
 
       <!-- Bootstrap grid: 2 per row on phones, 4 per row from md (768px) up -->
       <div class="row row-cols-2 row-cols-md-4 gx-3 gx-lg-4 gy-4">
-        <RouteTile
-          v-for="route in tiles"
-          :key="route.id"
-          :route="route"
-          :photo="PHOTOS[route.name]"
-        />
+        <RouteTile v-for="route in tiles" :key="route.id" :route="route" />
       </div>
 
       <div class="featured-more">

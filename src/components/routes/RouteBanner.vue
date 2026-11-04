@@ -3,18 +3,21 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { alertMessageForHikers } from '@/lib/alertDrafts'
 import { GRADES, gradeOf } from '@/lib/difficultyStyle'
+import { routePhotoUrl } from '@/controller/routesController'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import StarIcon from '@/components/common/StarIcon.vue'
 import SaveRouteButton from '@/components/common/SaveRouteButton.vue'
 import WarningIcon from '@/components/common/WarningIcon.vue'
 import RouteLine from './RouteLine.vue'
-import bannerPhoto from '@/assets/img/card-misty-lake.jpg'
 
 const props = defineProps({
   route: { type: Object, required: true },
   isLoggedIn: { type: Boolean, required: true },
   alerts: { type: Array, default: () => [] }, // live alerts published by admins
 })
+
+// The route's own photo, from the route-photos bucket
+const bannerPhoto = computed(() => routePhotoUrl(props.route))
 
 const grade = computed(() => gradeOf(props.route))
 const lineColor = computed(() => GRADES[grade.value]?.line ?? '#f2efea')

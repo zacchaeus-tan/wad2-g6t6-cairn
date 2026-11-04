@@ -14,13 +14,6 @@ import RouteTransitionScreen from '@/components/routes/RouteTransitionScreen.vue
 import CairnLoader from '@/components/common/CairnLoader.vue'
 import cairnPhoto from '@/assets/img/cairn1.jpg'
 import cairnMask from '@/assets/img/cairn1-mask.png'
-import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
-import photoLakePeaks from '@/assets/img/card-lake-peaks.jpg'
-import photoMistyLake from '@/assets/img/card-misty-lake.jpg'
-import photoRidgeHikers from '@/assets/img/card-ridge-hikers.jpg'
-
-// Stock photos behind the route lines until each route has its own photo.
-const TILE_PHOTOS = [photoLakePeaks, photoAlpinePath, photoRidgeHikers, photoMistyLake]
 
 // How many tiles show at first, and how many more each "Show more" adds.
 const PAGE_SIZE = 24
@@ -344,10 +337,6 @@ function clearFilters() {
   selectedTrips.value = []
   distanceRange.value = [0, 100]
   climbRange.value = [0, 100]
-}
-
-function photoFor(route, index) {
-  return TILE_PHOTOS[((route.name?.length ?? 0) + index) % TILE_PHOTOS.length]
 }
 
 // Banner parallax: the sky, the title and the mountain move at different speeds
@@ -754,7 +743,7 @@ onBeforeUnmount(() => {
           class="row row-cols-2 row-cols-md-3 row-cols-lg-4 gx-3 gx-lg-4 gy-5"
         >
           <motion.div
-            v-for="(route, index) in displayedRoutes"
+            v-for="route in displayedRoutes"
             :key="route.id"
             layout
             :initial="{ opacity: 0, y: 16 }"
@@ -763,11 +752,7 @@ onBeforeUnmount(() => {
             :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
           >
             <!-- Caught before the tile's link acts on it. Ctrl or Cmd-click still opens a new tab. -->
-            <RouteTile
-              :route="route"
-              :photo="photoFor(route, index)"
-              @click.capture.exact.prevent="openRoute(route)"
-            />
+            <RouteTile :route="route" @click.capture.exact.prevent="openRoute(route)" />
           </motion.div>
         </AnimatePresence>
 
