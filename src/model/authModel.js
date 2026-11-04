@@ -79,6 +79,24 @@ export function updateProfile(userId, fields) {
   return supabase.from('profiles').update(allowed).eq('id', userId).select('id')
 }
 
+// A profile picture in the public avatars bucket, as { data: { publicUrl } }.
+// Builds the link from the project URL; it doesn't send a request.
+export function getAvatarUrl(avatarPath) {
+  return supabase.storage.from('avatars').getPublicUrl(avatarPath)
+}
+
+// The picture is written by the upload-avatar Edge Function, not from the
+// browser. Both return { data: { avatar_path }, error }.
+export function uploadAvatar(file) {
+  const body = new FormData()
+  body.append('file', file)
+  return supabase.functions.invoke('upload-avatar', { body })
+}
+
+export function removeAvatar() {
+  return supabase.functions.invoke('upload-avatar', { body: { remove: true } })
+}
+
 export function updatePassword(password) {
   return supabase.auth.updateUser({ password })
 }

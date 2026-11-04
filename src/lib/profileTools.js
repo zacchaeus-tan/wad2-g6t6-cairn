@@ -133,6 +133,27 @@ export const AGE_MAX = 120
 export const ABOUT_MAX = 500
 export const PASSWORD_MIN = 6
 
+// "Jane Tan" -> "JT", "jane@x.com" -> "J". Shown when there's no profile picture.
+export function initialsOf(name) {
+  return (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('')
+}
+
+// Kept in step with the upload-avatar Edge Function, which checks again
+export const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+
+// What's wrong with a chosen picture, or '' when it's fine
+export function validateAvatarFile(file) {
+  if (!AVATAR_TYPES.includes(file?.type)) return 'Use a JPEG, PNG or WebP picture.'
+  if (file.size > AVATAR_MAX_BYTES) return 'Use a picture under 2 MB.'
+  return ''
+}
+
 export function profileFormFrom(profile) {
   return {
     name: profile?.display_name ?? '',

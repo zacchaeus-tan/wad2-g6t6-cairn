@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue'
+import { useAuthStore } from '@/controller/authStore'
 import { genderLabels } from '@/lib/countries'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import ProfileAccountButtons from '@/components/profile/ProfileAccountButtons.vue'
 
 const props = defineProps({
@@ -15,22 +17,14 @@ const profileDetails = computed(() => {
   return [p.country, p.age, gender].filter(Boolean).join(' · ')
 })
 
-const displayName = computed(() => props.profile.display_name || props.email)
+const auth = useAuthStore()
 
-// "Jane Tan" -> "JT", "jane@x.com" -> "J"
-const initials = computed(() =>
-  displayName.value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join(''),
-)
+const displayName = computed(() => props.profile.display_name || props.email)
 </script>
 
 <template>
   <div class="profile-summary">
-    <div class="profile-summary-avatar" aria-hidden="true">{{ initials }}</div>
+    <UserAvatar :src="auth.avatarUrl" :name="displayName" />
     <div class="profile-summary-main">
       <h2 class="cairn-headline profile-summary-name">{{ displayName }}</h2>
       <div
@@ -53,18 +47,6 @@ const initials = computed(() =>
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px 24px;
-}
-
-.profile-summary-avatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 72px;
-  height: 72px;
-  background: var(--pine);
-  color: var(--paper);
-  font-size: 28px;
-  font-weight: 900;
 }
 
 .profile-summary-main {

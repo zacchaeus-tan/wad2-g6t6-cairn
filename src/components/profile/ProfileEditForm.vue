@@ -1,17 +1,20 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useAuthStore } from '@/controller/authStore'
 import { countries, genderLabels } from '@/lib/countries'
 import {
   ABOUT_MAX,
   AGE_MAX,
   AGE_MIN,
+  AVATAR_TYPES,
   NAME_MAX,
   profileFormChanged,
   profileFormFrom,
+  validateAvatarFile,
   validateProfileForm,
 } from '@/lib/profileTools'
 import NoticeBox from '@/components/common/NoticeBox.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 
 const props = defineProps({
   profile: { type: Object, required: true },
@@ -34,6 +37,53 @@ const describedBy = (field) => (errors.value[field] ? `edit-${field}-error` : un
 
 onMounted(() => document.getElementById('edit-name')?.focus({ preventScroll: true }))
 
+// ---------- profile picture ----------
+// A picked picture is only uploaded when the form is saved
+
+const avatarInput = useTemplateRef('avatarInput')
+const avatarFile = ref(null)
+const avatarRemoved = ref(false)
+const avatarError = ref('')
+const avatarFileUrl = ref(null)
+
+// Object URLs hold the file in memory until they're revoked
+watch(avatarFile, (file) => {
+  if (avatarFileUrl.value) URL.revokeObjectURL(avatarFileUrl.value)
+  avatarFileUrl.value = file ? URL.createObjectURL(file) : null
+})
+onBeforeUnmount(() => avatarFileUrl.value && URL.revokeObjectURL(avatarFileUrl.value))
+
+const avatarPreview = computed(() => {
+  if (avatarFile.value) return avatarFileUrl.value
+  return avatarRemoved.value ? null : auth.avatarUrl
+})
+
+const avatarChanged = computed(
+  () => Boolean(avatarFile.value) || (avatarRemoved.value && Boolean(props.profile.avatar_path)),
+)
+
+function pickAvatar(event) {
+  const [file] = event.target.files
+  event.target.value = '' // so picking the same file again still fires change
+  if (!file) return
+
+  avatarError.value = validateAvatarFile(file)
+  if (avatarError.value) return
+  avatarFile.value = file
+  avatarRemoved.value = false
+}
+
+function removeAvatar() {
+  avatarFile.value = null
+  avatarRemoved.value = true
+  avatarError.value = ''
+}
+
+async function saveAvatar() {
+  if (avatarFile.value) return auth.saveAvatar(avatarFile.value)
+  return auth.clearAvatar()
+}
+
 async function submit() {
   if (saving.value) return
   formError.value = ''
@@ -45,23 +95,61 @@ async function submit() {
     document.getElementById(`edit-${firstInvalid}`)?.focus()
     return
   }
-  if (!profileFormChanged(props.profile, form.value)) {
+  const fieldsChanged = profileFormChanged(props.profile, form.value)
+  if (!fieldsChanged && !avatarChanged.value) {
     emit('done', false)
     return
   }
 
   saving.value = true
-  const { success, error } = await auth.saveProfile(form.value)
+  let result = { success: true }
+  if (fieldsChanged) result = await auth.saveProfile(form.value)
+  if (result.success && avatarChanged.value) result = await saveAvatar()
   saving.value = false
 
-  if (success) emit('done', true)
-  else formError.value = error
+  if (result.success) emit('done', true)
+  else formError.value = result.error
 }
 </script>
 
 <template>
   <form class="profile-form" novalidate @submit.prevent="submit">
     <div class="profile-form-fields">
+      <div class="profile-form-field is-wide">
+        <label class="cairn-label" for="edit-avatar">Profile picture (optional)</label>
+        <div class="profile-form-avatar">
+          <UserAvatar :src="avatarPreview" :name="form.name.trim() || auth.user?.email" />
+          <div class="profile-form-avatar-actions">
+            <button
+              id="edit-avatar"
+              type="button"
+              class="cairn-btn is-ghost is-small"
+              :aria-describedby="['edit-avatar-hint', avatarError && 'edit-avatar-error'].filter(Boolean).join(' ')"
+              @click="avatarInput.click()"
+            >
+              {{ avatarPreview ? 'Change picture' : 'Choose picture' }}
+            </button>
+            <button
+              v-if="avatarPreview"
+              type="button"
+              class="cairn-btn is-ghost is-small"
+              @click="removeAvatar"
+            >
+              Remove
+            </button>
+            <input
+              ref="avatarInput"
+              type="file"
+              :accept="AVATAR_TYPES.join(',')"
+              hidden
+              @change="pickAvatar"
+            />
+          </div>
+        </div>
+        <p id="edit-avatar-hint" class="profile-form-hint">JPEG, PNG or WebP, up to 2 MB.</p>
+        <p v-if="avatarError" id="edit-avatar-error" class="profile-form-error">{{ avatarError }}</p>
+      </div>
+
       <div class="profile-form-field">
         <label class="cairn-label" for="edit-name">Name</label>
         <input

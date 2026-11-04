@@ -40,6 +40,24 @@
   font-size: 13px;
 }
 
+.profile-form-hint {
+  color: var(--granite-700);
+  font-size: 13px;
+}
+
+.profile-form-avatar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-form-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .profile-form-error {
   color: var(--blaze-deep);
   font-size: 14px;
