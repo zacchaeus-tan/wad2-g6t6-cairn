@@ -22,6 +22,7 @@ import {
   validatePasswordForm,
   validateProfileForm,
 } from '@/lib/profileTools'
+import { quizAnswersToSave } from '@/lib/quizQuestions'
 
 let sessionReady = null
 
@@ -133,10 +134,14 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // Save the answers, then read the profile back so the store has the saved row.
+    // Numeric answers only ever raise a stat, like a completed hike does.
     async saveQuiz(answers) {
       if (!this.user) return { success: false, error: 'Not signed in' }
 
-      const { error } = await updateQuizAnswers(this.user.id, answers)
+      const { error } = await updateQuizAnswers(
+        this.user.id,
+        quizAnswersToSave(this.profile, answers),
+      )
 
       if (error) {
         this.error = error.message

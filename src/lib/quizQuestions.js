@@ -78,11 +78,30 @@ export function quizOptionFor(question, value) {
   return match
 }
 
-// The option the user picked for a question, or null if it isn't answered.
+const isNumeric = (question) => typeof question.options[0].val === 'number'
+
+// The option a profile's saved value falls in, or null if it isn't answered.
+// Numbers can be exact figures from a completed hike (e.g. 12.4 km), so they're
+// matched to their range rather than to an option value.
 export function quizAnswer(profile, question) {
-  if (!profile) return null
-  const value = profile[question.column]
-  return question.options.find((option) => String(option.val) === String(value)) || null
+  const value = profile?.[question.column]
+  if (value == null || value === '') return null
+  if (isNumeric(question)) return quizOptionFor(question, Number(value))
+  return question.options.find((option) => option.val === value) || null
+}
+
+// The answers to save, keyed by question key. A numeric answer only replaces the
+// saved figure when it's higher, so picking the same range or a lower one keeps the
+// exact figure from a completed hike instead of rounding it down.
+export function quizAnswersToSave(profile, answers) {
+  const toSave = { ...answers }
+  for (const question of quizQuestions) {
+    const saved = profile?.[question.column]
+    if (isNumeric(question) && saved != null && Number(saved) > answers[question.key]) {
+      toSave[question.key] = Number(saved)
+    }
+  }
+  return toSave
 }
 
 // "Occasional — a few day hikes a year" -> { title: 'Occasional', detail: 'a few day hikes a year' }

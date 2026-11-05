@@ -13,8 +13,8 @@ const router = useRouter()
 // Nothing is preselected, so every question has to be answered.
 const answers = ref({})
 
-// Fill in saved answers. Values from the old quiz that don't match an option
-// (e.g. 12.3 km typed by hand) are left blank so the user picks again.
+// Fill in saved answers. Exact figures (e.g. 12.4 km from a completed hike)
+// preselect the option whose range they fall in.
 function loadFromProfile() {
   if (!auth.profile) return
   const loaded = {}

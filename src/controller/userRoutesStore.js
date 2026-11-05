@@ -4,7 +4,6 @@ import * as userRoutesModel from '@/model/userRoutesModel'
 import * as routesModel from '@/model/routesModel'
 import { useAuthStore } from '@/controller/authStore'
 import { experienceFromRoute } from '@/lib/matching'
-import { quizQuestions, quizOptionFor } from '@/lib/quizQuestions'
 
 const statLabels = {
   longest_distance_km: 'longest distance',
@@ -59,22 +58,13 @@ export const useUserRoutesStore = defineStore('userRoutes', () => {
     return savedRoutes.value.some((r) => r.route_id === routeId && r.status === 'completed')
   }
 
-  // The hike's figures as quiz option values, so retaking the quiz shows them selected.
-  function asQuizAnswers(experience) {
-    const answers = {}
-    for (const question of quizQuestions) {
-      const value = experience[question.column]
-      if (value != null) answers[question.column] = quizOptionFor(question, value).val
-    }
-    return answers
-  }
-
   // A completed hike counts as experience: any stat it beats goes up on the profile.
+  // The hike's exact figures are saved; the quiz matches them to its ranges when retaken.
   async function raiseExperienceFrom(routeId) {
     try {
       const route = unwrap(await routesModel.getRouteExperience(routeId))
       if (!route) return
-      const result = await useAuthStore().raiseExperience(asQuizAnswers(experienceFromRoute(route)))
+      const result = await useAuthStore().raiseExperience(experienceFromRoute(route))
       if (!result.success) throw new Error(result.error)
       if (result.raised.length) {
         statsMessage.value = `Your ${result.raised.map((c) => statLabels[c]).join(', ')} went up.`
