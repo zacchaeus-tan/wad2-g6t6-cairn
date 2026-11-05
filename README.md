@@ -28,15 +28,15 @@ CAIRN is a trek planner for hikers in Southeast Asia. A short quiz about the hik
 
 ## Project structure
 
-| Folder | What's in it |
-| --- | --- |
-| `src/views` | One component per page |
-| `src/components` | Components, grouped by the page or feature they belong to |
-| `src/controller` | Pinia stores and controllers: checks input and turns Supabase replies into state or errors |
-| `src/model` | Calls to Supabase and Open-Meteo, returned unchanged |
-| `src/lib` | Plain logic with no Vue or database (suitability rules, formatting, globe helpers), and its unit tests |
-| `supabase/functions` | Edge Functions: `generate-itinerary`, `generate-checklist`, `recalc-route-stats` and `upload-avatar` |
-| `e2e` | Playwright end-to-end tests |
+| Folder               | What's in it                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `src/views`          | One component per page                                                                                 |
+| `src/components`     | Components, grouped by the page or feature they belong to                                              |
+| `src/controller`     | Pinia stores and controllers: checks input and turns Supabase replies into state or errors             |
+| `src/model`          | Calls to Supabase and Open-Meteo, returned unchanged                                                   |
+| `src/lib`            | Plain logic with no Vue or database (suitability rules, formatting, globe helpers), and its unit tests |
+| `supabase/functions` | Edge Functions: `generate-itinerary`, `generate-checklist`, `recalc-route-stats` and `upload-avatar`   |
+| `e2e`                | Playwright end-to-end tests                                                                            |
 
 The database schema lives in the Supabase project. SQL changes are run there directly, so this repo has no migration files.
 
@@ -94,11 +94,11 @@ pnpm preview
 
 ### What's in `.env`
 
-| Variable | What it is |
-| --- | --- |
-| `VITE_SUPABASE_URL` | The Supabase project's URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key |
-| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. It also switches to them by itself if MapTiler refuses the key (e.g. the free plan's monthly limit is used up), and stays on them until the month ends. |
+| Variable                        | What it is                                                                                                                                                                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_SUPABASE_URL`             | The Supabase project's URL                                                                                                                                                                                                                                         |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key                                                                                                                                                                                                                             |
+| `VITE_MAPTILER_KEY`             | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. It also switches to them by itself if MapTiler refuses the key (e.g. the free plan's monthly limit is used up), and stays on them until the month ends. |
 
 These keys are meant to be public: the browser needs them, so they're also in the live site's JavaScript. What a visitor can do with them is limited by Supabase's Row Level Security. The OpenAI key is never in the browser. It's a Supabase secret that only the Edge Functions can read, set with `supabase secrets set OPENAI_API_KEY=...`.
 
@@ -106,10 +106,10 @@ These keys are meant to be public: the browser needs them, so they're also in th
 
 Use these to try the parts of the app that need signing in, on the live site or a local copy.
 
-| Account | Email | Password | What it can do |
-| --- | --- | --- | --- |
-| Hiker | | | Take the quiz, save and complete routes, generate itineraries and gear checklists, write reviews, edit the profile |
-| Admin | | | Everything a hiker can, plus the Admin page (alerts, route status, route info and review moderation) |
+| Account | Email                    | Password                  | What it can do                                                                                                     |
+| ------- | ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Hiker   | `test-user@example.com`  | `Trek-730ecfab91a0-User`  | Take the quiz, save and complete routes, generate itineraries and gear checklists, write reviews, edit the profile |
+| Admin   | `test-admin@example.com` | `Trek-2501340e8540-Admin` | Everything a hiker can, plus the Admin page (alerts, route status, route info and review moderation)               |
 
 You can also register your own account on the sign-in page, or sign in with Google.
 
@@ -135,15 +135,15 @@ We cut tests that repeated the steps of another test, or that only checked a nic
 
 ### Focus areas
 
-| Focus area | Why it matters | Spec |
-| --- | --- | --- |
-| **Find a route** (search, filter, sort, page, globe) | The first thing every visitor does. Filters, sorting and paging share state, so they break each other easily. | `routes-browse.spec.js`, `globe.spec.js` |
-| **Decide on a route** (details, live weather, reviews) | The page hikers use to judge if a route is safe. It depends on an outside weather API and on other hikers' reviews. | `route-detail.spec.js` |
-| **Sign in and access** (sign in, Google, guards) | Everything personal sits behind sign-in. A broken guard either locks hikers out or shows pages they shouldn't see. | `auth.spec.js`, `quiz.spec.js`, `admin.spec.js` |
-| **Personalise** (experience quiz to profile) | Saves the hiker's answers, which shape what we suggest to them. | `quiz.spec.js` |
-| **Plan and report** (save a route, review it and flag a hazard) | What a signed-in hiker does with a route. A flagged hazard is what the admin page turns into an alert, so a broken review form means admins never hear about it. | `route-signed-in.spec.js` |
-| **Keep hikers safe** (admin alerts, route status, review moderation) | The highest-stakes feature: a wrong closure or a missing alert can send someone onto a dangerous trail. | `admin.spec.js` |
-| **Legal pages** | Google sign-in needs the privacy policy to open without signing in. | `legal.spec.js` |
+| Focus area                                                           | Why it matters                                                                                                                                                   | Spec                                            |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Find a route** (search, filter, sort, page, globe)                 | The first thing every visitor does. Filters, sorting and paging share state, so they break each other easily.                                                    | `routes-browse.spec.js`, `globe.spec.js`        |
+| **Decide on a route** (details, live weather, reviews)               | The page hikers use to judge if a route is safe. It depends on an outside weather API and on other hikers' reviews.                                              | `route-detail.spec.js`                          |
+| **Sign in and access** (sign in, Google, guards)                     | Everything personal sits behind sign-in. A broken guard either locks hikers out or shows pages they shouldn't see.                                               | `auth.spec.js`, `quiz.spec.js`, `admin.spec.js` |
+| **Personalise** (experience quiz to profile)                         | Saves the hiker's answers, which shape what we suggest to them.                                                                                                  | `quiz.spec.js`                                  |
+| **Plan and report** (save a route, review it and flag a hazard)      | What a signed-in hiker does with a route. A flagged hazard is what the admin page turns into an alert, so a broken review form means admins never hear about it. | `route-signed-in.spec.js`                       |
+| **Keep hikers safe** (admin alerts, route status, review moderation) | The highest-stakes feature: a wrong closure or a missing alert can send someone onto a dangerous trail.                                                          | `admin.spec.js`                                 |
+| **Legal pages**                                                      | Google sign-in needs the privacy policy to open without signing in.                                                                                              | `legal.spec.js`                                 |
 
 ### What we test in each journey
 
@@ -229,16 +229,16 @@ Running one browser or one file, `--headed` and `--debug` are extra commands fro
 
 You can also run them from the Testing panel in VS Code with the [Playwright Test for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright) extension.
 
-| Spec | User journey |
-| --- | --- |
-| `e2e/routes-browse.spec.js` (8) | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable |
-| `e2e/globe.spec.js` (2) | Fly to a country on the globe and back, and open a route from its pill |
-| `e2e/route-detail.spec.js` (3) | Read a route's details, weather and reviews, get prompted to sign in to write one, and find a way back from a missing route |
-| `e2e/auth.spec.js` (3) | See an error for a wrong password, get sent to Google and back, and finish a new Google user's profile |
-| `e2e/quiz.spec.js` (5) | Get sent to sign in, go back without losing an answer, save to the profile, retake it with a new answer, and see an error if saving fails |
-| `e2e/admin.spec.js` (8) | Keep non-admins out, check what needs attention, turn a hazard report into an alert, take an alert down, close a route, and remove a review |
+| Spec                              | User journey                                                                                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/routes-browse.spec.js` (8)   | Search, filter, sort and page through routes, open a route, and see an error if the database is unavailable                                         |
+| `e2e/globe.spec.js` (2)           | Fly to a country on the globe and back, and open a route from its pill                                                                              |
+| `e2e/route-detail.spec.js` (3)    | Read a route's details, weather and reviews, get prompted to sign in to write one, and find a way back from a missing route                         |
+| `e2e/auth.spec.js` (3)            | See an error for a wrong password, get sent to Google and back, and finish a new Google user's profile                                              |
+| `e2e/quiz.spec.js` (5)            | Get sent to sign in, go back without losing an answer, save to the profile, retake it with a new answer, and see an error if saving fails           |
+| `e2e/admin.spec.js` (8)           | Keep non-admins out, check what needs attention, turn a hazard report into an alert, take an alert down, close a route, and remove a review         |
 | `e2e/route-signed-in.spec.js` (3) | Sign in from a route, save it and find it on the profile, post a review that flags a hazard, and be stopped from flagging one without a description |
-| `e2e/legal.spec.js` (2) | Open the privacy policy and the terms of service from the footer without signing in |
+| `e2e/legal.spec.js` (2)           | Open the privacy policy and the terms of service from the footer without signing in                                                                 |
 
 ### Lint with [ESLint](https://eslint.org/) and [Oxlint](https://oxc.rs/docs/guide/usage/linter)
 
@@ -255,4 +255,5 @@ pnpm format
 - **Code tidy-up**: AI was used to check the code comments for accuracy and to remove unused code.
 - **MapLibre GL JS**: AI was used to research and assist in understanding the code for the globe and its features.
 - **Open AI API key**: AI was used to write the prompt for the itinerary and checklist.
-- **Supabase Edge Functions**: We used AI to also learn more on how to use Supabase as a backend.
+- **Supabase Edge Functions**: AI was used to learn more on how to use Supabase as a backend.
+- **Understand errors and aid in fixing bugs**: AI was used to help us debug code where necessary.
