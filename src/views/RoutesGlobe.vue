@@ -1,8 +1,11 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // MapLibre GL JS (https://maplibre.org, BSD-3-Clause) draws the 3D globe; see src/lib/globe/globeMap.js
-import { Map as MapLibreMap, Marker, Popup, ScaleControl } from 'maplibre-gl'
+import { Map as MapLibreMap, Marker, Popup, ScaleControl, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// MapLibre builds its worker's address at runtime, so the build never copies the file on its own.
+// Importing it with ?url makes Vite ship it, and setWorkerUrl points MapLibre at that copy.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 // Motion for Vue (https://motion.dev, MIT) fades and clears the globe
 import { motion } from 'motion-v'
 import { useRouter } from 'vue-router'
@@ -37,6 +40,8 @@ import {
   routePosition,
 } from '@/lib/globe/globeRoutes'
 import { anchorAwayFromRoute, popupOffset } from '@/lib/globe/routeCardPlacement'
+
+setWorkerUrl(maplibreWorkerUrl)
 
 // The globe view used once the user starts exploring, centred on our routes in Southeast Asia
 const exploreView = { center: [119, 4], zoom: 2.6 }
