@@ -179,11 +179,6 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
 
     <h2 id="gear-title" class="cairn-headline">Gear checklist</h2>
 
-    <p v-if="!isLoggedIn" class="gear-message">
-      <RouterLink :to="signInTo">Sign in</RouterLink>
-      to make a new checklist.
-    </p>
-
     <p v-if="checklistStore.checklist && !isSaved" class="cairn-fine">
       Save this checklist to edit it and find it in your profile.
     </p>
@@ -197,7 +192,8 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
 
     <!-- Sheet above the sidebar until lg, then side by side; at xl the sidebar is about 280px.
          g-4 only: a wider gutter pushes the row past the container's padding and the page scrolls sideways -->
-    <div v-if="isLoggedIn" class="row g-4 align-items-start">
+    <!-- Shown signed out too, so the notepad still sits over the trail like the other stops -->
+    <div class="row g-4 align-items-start">
       <div class="col-12 col-lg-8 col-xl-9">
         <!-- Tilted inside the column, so its corners turn into the gutter instead of past the screen edge -->
         <div class="gear-pad">
@@ -207,7 +203,11 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
               <strong>{{ route.name }} · Packing List</strong>
             </div>
 
-            <p v-if="!checklistStore.items.length" class="gear-empty">
+            <p v-if="!isLoggedIn" class="gear-empty">
+              <RouterLink :to="signInTo">Sign in</RouterLink>
+              to make a new checklist.
+            </p>
+            <p v-else-if="!checklistStore.items.length" class="gear-empty">
               {{
                 checklistStore.loading
                   ? 'Writing your list...'
@@ -353,7 +353,12 @@ const completionStars = Array.from({ length: 42 }, (_, index) => ({
           Adjust the list to your own experience and the conditions on the day.
         </div>
 
+        <RouterLink v-if="!isLoggedIn" :to="signInTo" class="cairn-btn is-blaze">
+          Sign in to generate
+        </RouterLink>
+
         <button
+          v-else
           type="button"
           class="cairn-btn is-blaze gear-generate"
           :class="{ 'is-loading': generating }"
