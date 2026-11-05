@@ -53,33 +53,11 @@ The database schema lives in the Supabase project. SQL changes are run there dir
   - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
   - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## Project Setup
 ## Set up and run the app
 
 The app runs against our hosted Supabase project, which holds the database, sign-in, storage and the Edge Functions (including the OpenAI key). You don't need a Supabase account or the Supabase CLI to run it.
 
-1. Install [Node.js](https://nodejs.org/) 22.18 or later (or 24.12 or later), then install pnpm:
-You need Node.js 22.18+ (or 24.12+) and [pnpm](https://pnpm.io/).
-
-```sh
-pnpm install
-```
-
-Copy `.env.example` to `.env` and fill in the values:
-
-| Variable | What it is |
-| --- | --- |
-| `VITE_SUPABASE_URL` | The Supabase project's URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key |
-| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. |
-
-The `VITE_` variables are bundled into the browser, so never put a secret in one. The OpenAI key is a Supabase secret, used only by the Edge Functions:
-
-```sh
-supabase secrets set OPENAI_API_KEY=sk-...
-```
-
-### Compile and Hot-Reload for Development
+1. Install [Node.js](https://nodejs.org/) 22.18 or later (or 24.12 or later), then install [pnpm](https://pnpm.io/):
 
    ```sh
    npm install -g pnpm
@@ -141,7 +119,7 @@ You can also register your own account on the sign-in page, or sign in with Goog
 
 CAIRN's value is in journeys that cross pages and services: a hiker finds a route, checks its weather and reviews, signs in, and plans or reports on it. Most of the bugs we hit while building were in the joins between parts, not inside one function: router guards sending people to the wrong page, Supabase rows not coming back, transitions opening the wrong route, the weather API being slow. A unit test can't catch those, so we test mainly with Playwright end-to-end (E2E) tests that drive the real app in a real browser, the way a user would.
 
-We keep a few Vitest unit tests for pure logic that is hard to reach through the UI (grouping globe routes, drafting alerts from hazard reports, profile helpers).
+We keep a few Vitest unit tests for pure logic that is hard to reach through the UI (checking and grouping globe routes, drafting alerts from hazard reports, profile helpers).
 
 We don't try to test everything. We chose the journeys below by asking two questions: how bad is it for a hiker if this breaks, and how likely is it to break?
 
@@ -194,7 +172,7 @@ We cut tests that repeated the steps of another test, or that only checked a nic
 
 We used two methods, depending on what a test needs:
 
-- **Recorded in VS Code (8 tests).** Tests that only read real data and make simple checks were recorded by Zacchaeus with the Playwright VS Code extension's recorder, then tidied into setup → actions → assert: renamed, made to use relative URLs, extra recorded steps removed, and the last step turned into an assertion. These were the codes that were recorded in Playwright VS Code:
+- **Recorded in VS Code (8 tests).** Tests that only read real data and make simple checks were recorded by Zacchaeus with the Playwright VS Code extension's recorder, then tidied into setup → actions → assert: renamed, made to use relative URLs, extra recorded steps removed, and the last step turned into an assertion. These are the tests that were recorded:
   - `legal.spec.js`: should open the terms of service from the footer (new)
   - `legal.spec.js`: should open the privacy policy from the footer, at the top
   - `quiz.spec.js`: should send a signed out visitor to sign in first
