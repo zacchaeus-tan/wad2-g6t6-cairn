@@ -20,22 +20,65 @@ This template should help get you started developing with Vue 3 in Vite.
 See [Vite Configuration Reference](https://vite.dev/config/).
 
 ## Project Setup
+## Set up and run the app
 
-```sh
-pnpm install
-```
+The app runs against our hosted Supabase project, which holds the database, sign-in, storage and the Edge Functions (including the OpenAI key). You don't need a Supabase account or the Supabase CLI to run it.
 
-### Compile and Hot-Reload for Development
+1. Install [Node.js](https://nodejs.org/) 22.18 or later (or 24.12 or later), then install pnpm:
 
-```sh
-pnpm dev
-```
+   ```sh
+   npm install -g pnpm
+   ```
 
-### Compile and Minify for Production
+2. Unzip the submitted files (or clone the repository), open a terminal in the project folder, and install the dependencies:
+
+   ```sh
+   pnpm install
+   ```
+
+3. Create the `.env` file by copying `.env.example`. It already has the values the app needs:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   On Windows Command Prompt, use `copy .env.example .env`.
+
+4. Start the development server:
+
+   ```sh
+   pnpm dev
+   ```
+
+5. Open the address it prints, usually http://localhost:5173. Browsing routes and the globe works without signing in; everything else needs one of the [accounts below](#accounts-for-testing).
+
+To build and preview the production version instead:
 
 ```sh
 pnpm build
+pnpm preview
 ```
+
+### What's in `.env`
+
+| Variable | What it is |
+| --- | --- |
+| `VITE_SUPABASE_URL` | The Supabase project's URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key |
+| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. |
+
+These keys are meant to be public: the browser needs them, so they're also in the live site's JavaScript. What a visitor can do with them is limited by Supabase's Row Level Security. The OpenAI key is never in the browser. It's a Supabase secret that only the Edge Functions can read, set with `supabase secrets set OPENAI_API_KEY=...`.
+
+## Accounts for testing
+
+Use these to try the parts of the app that need signing in, on the live site or a local copy.
+
+| Account | Email | Password | What it can do |
+| --- | --- | --- | --- |
+| Hiker | | | Take the quiz, save and complete routes, generate itineraries and gear checklists, write reviews, edit the profile |
+| Admin | | | Everything a hiker can, plus the Admin page (alerts, route status, route info and review moderation) |
+
+You can also register your own account on the sign-in page, or sign in with Google.
 
 ## Testing strategy
 
@@ -125,7 +168,7 @@ The tests in `e2e/` drive the real app in a browser, against the Supabase projec
 Before the first run:
 
 1. Run `pnpm install`.
-2. Copy `.env.example` to `.env` and fill in the values.
+2. Copy `.env.example` to `.env` (see [Set up and run the app](#set-up-and-run-the-app)).
 3. Install the browsers:
 
 ```sh
