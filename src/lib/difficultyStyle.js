@@ -8,7 +8,8 @@ export const GRADES = {
   4: { key: 'strenuous', label: 'Strenuous', line: '#ff5b4f', ink: '#b42318' },
 }
 
-// The grade a route is shown at: community-adjusted when there is one, else official.
+// The grade a route is shown at: community-adjusted when there is one, else official,
+// else its technical rating.
 // Returns null when the route has no grade at all.
 export function gradeOf(route) {
   const value = route.effective_difficulty ?? route.official_difficulty ?? route.technical_rating

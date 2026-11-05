@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 
-// Model: talks to Supabase Auth and the profiles table only. Each function
+// Model: talks to Supabase Auth, the profiles table, the avatars bucket and the
+// upload-avatar Edge Function. Each function
 // returns Supabase's { data, error } unchanged; the controller decides what
 // to do with errors.
 

@@ -101,7 +101,8 @@ export function listPointWarnings() {
 }
 
 // Every severity 3 incident in the last 12 months, the same window the hazard
-// level uses. The controller picks out those only one hiker has reported.
+// level uses. The controller groups them and splits those one hiker reported from
+// those several have.
 export function listSeriousIncidents() {
   const since = new Date()
   since.setMonth(since.getMonth() - 12)

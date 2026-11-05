@@ -60,7 +60,8 @@ export function fetchStartForecast(latitude, longitude) {
   })
 }
 
-// Temperatures at the route's highest point. Same coordinates but at the height of the summit. NOT EXACTLY AT THE SUMMIT
+// Temperatures at the summit's height, taken over the trailhead's coordinates rather than at the
+// summit itself, so treat them as an estimate
 export function fetchSummitForecast(latitude, longitude, elevation) {
   return request({
     latitude,

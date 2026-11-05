@@ -254,7 +254,6 @@ const confettiPieces = Array.from({ length: 35 }, (_, i) => ({
                     rotate: piece.rotation,
                   }"
                   :transition="{
-                    duration: 2.5,
                     delay: piece.delay * 0.3,
                     duration: 1.8,
                     ease: 'easeOut',

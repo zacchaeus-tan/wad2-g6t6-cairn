@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) drops the stones into place
 import { AnimatePresence, motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 
 // A cairn that grows as loading progresses, with a line of text under it while there's a message.
 // Without a progress it builds and clears on a loop, for pages that can't tell how far along they are.
@@ -66,7 +67,7 @@ const placedStones = computed(() => {
           :initial="{ opacity: 0, y: -16 }"
           :animate="{ opacity: 1, y: 0 }"
           :exit="{ opacity: 0 }"
-          :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
+          :transition="{ duration: 0.45, ease: EASE_OUT }"
         />
       </AnimatePresence>
     </svg>

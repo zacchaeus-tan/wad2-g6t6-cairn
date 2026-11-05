@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) brings in the title and signpost, and fades the screen
 import { motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import CairnLoader from '@/components/common/CairnLoader.vue'
 import TrailPlank from './TrailPlank.vue'
 
@@ -37,7 +38,7 @@ const loadingMessage = computed(() => {
     :style="{ pointerEvents: phase === 'explore' ? 'none' : 'auto' }"
     :initial="false"
     :animate="phase === 'explore' ? { opacity: 0, y: -24 } : { opacity: 1, y: 0 }"
-    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+    :transition="{ duration: 0.8, ease: EASE_OUT }"
   >
     <h1 class="globe-title" aria-label="CAIRN">
       <motion.span
@@ -47,7 +48,7 @@ const loadingMessage = computed(() => {
         aria-hidden="true"
         :initial="{ opacity: 0, y: '0.25em' }"
         :animate="{ opacity: 1, y: 0 }"
-        :transition="{ duration: 0.9, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }"
+        :transition="{ duration: 0.9, delay: index * 0.1, ease: EASE_OUT }"
         >{{ letter }}</motion.span
       >
     </h1>
@@ -55,7 +56,7 @@ const loadingMessage = computed(() => {
       class="globe-tagline"
       :initial="{ opacity: 0, y: '0.25em' }"
       :animate="{ opacity: 1, y: 0 }"
-      :transition="{ duration: 0.9, delay: 0.6, ease: [0.16, 1, 0.3, 1] }"
+      :transition="{ duration: 0.9, delay: 0.6, ease: EASE_OUT }"
     >
       Find your next trail.
     </motion.p>
@@ -67,7 +68,7 @@ const loadingMessage = computed(() => {
         class="globe-sign"
         :initial="{ opacity: 0, y: '0.25em' }"
         :animate="{ opacity: 1, y: 0 }"
-        :transition="{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }"
+        :transition="{ duration: 0.7, ease: EASE_OUT }"
       >
         <TrailPlank big data-testid="globe-explore-button" @click="emit('explore')">
           Explore the globe

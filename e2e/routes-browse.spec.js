@@ -133,7 +133,7 @@ test.describe('Browsing routes', () => {
     // actions
     await firstTile.click()
 
-    // assert: the transition waits for the route's photos before the page opens
+    // assert: the transition waits for the route's details before the page opens
     await expect(page.getByTestId('route-transition-screen')).toContainText(name)
     await expect(page).toHaveURL(/\/routes\/[^/]+$/, { timeout: 30000 })
     await expect(page.getByTestId('route-loading')).toHaveCount(0)

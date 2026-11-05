@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { motion } from 'motion-v'
+import { CATEGORY_LABELS as categoryLabels } from '@/lib/profileTools'
 
 const props = defineProps({
   items: {
@@ -10,16 +11,6 @@ const props = defineProps({
 })
 
 const selectedCategory = ref('all')
-
-const categoryLabels = {
-  clothing: 'Clothing',
-  safety: 'Safety',
-  navigation: 'Navigation',
-  water_food: 'Water & Food',
-  shelter: 'Shelter',
-  documents: 'Documents',
-  other: 'Other',
-}
 
 const categoryFilters = computed(() => [
   {

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import { quizQuestions as questions, splitOption } from '@/lib/quizQuestions'
 
 // The quiz as an ascent: the questions are stops on a trail up a mountain. Answering
@@ -72,9 +73,7 @@ function pick(value) {
   advanceTimer = setTimeout(() => (index.value = next), 450)
 }
 
-// Same curve as --ease in cairn.css
-const EASE = [0.16, 1, 0.3, 1]
-const WALK = { duration: 0.9, ease: EASE }
+const WALK = { duration: 0.9, ease: EASE_OUT }
 const CLIMB = { type: 'spring', stiffness: 140, damping: 20 }
 const PING = { duration: 1.8, ease: 'easeOut', repeat: Infinity }
 
@@ -202,7 +201,7 @@ const STONE_VARIANTS = {
           :initial="{ opacity: 0, y: 24, filter: 'blur(6px)' }"
           :animate="{ opacity: 1, y: 0, filter: 'blur(0px)' }"
           :exit="{ opacity: 0, y: -16, filter: 'blur(6px)' }"
-          :transition="{ duration: 0.35, ease: EASE }"
+          :transition="{ duration: 0.35, ease: EASE_OUT }"
         >
           <template v-if="!isSummit">
             <p class="quiz-ascent-where">

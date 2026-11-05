@@ -3,8 +3,8 @@ import { useUserRoutesStore } from '@/controller/userRoutesStore'
 import { computed, ref } from 'vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import TickIcon from '@/components/common/TickIcon.vue'
-// Save and completed buttons for a route. The parent owns the route's status
-// and does the saving when these emit.
+// Save and completed buttons for a route. Reads the route's status from the user routes
+// store and saves through it.
 
 const userRoutesStore = useUserRoutesStore()
 

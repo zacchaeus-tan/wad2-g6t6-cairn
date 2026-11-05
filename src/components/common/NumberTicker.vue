@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { animate, useInView } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 
 // A number that counts up from zero once it scrolls into view.
 // Screen readers get the final value straight away.
@@ -30,7 +31,7 @@ function run() {
   controls?.stop()
   controls = animate(0, props.value, {
     duration: 1.2,
-    ease: [0.16, 1, 0.3, 1],
+    ease: EASE_OUT,
     onUpdate: (latest) => (shown.value = latest),
   })
 }

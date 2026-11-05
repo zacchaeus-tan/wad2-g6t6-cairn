@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { AnimatePresence, motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import { weatherLabel } from '@/lib/format'
 import WarningIcon from '@/components/common/WarningIcon.vue'
 
@@ -14,15 +15,12 @@ const props = defineProps({
 const selected = ref(0)
 const detailsOpen = ref(false)
 
-// Same curve as --ease in cairn.css
-const EASE = [0.16, 1, 0.3, 1]
-
 // The lines start fully clipped away on the right and are uncovered left to right.
 // The chart, not the lines, watches for scrolling into view: a fully clipped element
 // never counts as visible, so it would never start.
 const LINES_WIPE = {
   hidden: { clipPath: 'inset(0 100% 0 0)' },
-  shown: { clipPath: 'inset(0 0% 0 0)', transition: { duration: 1.4, ease: EASE } },
+  shown: { clipPath: 'inset(0 0% 0 0)', transition: { duration: 1.4, ease: EASE_OUT } },
 }
 
 const days = computed(() => props.weather?.days ?? [])
@@ -278,7 +276,7 @@ const chartDays = computed(() =>
           <motion.svg
             viewBox="0 0 24 24"
             :animate="{ rotate: detailsOpen ? 180 : 0 }"
-            :transition="{ duration: 0.3, ease: EASE }"
+            :transition="{ duration: 0.3, ease: EASE_OUT }"
           >
             <path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" />
           </motion.svg>
@@ -293,7 +291,7 @@ const chartDays = computed(() =>
           :initial="{ height: 0 }"
           :animate="{ height: 'auto' }"
           :exit="{ height: 0 }"
-          :transition="{ duration: 0.5, ease: EASE }"
+          :transition="{ duration: 0.5, ease: EASE_OUT }"
         >
           <div class="weather-details-inner">
             <!-- Bootstrap grid: Trailhead and Summit side by side from lg (992px) up, stacked below -->

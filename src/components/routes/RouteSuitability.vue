@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
+import { GRADES } from '@/lib/difficultyStyle'
 import { checkRouteSuitability } from '@/lib/matching'
 
 // The personal verdict on pine: one row per rule check, with a solid mark so
@@ -19,11 +21,6 @@ const suitability = computed(() => {
   return checkRouteSuitability(props.profile, props.route)
 })
 
-// Rules that do not apply to this route get no row
-const checks = computed(() =>
-  suitability.value.checks.filter((check) => check.status !== 'not_applicable'),
-)
-
 const verdictLabels = {
   comfortable: 'Comfortable',
   good_challenge: 'Good challenge',
@@ -39,9 +36,9 @@ const verdictDescriptions = {
 
 // How many bars of the meter fill, and in which heat colour
 const verdictMeter = {
-  comfortable: { bars: 1, color: '#6fdc8c' },
-  good_challenge: { bars: 2, color: '#f2d34f' },
-  stretch: { bars: 3, color: '#ff9f43' },
+  comfortable: { bars: 1, color: GRADES[1].line },
+  good_challenge: { bars: 2, color: GRADES[2].line },
+  stretch: { bars: 3, color: GRADES[3].line },
   unknown: { bars: 0, color: '' },
 }
 
@@ -68,13 +65,11 @@ const statusIcons = {
   unknown: 'M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.1',
 }
 
-const EASE = [0.16, 1, 0.3, 1]
-
 // Filled bars grow up from the base one after another once the band is in view
 function barVariants(bar) {
   return {
     hidden: { scaleY: 0 },
-    shown: { scaleY: 1, transition: { duration: 0.5, ease: EASE, delay: 0.2 + bar * 0.12 } },
+    shown: { scaleY: 1, transition: { duration: 0.5, ease: EASE_OUT, delay: 0.2 + bar * 0.12 } },
   }
 }
 
@@ -86,7 +81,7 @@ const listVariants = {
 
 const rowVariants = {
   hidden: { opacity: 0, y: 12 },
-  shown: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE_OUT } },
 }
 </script>
 
@@ -133,7 +128,7 @@ const rowVariants = {
         :in-view-options="{ once: true, amount: 0.3 }"
       >
         <motion.li
-          v-for="check in checks"
+          v-for="check in suitability.checks"
           :key="check.rule"
           :class="`is-${check.status}`"
           :variants="rowVariants"
