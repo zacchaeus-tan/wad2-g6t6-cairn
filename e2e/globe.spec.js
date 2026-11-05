@@ -64,3 +64,56 @@ test.describe('Exploring the globe', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(name)
   })
 })
+
+// MapTiler stops serving our key once the free plan's monthly limit is used up. These tests answer
+// every MapTiler request themselves, so they never use up any of that limit.
+test.describe('When MapTiler refuses our key', () => {
+  const refuse = (route) => route.fulfill({ status: 403, body: 'Key is over its limit' })
+  const freeMapStyle = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+
+  // Verify that the globe still works, on the free map, when MapTiler refuses the map style.
+  test('should switch to the free map before the globe opens', async ({ page }) => {
+    // setup
+    await page.route('https://api.maptiler.com/**', refuse)
+    const freeMapRequested = page.waitForRequest(freeMapStyle)
+
+    // actions
+    await startExploring(page)
+
+    // assert
+    await freeMapRequested
+    await expect(page.getByTestId('globe-readout')).toHaveText(START_POSITION)
+    await expect(page.getByTestId('route-pill').first()).toBeVisible()
+  })
+
+  // Verify that the globe switches over when MapTiler only starts refusing after its style loaded.
+  test('should switch to the free map once MapTiler stops sending tiles', async ({ page }) => {
+    // setup: a small MapTiler-style map whose tiles MapTiler then refuses
+    await page.route('https://api.maptiler.com/**', (route) => {
+      if (!route.request().url().includes('/style.json')) {
+        return refuse(route)
+      }
+      return route.fulfill({
+        json: {
+          version: 8,
+          sources: {
+            maptiler: { type: 'vector', url: 'https://api.maptiler.com/tiles/v3/tiles.json' },
+          },
+          layers: [
+            { id: 'background', type: 'background' },
+            { id: 'water', type: 'fill', source: 'maptiler', 'source-layer': 'water' },
+          ],
+        },
+      })
+    })
+    const freeMapRequested = page.waitForRequest(freeMapStyle)
+
+    // actions
+    await startExploring(page)
+
+    // assert
+    await freeMapRequested
+    await expect(page.getByTestId('globe-readout')).toHaveText(START_POSITION)
+    await expect(page.getByTestId('route-pill').first()).toBeVisible()
+  })
+})

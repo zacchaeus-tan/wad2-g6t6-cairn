@@ -4,7 +4,8 @@
 // Third-party sources used here:
 // - MapLibre GL JS (https://maplibre.org, BSD-3-Clause), the open-source map library
 // - MapTiler (https://www.maptiler.com) Outdoor style, vector tiles and satellite photos, with our API key
-// - CARTO basemaps (https://carto.com/basemaps) and Esri World Imagery, used when no MapTiler key is set
+// - CARTO basemaps (https://carto.com/basemaps) and Esri World Imagery, used when no MapTiler key
+//   is set or MapTiler refuses it
 // - NASA GIBS Blue Marble imagery (https://earthdata.nasa.gov/gibs) and NASA's cloud picture (src/assets/img/globeClouds.jpg)
 // - Motion for Vue (https://motion.dev, MIT), which walks the dot along a pinned route
 
@@ -15,35 +16,82 @@ import { distanceInMetres, mainTrail, unratedColour } from './globeRoutes'
 
 const maptilerKey = import.meta.env.VITE_MAPTILER_KEY
 
-// MapTiler Outdoor shows peaks, contours, huts and trails; fall back to Carto if no key is set
-export const mapStyle = maptilerKey
-  ? `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${maptilerKey}`
-  : 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+// MapTiler's free plan stops serving our key for the rest of the month once its monthly limit is
+// used up. The globe then switches to the free CARTO and Esri maps (the same ones used when no key
+// is set) and remembers that until the month is over, so later visits skip MapTiler straight away.
+const mapTilerOffKey = 'cairn-maptiler-off'
+
+// e.g. '2026-11'
+function thisMonth() {
+  return new Date().toISOString().slice(0, 7)
+}
+
+function mapTilerOffThisMonth() {
+  try {
+    return localStorage.getItem(mapTilerOffKey) === thisMonth()
+  } catch {
+    return false
+  }
+}
+
+let mapTilerOn = Boolean(maptilerKey) && !mapTilerOffThisMonth()
+
+export function usingMapTiler() {
+  return mapTilerOn
+}
+
+// MapTiler answers 401, 403 or 429 when it won't serve our key (limit used up, or the key removed)
+export function isMapTilerRefusal(error) {
+  return (
+    String(error?.url ?? '').startsWith('https://api.maptiler.com/') &&
+    [401, 403, 429].includes(error.status)
+  )
+}
+
+export function stopUsingMapTiler() {
+  mapTilerOn = false
+  try {
+    localStorage.setItem(mapTilerOffKey, thisMonth())
+  } catch {
+    // Storage is blocked (e.g. some private windows): the next visit just tries MapTiler again
+  }
+}
+
+// MapTiler Outdoor shows peaks, contours, huts and trails; fall back to Carto without MapTiler
+export function mapStyle() {
+  return mapTilerOn
+    ? `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${maptilerKey}`
+    : 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+}
 
 // Plain land/ocean tiles for the flat-coloured globe look; both use the OpenMapTiles layer names
-const baseTilesUrl = maptilerKey
-  ? `https://api.maptiler.com/tiles/v3/tiles.json?key=${maptilerKey}`
-  : 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json'
+function baseTilesUrl() {
+  return mapTilerOn
+    ? `https://api.maptiler.com/tiles/v3/tiles.json?key=${maptilerKey}`
+    : 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json'
+}
 
 // Raster tiles are declared at half their real pixel size so the map fetches one zoom level
 // deeper than usual. That gives one image pixel per screen pixel on high-DPI (retina) screens
 // instead of stretching each image pixel over four, which made the photos look blurry.
-// Satellite photos for the Google Earth-style view; Esri's free imagery if no MapTiler key is set
-const satelliteSource = maptilerKey
-  ? {
-      type: 'raster',
-      url: `https://api.maptiler.com/tiles/satellite-v2/tiles.json?key=${maptilerKey}`,
-      tileSize: 256,
-    }
-  : {
-      type: 'raster',
-      tiles: [
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      ],
-      tileSize: 128,
-      maxzoom: 19,
-      attribution: 'Imagery &copy; Esri',
-    }
+// Satellite photos for the Google Earth-style view; Esri's free imagery without MapTiler
+function satelliteSource() {
+  return mapTilerOn
+    ? {
+        type: 'raster',
+        url: `https://api.maptiler.com/tiles/satellite-v2/tiles.json?key=${maptilerKey}`,
+        tileSize: 256,
+      }
+    : {
+        type: 'raster',
+        tiles: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 128,
+        maxzoom: 19,
+        attribution: 'Imagery &copy; Esri',
+      }
+}
 
 // NASA's Blue Marble (with sea-floor shading) for the bright, blue zoomed-out globe like Google Earth.
 // Its tiles stop at zoom 8, so it fades into the sharper satellite photos above as you zoom in.
@@ -64,7 +112,7 @@ export function prepareGlobeStyle(map) {
   // No glow around the globe, so it sits cleanly on the background
   map.setSky({ 'atmosphere-blend': 0 })
   // Force English labels on the Carto fallback only, so MapTiler keeps its peak heights in labels
-  for (const layer of maptilerKey ? [] : map.getStyle().layers) {
+  for (const layer of mapTilerOn ? [] : map.getStyle().layers) {
     const textField = layer.layout?.['text-field']
     if (layer.type === 'symbol' && JSON.stringify(textField ?? '').includes('name')) {
       map.setLayoutProperty(layer.id, 'text-field', [
@@ -90,7 +138,7 @@ export function prepareGlobeStyle(map) {
 // They fade out as the user zooms in, revealing the detailed trail map underneath.
 export function addGlobeBaseLayers(map) {
   const fadeOnZoom = ['interpolate', ['linear'], ['zoom'], 3, 1, 4.5, 0]
-  map.addSource('globe-base', { type: 'vector', url: baseTilesUrl })
+  map.addSource('globe-base', { type: 'vector', url: baseTilesUrl() })
   map.addLayer({
     id: 'globe-land',
     type: 'background',
@@ -117,7 +165,7 @@ export function addGlobeBaseLayers(map) {
 // place names, like Google Earth's labels layer. Shown or hidden by applyMapType().
 // Returns the ids of the style's own layers under the satellite photos, which applyMapType() needs.
 export function addSatelliteLayers(map) {
-  map.addSource('satellite', satelliteSource)
+  map.addSource('satellite', satelliteSource())
   map.addSource('blue-marble', blueMarbleSource)
   const layers = map.getStyle().layers
   const areaTypes = ['background', 'fill', 'fill-extrusion', 'hillshade', 'raster']
@@ -196,8 +244,9 @@ export async function addCloudLayer(map, isSatelliteView) {
   }
   context.putImageData(pixels, 0, 0)
 
-  // The map may have been closed while the picture was loading
-  if (!map.getStyle()) {
+  // The map may have been closed while the picture was loading, or switched to the free map
+  // (which adds the clouds itself once its style has loaded)
+  if (!map.getStyle() || map.getSource('clouds')) {
     return
   }
   const mercatorEdge = 85.051129

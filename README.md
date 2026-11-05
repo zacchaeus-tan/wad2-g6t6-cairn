@@ -98,7 +98,7 @@ pnpm preview
 | --- | --- |
 | `VITE_SUPABASE_URL` | The Supabase project's URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key |
-| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. |
+| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. It also switches to them by itself if MapTiler refuses the key (e.g. the free plan's monthly limit is used up), and stays on them until the month ends. |
 
 These keys are meant to be public: the browser needs them, so they're also in the live site's JavaScript. What a visitor can do with them is limited by Supabase's Row Level Security. The OpenAI key is never in the browser. It's a Supabase secret that only the Edge Functions can read, set with `supabase secrets set OPENAI_API_KEY=...`.
 
@@ -131,7 +131,7 @@ A test earns its place if it does at least one of these:
 2. **Protects a rule**: something that keeps hikers safe or data correct, such as sign-in guards, a closure needing a note, or confirming before a review is removed.
 3. **Catches a real failure**: an error a user could actually hit, such as the database being down, a wrong password or a failed save.
 
-We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, and later 1 for the terms of service page, making 34.
+We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, and later 1 for the terms of service page, making 34. Last, we added 2 that check the globe still works when MapTiler refuses our key (for example once the free plan's monthly limit is used up), making 36.
 
 ### Focus areas
 
@@ -155,7 +155,7 @@ We cut tests that repeated the steps of another test, or that only checked a nic
 
 - **Selectors a user would recognise.** We find elements by role, label or visible text first (`getByRole`, `getByLabel`), which also checks the page is accessible. Where an element has no name, such as a route tile or a pill on the globe, we added a `data-testid`. We avoid CSS classes and element order, which change whenever the design does.
 - **No hard-coded data.** Tests read what they expect from the page or from the app's own source (for example the quiz questions in `src/lib/quizQuestions.js`), so they keep passing when routes or questions change.
-- **Two kinds of data.** Journeys that only read data run against the real Supabase project, so they prove the real database works. Journeys that write data (quiz, admin, Google sign-up, saving and reviewing a route) answer Supabase's requests with Playwright's `page.route`, so no real account or row is touched, every run starts from the same state, and we can make a request fail on purpose to test error messages. The signed-in route tests mix the two: what the hiker saves is mocked, while public data such as the route itself still comes from the real database.
+- **Two kinds of data.** Journeys that only read data run against the real Supabase project, so they prove the real database works. Journeys that write data (quiz, admin, Google sign-up, saving and reviewing a route) answer Supabase's requests with Playwright's `page.route`, so no real account or row is touched, every run starts from the same state, and we can make a request fail on purpose to test error messages. The signed-in route tests mix the two: what the hiker saves is mocked, while public data such as the route itself still comes from the real database. The MapTiler fallback tests answer every MapTiler request with a refusal, so they use none of our monthly map limit.
 - **A clean server every run.** Playwright starts its own dev server on port 5199 and never reuses one that is already running.
 - **Three browsers.** Every test runs on Chromium, Firefox and WebKit (Safari's engine).
 - **Phone width where the UI changes.** The quiz's Back down and Next stop buttons only appear below 992px, so the tests that use them run at 375px wide (iPhone 6).
@@ -181,7 +181,7 @@ We used two methods, depending on what a test needs:
   - `route-detail.spec.js`: should show a message and a link back when the route doesn't exist
   - `routes-browse.spec.js`: should show a message when nothing matches, and recover on clear
   - `routes-browse.spec.js`: should show the transition screen before the route page opens
-- **Generated with AI (26 tests).** Tests that need mocked Supabase data, or checks worked out from the page (sorting, counting, reading route names), can't be recorded, so these were generated with AI and reviewed by the team. This is every other test in `e2e/`.
+- **Generated with AI (28 tests).** Tests that need mocked Supabase data, or checks worked out from the page (sorting, counting, reading route names), can't be recorded, so these were generated with AI and reviewed by the team. This is every other test in `e2e/`.
 
 ### Run Unit Tests with [Vitest](https://vitest.dev/)
 

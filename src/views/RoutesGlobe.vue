@@ -26,9 +26,12 @@ import {
   addRouteLayers,
   addSatelliteLayers,
   applyMapType,
+  isMapTilerRefusal,
   mapStyle,
   prepareGlobeStyle,
   setMapInteraction,
+  stopUsingMapTiler,
+  usingMapTiler,
   walkRoute,
 } from '@/lib/globe/globeMap'
 import {
@@ -230,7 +233,9 @@ async function showRouteGeometry(routeId) {
 
   source.setData({
     type: 'FeatureCollection',
-    features: line ? [{ type: 'Feature', properties: routeProperties.get(routeId), geometry: line }] : [],
+    features: line
+      ? [{ type: 'Feature', properties: routeProperties.get(routeId), geometry: line }]
+      : [],
   })
 
   // Only the pinned route gets a dot, and not during the dive onto it
@@ -740,6 +745,13 @@ watch([loading, mapReady, mapError, introTimeDone], () => {
 // and a blank map with no explanation would be worse. Details go to the console rather than
 // showing a raw server error.
 function onMapError(event) {
+  // MapTiler stops serving our key once the free plan's monthly limit is used up. Later refusals
+  // (tiles already on their way when the map switched) are ignored.
+  if (isMapTilerRefusal(event.error)) {
+    switchToFreeMaps()
+    return
+  }
+
   console.warn('Globe map error:', event.error)
   if (!event.tile) {
     mapError.value = mapErrorMessage
@@ -753,6 +765,39 @@ function onMapError(event) {
   }
 }
 
+// Swaps the MapTiler map for the free CARTO and Esri one, keeping the camera where it is. The new
+// style has none of our layers, so onStyleLoad adds them again.
+function switchToFreeMaps() {
+  if (!usingMapTiler()) {
+    return
+  }
+
+  console.warn(
+    'MapTiler refused our key, so the globe is switching to the free CARTO and Esri maps',
+  )
+  stopUsingMapTiler()
+  // The walking dot and the route layers belong to the old style
+  stopWalker?.()
+  stopWalker = null
+  routeOverlayReady = false
+  // diff: false rebuilds the style from scratch, so 'style.load' fires again
+  globeView.setStyle(mapStyle(), { diff: false })
+}
+
+// Runs for the first style and again if the map switches to the free one
+function onStyleLoad() {
+  prepareGlobeStyle(globeView)
+  layersUnderSatellite = addSatelliteLayers(globeView)
+  addGlobeBaseLayers(globeView)
+  applyMapType(globeView, satelliteView.value, layersUnderSatellite)
+  addCloudLayer(globeView, () => satelliteView.value)
+  routeOverlayReady = true
+  updateRouteLayer()
+  // Draws the hovered or pinned route's line again after a switch
+  showRouteGeometry(highlightedRouteId)
+  styleReady.value = true
+}
+
 onMounted(async () => {
   if (!introTimeDone.value) {
     introTimer = setTimeout(() => {
@@ -764,7 +809,7 @@ onMounted(async () => {
   try {
     globeView = new MapLibreMap({
       container: globeHost.value,
-      style: mapStyle,
+      style: mapStyle(),
       center: savedView?.center ?? [20, 15],
       zoom: savedView?.zoom ?? 1.4,
       bearing: savedView?.bearing ?? 0,
@@ -785,16 +830,7 @@ onMounted(async () => {
     globeView.once('load', () => {
       mapReady.value = true
     })
-    globeView.once('style.load', () => {
-      prepareGlobeStyle(globeView)
-      layersUnderSatellite = addSatelliteLayers(globeView)
-      addGlobeBaseLayers(globeView)
-      applyMapType(globeView, satelliteView.value, layersUnderSatellite)
-      addCloudLayer(globeView, () => satelliteView.value)
-      routeOverlayReady = true
-      updateRouteLayer()
-      styleReady.value = true
-    })
+    globeView.on('style.load', onStyleLoad)
   } catch (err) {
     console.error(err)
     mapError.value = mapErrorMessage
