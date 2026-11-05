@@ -3,7 +3,7 @@
 CAIRN is a trek planner for hikers in Southeast Asia. A short quiz about the hikes you've done lets every route show whether it suits you and where it will stretch you. Route grades shift with real hiker reviews, and AI helps you plan the days and pack the right gear.
 
 - **Live site:** https://cairn-trails.vercel.app/
-- **Repository:** https://github.com/zacchaeus-tan/wad2-2
+- **Repository:** https://github.com/zacchaeus-tan/wad2-g6t6-cairn
 
 ## Features
 
