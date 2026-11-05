@@ -253,3 +253,6 @@ pnpm format
 
 - **End-to-end tests**: 26 of the 34 Playwright tests were generated with AI and reviewed by the team (see [How we made the tests](#how-we-made-the-tests)).
 - **Code tidy-up**: AI was used to check the code comments for accuracy and to remove unused code.
+- **MapLibre GL JS**: AI was used to research and assist in understanding the code for the globe and its features.
+- **Open AI API key**: AI was used to write the prompt for the itinerary and checklist.
+- **Supabase Edge Functions**: We used AI to also learn more on how to use Supabase as a backend.
