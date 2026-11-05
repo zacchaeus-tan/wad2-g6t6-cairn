@@ -1,9 +1,11 @@
 <script setup>
 import { AnimatePresence, motion } from 'motion-v'
 import { formatDate } from '@/lib/format'
+import { avatarUrlOf } from '@/controller/authStore'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
 import StarIcon from '@/components/common/StarIcon.vue'
 import TrashButton from '@/components/common/TrashButton.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import ReviewEntryMeta from './ReviewEntryMeta.vue'
 
 // Your own review is edited and deleted from the "Edit your review" button above the list.
@@ -39,9 +41,11 @@ function nameOf(review) {
         ease: [0.16, 1, 0.3, 1],
       }"
     >
-      <span class="review-entry-who">
-        {{ nameOf(review).charAt(0).toUpperCase() }}
-      </span>
+      <UserAvatar
+        :src="avatarUrlOf(review.profiles?.avatar_path)"
+        :name="nameOf(review)"
+        size="small"
+      />
       <div>
         <div
           class="review-entry-top d-flex flex-wrap justify-content-between align-items-baseline gap-3"
@@ -89,17 +93,6 @@ function nameOf(review) {
   gap: 16px;
   padding: 20px 0;
   border-bottom: 1px solid #c9d0cb;
-}
-
-.review-entry-who {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: var(--pine);
-  color: var(--paper);
-  font-size: 17px;
-  font-weight: 900;
 }
 
 .review-entry-top strong {

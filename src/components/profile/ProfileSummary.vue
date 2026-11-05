@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue'
+import { useAuthStore } from '@/controller/authStore'
 import { genderLabels } from '@/lib/countries'
-import ProfileAccount from './ProfileAccount.vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
+import ProfileAccountButtons from '@/components/profile/ProfileAccountButtons.vue'
 
 const props = defineProps({
   profile: { type: Object, required: true },
@@ -15,29 +17,27 @@ const profileDetails = computed(() => {
   return [p.country, p.age, gender].filter(Boolean).join(' · ')
 })
 
-const displayName = computed(() => props.profile.display_name || props.email)
+const auth = useAuthStore()
 
-// "Jane Tan" -> "JT", "jane@x.com" -> "J"
-const initials = computed(() =>
-  displayName.value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join(''),
-)
+const displayName = computed(() => props.profile.display_name || props.email)
 </script>
 
 <template>
   <div class="profile-summary">
-    <div class="profile-summary-avatar" aria-hidden="true">{{ initials }}</div>
-    <div class="profile-summary-text">
+    <UserAvatar :src="auth.avatarUrl" :name="displayName" />
+    <div class="profile-summary-main">
       <h2 class="cairn-headline profile-summary-name">{{ displayName }}</h2>
-      <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
-      <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
-      <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
+      <div
+        class="profile-summary-text d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 gap-sm-3"
+      >
+        <p v-if="profileDetails" class="profile-summary-details">{{ profileDetails }}</p>
+        <p v-if="profileDetails && profile.about?.trim()" class="d-none d-sm-block">|</p>
+        <p v-if="profile.about?.trim()" class="profile-summary-about">{{ profile.about }}</p>
+        <p v-if="profile.about?.trim()" class="d-none d-sm-block">|</p>
+        <p class="profile-summary-chip">{{ profile.experience_level || 'Experience not set' }}</p>
+      </div>
     </div>
-    <ProfileAccount />
+    <ProfileAccountButtons />
   </div>
 </template>
 
@@ -49,23 +49,14 @@ const initials = computed(() =>
   gap: 16px 24px;
 }
 
-.profile-summary-avatar {
+.profile-summary-main {
   display: grid;
-  place-items: center;
-  flex: none;
-  width: 72px;
-  height: 72px;
-  background: var(--pine);
-  color: var(--paper);
-  font-size: 28px;
-  font-weight: 900;
+  flex: 1 1 16rem;
+  gap: 8px;
+  min-width: 0;
 }
 
 .profile-summary-text {
-  display: grid;
-  flex: 1 1 16rem;
-  justify-items: start;
-  gap: 8px;
   min-width: 0;
 }
 
@@ -79,6 +70,7 @@ const initials = computed(() =>
 
 .profile-summary-chip {
   display: inline-flex;
+  flex: none;
   align-items: center;
   min-height: 30px;
   padding: 0 12px;

@@ -14,3 +14,8 @@ verify_jwt = true
 [functions.recalc-route-stats]
 entrypoint = "./functions/recalc-route-stats/index.js"
 verify_jwt = true
+
+# Saves or removes the signed-in user's profile picture.
+[functions.upload-avatar]
+entrypoint = "./functions/upload-avatar/index.js"
+verify_jwt = true

@@ -12,14 +12,31 @@ import {
   updateExperience,
   updateProfile,
   updatePassword,
+  getAvatarUrl,
+  uploadAvatar,
+  removeAvatar,
 } from '@/model/authModel'
 import {
   profileColumnsFrom,
+  validateAvatarFile,
   validatePasswordForm,
   validateProfileForm,
 } from '@/lib/profileTools'
 
 let sessionReady = null
+
+// The link to a profile picture, from an avatar_path in the avatars bucket.
+// null when there's no picture, so UserAvatar shows initials.
+export function avatarUrlOf(avatarPath) {
+  return avatarPath ? getAvatarUrl(avatarPath).data.publicUrl : null
+}
+
+// An Edge Function's own { error } message is in the response body; error.message
+// is only a generic "non-2xx status code"
+async function functionErrorMessage(error) {
+  const body = await error.context?.json?.().catch(() => null)
+  return body?.error ?? error.message
+}
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -32,6 +49,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isLoggedIn: (state) => !!state.user,
     isAdmin: (state) => !!state.profile?.is_admin,
+    avatarUrl: (state) => avatarUrlOf(state.profile?.avatar_path),
     // Google doesn't share age, gender or country, so those sign-ups still need to fill them in.
     // Email sign-ups give them on the register form.
     needsProfile: (state) => {
@@ -161,6 +179,29 @@ export const useAuthStore = defineStore('auth', {
       if (!data?.length) return this.failAccountChange('You do not have permission to edit this profile.')
 
       await this.fetchProfile()
+      return { success: true }
+    },
+
+    async saveAvatar(file) {
+      const problem = validateAvatarFile(file)
+      if (problem || !this.user) return this.failAccountChange(problem || 'Not signed in')
+
+      this.error = null
+      const { data, error } = await uploadAvatar(file)
+
+      if (error) return this.failAccountChange(await functionErrorMessage(error))
+      this.profile = { ...this.profile, avatar_path: data.avatar_path }
+      return { success: true }
+    },
+
+    async clearAvatar() {
+      if (!this.user) return this.failAccountChange('Not signed in')
+
+      this.error = null
+      const { error } = await removeAvatar()
+
+      if (error) return this.failAccountChange(await functionErrorMessage(error))
+      this.profile = { ...this.profile, avatar_path: null }
       return { success: true }
     },
 
