@@ -7,7 +7,6 @@ const props = defineProps({
   profile: { type: Object, required: true },
 })
 
-// what the user told us in the quiz, shown as the option they picked; null means not answered
 const statLabels = {
   longest_distance_km: 'Longest distance',
   max_elevation_gain_m: 'Max elevation gain',
@@ -15,6 +14,8 @@ const statLabels = {
   longest_trek_days: 'Longest trek',
 }
 
+// Each stat as the quiz option its saved value falls in (from the quiz or a completed hike);
+// null means not answered
 const experienceStats = computed(() =>
   quizQuestions
     .filter((question) => statLabels[question.column])

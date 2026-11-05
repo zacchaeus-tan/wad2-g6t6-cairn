@@ -1,4 +1,5 @@
-// Made by scripts/build-auth-routes.mjs. The names are for developers and are never shown.
+// Real trails for the sign-in page background (TrailBackground.vue), as SVG paths fitted to a
+// 600 x 400 box. The names are for developers and are never shown.
 export const authRoutes = [
   {
     name: 'Simpang Paths',

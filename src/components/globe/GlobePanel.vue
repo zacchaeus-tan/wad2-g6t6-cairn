@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) slides the board in and turns the phone toggle's icon
 import { motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import DifficultyMark from '@/components/common/DifficultyMark.vue'
 import TrailPlank from './TrailPlank.vue'
 
@@ -54,7 +55,7 @@ function showAll() {
     data-testid="globe-panel"
     :initial="{ opacity: 0, ...startOffset }"
     :animate="{ opacity: 1, x: 0, y: 0 }"
-    :transition="{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }"
+    :transition="{ duration: 0.6, delay: 0.3, ease: EASE_OUT }"
   >
     <span class="globe-panel-roof" aria-hidden="true"></span>
     <button
@@ -75,7 +76,7 @@ function showAll() {
           aria-hidden="true"
           :initial="false"
           :animate="{ rotate: isOpen ? 45 : 0 }"
-          :transition="{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }"
+          :transition="{ duration: 0.2, ease: EASE_OUT }"
         >
           <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" />
         </motion.svg>

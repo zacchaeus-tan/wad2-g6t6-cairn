@@ -1,5 +1,6 @@
 <script setup>
 import { AnimatePresence, motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import { formatDate } from '@/lib/format'
 import { avatarUrlOf } from '@/controller/authStore'
 import { REVIEWS_PAGE_SIZE } from '@/controller/reviewsStore'
@@ -38,7 +39,7 @@ function nameOf(review) {
       :transition="{
         duration: 0.45,
         delay: (index % REVIEWS_PAGE_SIZE) * 0.06,
-        ease: [0.16, 1, 0.3, 1],
+        ease: EASE_OUT,
       }"
     >
       <UserAvatar

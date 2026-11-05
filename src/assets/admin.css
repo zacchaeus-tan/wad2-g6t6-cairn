@@ -1,6 +1,4 @@
-/* Admin page, in the CAIRN look (see DESIGN.md). Imported by AdminView.
-   Like the route page: a dimmed photo banner, a band of big numbers, a pine bar
-   (here the tabs), then flat sections ruled in ink on the near-white page. */
+
 
 .cairn.admin-page {
   min-height: 100vh;

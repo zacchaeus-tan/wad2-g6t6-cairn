@@ -77,8 +77,9 @@ export const useChecklistStore = defineStore('checklist', () => {
   }
 
   function validate(form) {
-    if (checkItemName(form.label)) {
-      error.value = checkItemName(form.label)
+    const nameError = checkItemName(form.label)
+    if (nameError) {
+      error.value = nameError
       return false
     }
     if (form.quantity == null || form.quantity.trim() === '') {
@@ -117,7 +118,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
     return (
       data.items
-        //remove invalid checklist items
+        // remove invalid checklist items
         .filter((i) => typeof i?.label === 'string' && i.label.trim())
         // clean each item
         .map((i) => ({

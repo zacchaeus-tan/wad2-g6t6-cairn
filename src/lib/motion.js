@@ -1,5 +1,6 @@
 // Shared Motion settings, spread onto a motion component with v-bind.
 
+// Same curve as --ease in cairn.css
 export const EASE_OUT = [0.16, 1, 0.3, 1]
 
 // Rows in a list: rise in, and fade out when they are dealt with.

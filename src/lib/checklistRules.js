@@ -2,7 +2,7 @@ export const maxNameLength = 50
 export const maxReasonLength = 150
 
 // characters that aren't allowed in an item name
-const blockedNameChars = /[?!@#$%^*=+[\]{}<>|\\\/~`_;:"]/
+const blockedNameChars = /[?!@#$%^*=+[\]{}<>|\\/~`_;:"]/
 
 // trim, collapse extra spaces, capital first letter
 export function tidyItemName(text) {

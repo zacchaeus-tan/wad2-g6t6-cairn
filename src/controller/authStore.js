@@ -42,7 +42,7 @@ async function functionErrorMessage(error) {
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,       // Supabase auth user object (id, email, etc.)
-    profile: null,     // row from `profiles` table (display_name, age, gender, country, about, is_admin)
+    profile: null,     // row from `profiles` table (details, quiz answers, avatar_path, is_admin)
     loading: false,
     error: null,
   }),

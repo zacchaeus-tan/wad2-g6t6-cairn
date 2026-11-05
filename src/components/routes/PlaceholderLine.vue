@@ -1,5 +1,5 @@
 <script setup>
-// Stand-in for a route's real line until the simplified route lines are added.
+// Stand-in for a route that has no line to draw (no line_svg and no geometry).
 // It is the same drawing for every route; only the colour (difficulty) changes.
 defineProps({
   color: { type: String, required: true },

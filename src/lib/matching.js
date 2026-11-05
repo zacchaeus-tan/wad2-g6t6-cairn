@@ -1,5 +1,7 @@
 // Route suitability rules.
 
+import { difficultyLabel } from '@/lib/format'
+
 // A route may go up to 25% beyond what you've done before and still count as
 // within your experience. Hiking and mountaineering training advice is to build
 // up distance and climb gradually rather than in big jumps.
@@ -17,8 +19,6 @@ const TRIP_TYPE_LABELS = { day: 'a day hike', overnight: 'an overnight hike', mu
 
 // Each quiz experience level copes with routes up to this difficulty grade.
 const EXPERIENCE_GRADE = { beginner: 1, occasional: 2, regular: 3, experienced: 4 }
-
-const DIFFICULTY_LABELS = { 1: 'Easy', 2: 'Moderate', 3: 'Hard', 4: 'Strenuous' }
 
 function round(value) {
   return Math.round(value * 10) / 10
@@ -91,7 +91,7 @@ function checkDifficulty(route, experienceLevel) {
   }
 
   const grade = Math.round(Number(difficulty))
-  const label = DIFFICULTY_LABELS[grade]
+  const label = difficultyLabel(grade)
 
   if (grade <= level) {
     return { rule: 'difficulty', status: 'pass', message: `Rated ${label}, which suits your experience level (${experienceLevel}).` }

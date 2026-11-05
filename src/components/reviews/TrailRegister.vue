@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { AnimatePresence, motion, useInView } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import { useReviewsStore } from '@/controller/reviewsStore'
 import NumberTicker from '@/components/common/NumberTicker.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -86,7 +87,7 @@ async function deleteFromList() {
         :initial="{ height: 0 }"
         :animate="{ height: 'auto' }"
         :exit="{ height: 0 }"
-        :transition="{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }"
+        :transition="{ duration: 0.5, ease: EASE_OUT }"
       >
         <ReviewForm :route="route" :user-id="userId" @saved="onSaved" @deleted="onDeleted" />
       </motion.div>
@@ -116,7 +117,7 @@ async function deleteFromList() {
                 class="register-rating-fill"
                 :initial="{ scaleX: 0 }"
                 :animate="{ scaleX: ratingsSeen ? bar.share : 0 }"
-                :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                :transition="{ duration: 0.8, ease: EASE_OUT }"
                 :style="{ originX: 0 }"
               />
             </span>

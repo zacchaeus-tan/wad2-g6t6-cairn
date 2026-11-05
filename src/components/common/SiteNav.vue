@@ -8,7 +8,7 @@ import { EASE_OUT } from '@/lib/motion'
 const PANEL_CLOSED = { clipPath: 'inset(0 0 100% 0)', y: -8 }
 const PANEL_OPEN = { clipPath: 'inset(0 0 0% 0)', y: 0 }
 
-// overlay: sits on top of a dark banner (route detail) with light text.
+// overlay: sits on top of the page's photo or banner with light text (App.vue lists the pages).
 defineProps({
   overlay: { type: Boolean, default: false },
 })
@@ -127,7 +127,7 @@ async function logout() {
 </template>
 
 <style scoped>
-/* 63px tall plus a 2px rule = 4rem + 1px, the height the globe page leaves for the navbar */
+/* 63px tall plus a 2px rule = 4rem + 1px (--nav-height), the room overlaid pages leave for it */
 /* Always transparent; light text when it sits over a dark banner (overlay) */
 .site-nav {
   position: relative;
