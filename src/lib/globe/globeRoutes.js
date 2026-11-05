@@ -287,7 +287,7 @@ export function routeCardDetails(route) {
   }
 }
 
-// One entry per country for the globe's "Fly to" list: how many routes it has and the
+// One entry per country for the trail board's country list: how many routes it has and the
 // corners of the box around their trailheads. In alphabetical order.
 export function countrySummaries(routes) {
   const countries = new Map()

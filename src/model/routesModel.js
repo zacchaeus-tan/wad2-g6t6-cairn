@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { alertsHaveReports, withLiveReportCount } from '@/lib/alertDrafts'
 
-// Model: talks to the database only. Each function returns Supabase's
+// Model: talks to Supabase (the database and the route-photos bucket). Each function returns Supabase's
 // { data, error } unchanged; the controller decides what to do with errors.
 
 // Just what the browse filters and tiles need. line_svg is a small ready-made path for the

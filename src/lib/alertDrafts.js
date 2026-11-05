@@ -46,9 +46,7 @@ export function alertMessageLines(message) {
 }
 
 // Alerts raised from a report keep a reference to it in external_ref, so the
-// admin page can tell which reports already have a live alert. A timestamp is
-// added because external_ref is unique per route, and the same report may be
-// raised again once an earlier alert has ended.
+// admin page can tell which reports already have a live alert.
 export function pointWarningRef(warning) {
   return `point:${warning.point_id}:${warning.category}`
 }
@@ -137,6 +135,8 @@ export function groupSeriousIncidents(incidents) {
   }))
 }
 
+// A timestamp is added because external_ref is unique per route, and the same report may be
+// raised again once an earlier alert has ended.
 function linkTo(reportRef) {
   return { source: 'community', externalRef: `${reportRef}:${Date.now()}` }
 }

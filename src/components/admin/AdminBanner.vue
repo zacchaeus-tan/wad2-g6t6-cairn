@@ -10,7 +10,7 @@ const adminStore = useAdminStore()
 
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`
 
-// The newest hazard hikers confirmed at a checkpoint, shown under the navbar as on a route banner.
+// The most severe hazard hikers confirmed at a checkpoint, shown under the navbar as on a route banner.
 const hazard = computed(() => adminStore.openPointWarnings[0] ?? null)
 
 const summary = computed(() => {

@@ -532,7 +532,7 @@ onBeforeUnmount(() => {
         aria-label="Filter routes"
       >
         <div class="cairn-wrap routes-bar-inner">
-          <!-- From md up the filters sit in the bar; below md they drop down as a menu under it -->
+          <!-- From lg (992px) up the filters sit in the bar; below that they drop down as a menu under it -->
           <AnimatePresence>
             <motion.div
               v-if="!isMdOrBelow || filtersOpen"
@@ -806,7 +806,7 @@ onBeforeUnmount(() => {
             :initial="{ opacity: 0, y: 16 }"
             :animate="{ opacity: 1, y: 0 }"
             :exit="{ opacity: 0, transition: { duration: 0.15 } }"
-            :transition="{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }"
+            :transition="{ duration: 0.45, ease: EASE_OUT }"
           >
             <!-- Caught before the tile's link acts on it. Ctrl or Cmd-click still opens a new tab. -->
             <RouteTile :route="route" @click.capture.exact.prevent="openRoute(route)" />

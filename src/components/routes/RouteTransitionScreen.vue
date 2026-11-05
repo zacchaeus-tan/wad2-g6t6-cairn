@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 // Motion for Vue (https://motion.dev, MIT) fades the screen in and runs the cairn's progress
 import { animate, motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import CairnLoader from '@/components/common/CairnLoader.vue'
 
 // Covers the whole page on the way to a route's details page, so that page opens with no loading
@@ -51,7 +52,7 @@ buildCairn()
     data-testid="route-transition-screen"
     :initial="{ opacity: 0 }"
     :animate="{ opacity: 1 }"
-    :transition="{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }"
+    :transition="{ duration: 0.6, ease: EASE_OUT }"
   >
     <p class="cairn-label">Heading to the trailhead</p>
     <p class="route-screen-name">{{ routeName }}</p>

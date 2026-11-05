@@ -1,6 +1,44 @@
 # CAIRN
 
-This template should help get you started developing with Vue 3 in Vite.
+CAIRN is a trek planner for hikers in Southeast Asia. A short quiz about the hikes you've done lets every route show whether it suits you and where it will stretch you. Route grades shift with real hiker reviews, and AI helps you plan the days and pack the right gear.
+
+- **Live site:** https://cairn-trails.vercel.app/
+- **Repository:** https://github.com/zacchaeus-tan/wad2-2
+
+## Features
+
+- **Browse and search routes** with filters for country, difficulty, trip length, distance and climb, or explore them on a 3D globe.
+- **Route pages** with the route's line, its numbers, a 7-day forecast for the trailhead and summit, and any safety notices.
+- **Suitability check**: fixed rules compare a route with your quiz answers and completed hikes (`src/lib/matching.js`).
+- **Community grade**: reviews move a route's difficulty away from its official grade, and incident reports raise its hazard level (`supabase/functions/_shared/route-stats.js`).
+- **AI planning**: a day-by-day itinerary and a gear checklist, written by OpenAI from the route, the forecast and your trip.
+- **Profile**: saved and completed routes, saved checklists, your reviews and a profile picture.
+- **Admin page**: turn hiker reports into alerts, set a route's safety status, fill in missing route details and moderate reviews.
+
+## Built with
+
+- [Vue 3](https://vuejs.org/), [Vue Router](https://router.vuejs.org/), [Pinia](https://pinia.vuejs.org/) and [Vite](https://vite.dev/)
+- [Bootstrap 5](https://getbootstrap.com/) for the grid and utility classes
+- [Motion for Vue](https://motion.dev/) (`motion-v`) for animation
+- [MapLibre GL JS](https://maplibre.org/) for the globe, with map tiles from [MapTiler](https://www.maptiler.com/) (or [CARTO](https://carto.com/basemaps) and Esri World Imagery when no MapTiler key is set) and NASA GIBS Blue Marble imagery
+- [Supabase](https://supabase.com/) for the database, sign-in, storage and Edge Functions
+- [Open-Meteo](https://open-meteo.com/) for weather forecasts
+- [OpenAI](https://openai.com/) (`gpt-4.1-mini`) for itineraries and gear checklists
+- Trail data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
+
+## Project structure
+
+| Folder | What's in it |
+| --- | --- |
+| `src/views` | One component per page |
+| `src/components` | Components, grouped by the page or feature they belong to |
+| `src/controller` | Pinia stores and controllers: checks input and turns Supabase replies into state or errors |
+| `src/model` | Calls to Supabase and Open-Meteo, returned unchanged |
+| `src/lib` | Plain logic with no Vue or database (suitability rules, formatting, globe helpers), and its unit tests |
+| `supabase/functions` | Edge Functions: `generate-itinerary`, `generate-checklist`, `recalc-route-stats` and `upload-avatar` |
+| `e2e` | Playwright end-to-end tests |
+
+The database schema lives in the Supabase project. SQL changes are run there directly, so this repo has no migration files.
 
 ## Recommended IDE Setup
 
@@ -15,16 +53,33 @@ This template should help get you started developing with Vue 3 in Vite.
   - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
   - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
 ## Project Setup
 ## Set up and run the app
 
 The app runs against our hosted Supabase project, which holds the database, sign-in, storage and the Edge Functions (including the OpenAI key). You don't need a Supabase account or the Supabase CLI to run it.
 
 1. Install [Node.js](https://nodejs.org/) 22.18 or later (or 24.12 or later), then install pnpm:
+You need Node.js 22.18+ (or 24.12+) and [pnpm](https://pnpm.io/).
+
+```sh
+pnpm install
+```
+
+Copy `.env.example` to `.env` and fill in the values:
+
+| Variable | What it is |
+| --- | --- |
+| `VITE_SUPABASE_URL` | The Supabase project's URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | The Supabase project's publishable key |
+| `VITE_MAPTILER_KEY` | MapTiler key for the globe's map and satellite tiles. Without one, the globe falls back to CARTO and Esri. |
+
+The `VITE_` variables are bundled into the browser, so never put a secret in one. The OpenAI key is a Supabase secret, used only by the Edge Functions:
+
+```sh
+supabase secrets set OPENAI_API_KEY=sk-...
+```
+
+### Compile and Hot-Reload for Development
 
    ```sh
    npm install -g pnpm
@@ -98,7 +153,7 @@ A test earns its place if it does at least one of these:
 2. **Protects a rule**: something that keeps hikers safe or data correct, such as sign-in guards, a closure needing a note, or confirming before a review is removed.
 3. **Catches a real failure**: an error a user could actually hit, such as the database being down, a wrong password or a failed save.
 
-We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, making 34.
+We cut tests that repeated the steps of another test, or that only checked a nicety (for example keyboard shortcuts between admin tabs). That took the suite from 45 E2E tests to 30. The same rules showed that planning and reviewing a route had no tests at all, so we added 3 for those, and later 1 for the terms of service page, making 34.
 
 ### Focus areas
 
@@ -205,10 +260,18 @@ You can also run them from the Testing panel in VS Code with the [Playwright Tes
 | `e2e/quiz.spec.js` (5) | Get sent to sign in, go back without losing an answer, save to the profile, retake it with a new answer, and see an error if saving fails |
 | `e2e/admin.spec.js` (8) | Keep non-admins out, check what needs attention, turn a hazard report into an alert, take an alert down, close a route, and remove a review |
 | `e2e/route-signed-in.spec.js` (3) | Sign in from a route, save it and find it on the profile, post a review that flags a hazard, and be stopped from flagging one without a description |
-| `e2e/legal.spec.js` (2) | Open the privacy policy from the footer without signing in |
+| `e2e/legal.spec.js` (2) | Open the privacy policy and the terms of service from the footer without signing in |
 
-### Lint with [ESLint](https://eslint.org/)
+### Lint with [ESLint](https://eslint.org/) and [Oxlint](https://oxc.rs/docs/guide/usage/linter)
 
 ```sh
+# Run both linters and fix what they can
 pnpm lint
+# Format the code in src/ with Prettier
+pnpm format
 ```
+
+## Use of AI
+
+- **End-to-end tests**: 26 of the 34 Playwright tests were generated with AI and reviewed by the team (see [How we made the tests](#how-we-made-the-tests)).
+- **Code tidy-up**: AI was used to check the code comments for accuracy and to remove unused code.

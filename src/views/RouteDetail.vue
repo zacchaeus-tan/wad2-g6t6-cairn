@@ -172,7 +172,7 @@ const { scrollYProgress: trailProgress } = useScroll({
             :route="route"
             :isLoggedIn="auth.isLoggedIn"
             :profile="auth.profile"
-            :signInTo="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
+            :signInTo="signInTo"
           />
         </section>
 
@@ -205,9 +205,7 @@ const { scrollYProgress: trailProgress } = useScroll({
                 @generate="onGenerate"
               />
               <p v-else class="route-plan-intro">
-                <RouterLink :to="{ name: 'auth', query: { redirect: routeParams.fullPath } }"
-                  >Sign in</RouterLink
-                >
+                <RouterLink :to="signInTo">Sign in</RouterLink>
                 to generate an itinerary.
               </p>
 

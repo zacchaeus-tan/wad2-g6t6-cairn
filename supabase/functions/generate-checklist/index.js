@@ -3,7 +3,7 @@
 // Runs on Supabase (Deno), so the OpenAI key never reaches the browser.
 // Only signed-in users can call it (Supabase checks their login token).
 //
-// Request body: { route_id }
+// Request body: { route_id, forecast, plan }  (forecast and plan are optional)
 // Response:     { items: [{ label, category, quantity, reason }] }  or  { error }
 
 import { createClient } from 'npm:@supabase/supabase-js@2'

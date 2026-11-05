@@ -4,8 +4,8 @@ import { useAuthStore } from '@/controller/authStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  // A route's page always opens at its banner, not wherever the previous page was scrolled to.
-  // Back and forward still return to where you were; other pages keep their current behaviour.
+  // A route's page, and the privacy and terms pages, always open at the top rather than wherever
+  // the previous page was scrolled to. Back and forward still return to where you were.
   scrollBehavior(to, from, savedPosition) {
     // Section links (#reviews) on the same route keep their own scrolling
     if (to.name === 'route-detail' && to.params.id !== from.params.id) {

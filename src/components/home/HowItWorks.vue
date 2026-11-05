@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { motion } from 'motion-v'
+import { EASE_OUT } from '@/lib/motion'
 import { GRADES } from '@/lib/difficultyStyle'
 import ArrowIcon from '@/components/common/ArrowIcon.vue'
 import photoAlpinePath from '@/assets/img/card-alpine-path.jpg'
@@ -51,7 +52,6 @@ const PACK_LIST = [
   { name: 'Warm layer' },
 ]
 
-const EASE = [0.16, 1, 0.3, 1]
 const count = SLIDES.length
 const panels = [...SLIDES, ...SLIDES, ...SLIDES]
 
@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
         alt=""
         :initial="false"
         :animate="{ opacity: index === current ? 1 : 0 }"
-        :transition="{ duration: 0.8, ease: EASE }"
+        :transition="{ duration: 0.8, ease: EASE_OUT }"
       />
     </div>
 
@@ -174,7 +174,7 @@ onBeforeUnmount(() => {
           class="slide"
           :initial="false"
           :animate="{ opacity: wrap(index) === current ? 1 : 0.45 }"
-          :transition="{ duration: 0.35, ease: EASE }"
+          :transition="{ duration: 0.35, ease: EASE_OUT }"
         >
           <img class="slide-photo" :src="slide.photo" alt="" loading="lazy" />
           <!-- Text beside the visual from lg (992px) up, stacked below it -->
@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
           <motion.span
             :initial="false"
             :animate="{ scaleX: index <= current ? 1 : 0 }"
-            :transition="{ duration: 0.25, ease: EASE }"
+            :transition="{ duration: 0.25, ease: EASE_OUT }"
             :style="{ originX: 0 }"
           />
         </button>
